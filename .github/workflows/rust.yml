@@ -20,7 +20,7 @@ jobs:
         run: cargo fmt -- --check
 
       - name: Run clippy
-        run: cargo clippy -Z cache-messages -- -W clippy::all -W clippy::pedantic -W clippy::nursery -W clippy::cargo
+        run: cargo clippy -- -D clippy::all -D clippy::pedantic -D clippy::nursery -D clippy::cargo
         
   test:
     name: Test

@@ -1,3 +1,5 @@
+#![allow(clippy::use_self)]
+
 use crate::alloc::{
     AllocRef,
     BuildAlloc,
@@ -17,7 +19,7 @@ impl<A: BuildAlloc> BuildAlloc for AbortAlloc<A> {
     type AllocRef = AbortAlloc<A::AllocRef>;
 
     unsafe fn build_alloc_ref(&mut self, ptr: NonNull<u8>, layout: Layout) -> Self::AllocRef {
-        AbortAlloc(self.0.build_alloc_ref(ptr, layout))
+        Self(self.0.build_alloc_ref(ptr, layout))
     }
 }
 
@@ -25,7 +27,7 @@ impl<A: BuildDealloc> BuildDealloc for AbortAlloc<A> {
     type DeallocRef = AbortAlloc<A::DeallocRef>;
 
     unsafe fn build_dealloc_ref(&mut self, ptr: NonNull<u8>, layout: Layout) -> Self::DeallocRef {
-        AbortAlloc(self.0.build_dealloc_ref(ptr, layout))
+        Self(self.0.build_dealloc_ref(ptr, layout))
     }
 }
 
@@ -33,7 +35,7 @@ impl<A: BuildRealloc> BuildRealloc for AbortAlloc<A> {
     type ReallocRef = AbortAlloc<A::ReallocRef>;
 
     unsafe fn build_realloc_ref(&mut self, ptr: NonNull<u8>, layout: Layout) -> Self::ReallocRef {
-        AbortAlloc(self.0.build_realloc_ref(ptr, layout))
+        Self(self.0.build_realloc_ref(ptr, layout))
     }
 }
 
@@ -55,7 +57,7 @@ impl<A: AllocRef> AllocRef for AbortAlloc<A> {
     type Error = !;
 
     fn get_build_alloc(&mut self) -> Self::BuildAlloc {
-        AbortAlloc(self.0.get_build_alloc())
+        Self(self.0.get_build_alloc())
     }
 
     fn alloc(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
@@ -71,7 +73,7 @@ impl<A: DeallocRef> DeallocRef for AbortAlloc<A> {
     type BuildDealloc = AbortAlloc<A::BuildDealloc>;
 
     fn get_build_dealloc(&mut self) -> Self::BuildDealloc {
-        AbortAlloc(self.0.get_build_dealloc())
+        Self(self.0.get_build_dealloc())
     }
 
     unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: NonZeroLayout) {
@@ -84,7 +86,7 @@ impl<A: ReallocRef> ReallocRef for AbortAlloc<A> {
     type Error = !;
 
     fn get_build_realloc(&mut self) -> Self::BuildRealloc {
-        AbortAlloc(self.0.get_build_realloc())
+        Self(self.0.get_build_realloc())
     }
 
     unsafe fn realloc(
