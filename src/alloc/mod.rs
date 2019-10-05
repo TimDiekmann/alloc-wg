@@ -5,12 +5,12 @@ pub use self::{
     abort::AbortAlloc,
     layout::{LayoutErr, NonZeroLayout},
 };
+pub use core::alloc::{GlobalAlloc, Layout};
 use core::{
-    alloc::{GlobalAlloc, Layout},
     fmt,
     ptr::{self, NonNull},
 };
-use liballoc::alloc::{alloc, alloc_zeroed, dealloc, realloc};
+pub use liballoc::alloc::{alloc, alloc_zeroed, dealloc, realloc};
 #[cfg(feature = "std")]
 use std::alloc::System;
 

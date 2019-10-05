@@ -26,7 +26,7 @@
 //!   Personally I think this is a pretty big deal, as kernel programmer can rely on allocation, which will never fail. If
 //!   an allocation can fail, only a `try_*_in` method may be available. To maintain backwards compatibility, [`AbortAlloc`]
 //!   was introduced. [`AbortAlloc`] wraps another allocator, but aborts on OOM thus `AbortAlloc<Global>` may be used as
-//!   default allocator for `Box` or `Vec`. To realize this, [`AbortAlloc`] implements `AllocRef<Error=!>`.
+//!   default allocator for [`Box`] or `Vec`. To realize this, [`AbortAlloc`] implements `AllocRef<Error=!>`.
 //!
 //!   Issue: [rust-lang/wg-allocators#23](https://github.com/rust-lang/wg-allocators/issues/23)
 //!
@@ -42,6 +42,7 @@
 //! [`AllocRef`]: crate::alloc::AllocRef
 //! [`AllocRef::alloc`]: crate::alloc::AllocRef::alloc
 //! [`AllocRef::alloc_zeroed`]: crate::alloc::AllocRef::alloc_zeroed
+//! [`Box`]: crate::boxed::Box
 //! [`DeallocRef`]: crate::alloc::AllocRef
 //! [`ReallocRef`]: crate::alloc::AllocRef
 //! [`BuildAlloc`]: crate::alloc::AllocRef
@@ -52,6 +53,7 @@
 //! [`NonZeroLayout`]: crate::alloc::NonZeroLayout
 //! [`AbortAlloc`]: crate::alloc::AbortAlloc
 
+#![cfg_attr(feature = "dropck_eyepatch", feature(dropck_eyepatch))]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![doc(test(attr(
     deny(
@@ -84,8 +86,10 @@
     unused_lifetimes,
     unused_qualifications
 )]
-#[allow(clippy::module_name_repetitions)]
+#![allow(clippy::module_name_repetitions)]
+
 pub mod alloc;
+pub mod boxed;
 
 extern crate alloc as liballoc;
 

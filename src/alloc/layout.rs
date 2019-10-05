@@ -99,6 +99,42 @@ impl NonZeroLayout {
         Layout::for_value(t).try_into()
     }
 
+    /// Returns the amount of padding we must insert after `self` to ensure that the following
+    /// address will satisfy `align` (measured in bytes).
+    ///
+    /// e.g., if `self.size()` is 9, then `self.padding_needed_for(4)` returns 3, because that is
+    /// the minimum number of bytes of padding required to get a 4-aligned address (assuming
+    /// that the corresponding memory block starts at a 4-aligned address).
+    ///
+    /// The return value of this function has no meaning if `align` is not a power-of-two.
+    ///
+    /// Note that the utility of the returned value requires `align` to be less than or equal to the
+    /// alignment of the starting address for the whole allocated block of memory. One way to
+    /// satisfy this constraint is to ensure `align <= self.align()`.
+    #[inline]
+    pub fn padding_needed_for(&self, align: usize) -> usize {
+        let len = self.size();
+
+        // Rounded up value is:
+        //   len_rounded_up = (len + align - 1) & !(align - 1);
+        // and then we return the padding difference: `len_rounded_up - len`.
+        //
+        // We use modular arithmetic throughout:
+        //
+        // 1. align is guaranteed to be > 0, so align - 1 is always valid.
+        //
+        // 2. `len + align - 1` can overflow by at most `align - 1`, so the &-mask wth
+        //    `!(align - 1)` will ensure that in the    case of overflow, `len_rounded_up` will
+        // itself be 0.    Thus the returned padding, when added to `len`, yields 0, which
+        // trivially satisfies    the alignment `align`.
+        //
+        // (Of course, attempts to allocate blocks of memory whose size and padding overflow in the
+        // above manner should cause the allocator to yield an error anyway.)
+
+        let len_rounded_up = len.wrapping_add(align).wrapping_sub(1) & !align.wrapping_sub(1);
+        len_rounded_up.wrapping_sub(len)
+    }
+
     /// Produces layout describing a record that could be used to allocate backing structure
     /// for `T` (which could be a trait or other unsized type like a slice).
     ///
@@ -109,6 +145,43 @@ impl NonZeroLayout {
     #[inline]
     pub unsafe fn for_value_unchecked<T: ?Sized>(t: &T) -> Self {
         Self::from_size_align_unchecked(mem::size_of_val(t), mem::align_of_val(t))
+    }
+
+    /// Creates a layout describing the record for `n` instances of `self`, with a suitable amount
+    /// of padding between each to ensure that each instance is given its requested size and
+    /// alignment. On success, returns `(k, offs)` where `k` is the layout of the array and
+    /// `offs` is the distance between the start of each element in the array.
+    ///
+    /// On arithmetic overflow, returns `LayoutErr`.
+    #[inline]
+    pub fn repeat(&self, n: usize) -> Result<(Self, usize), LayoutErr> {
+        let padded_size = self
+            .size()
+            .checked_add(self.padding_needed_for(self.align()))
+            .ok_or(LayoutErr { private: () })?;
+        let alloc_size = padded_size
+            .checked_mul(n)
+            .ok_or(LayoutErr { private: () })?;
+
+        unsafe {
+            // self.align is already known to be valid and alloc_size has been
+            // padded already.
+            Ok((
+                Self::from_size_align_unchecked(alloc_size, self.align()),
+                padded_size,
+            ))
+        }
+    }
+
+    /// Creates a layout describing the record for a `[T; n]`.
+    ///
+    /// On arithmetic overflow, returns `LayoutErr`.
+    #[inline]
+    pub fn array<T>(n: usize) -> Result<Self, LayoutErr> {
+        Self::new::<T>()?.repeat(n).map(|(k, offs)| {
+            debug_assert!(offs == mem::size_of::<T>());
+            k
+        })
     }
 }
 

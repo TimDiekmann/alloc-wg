@@ -17,3 +17,5 @@ maintenance = { status = "actively-developed" }
 [features]
 std = []
 default = ["std"]
+dropck_eyepatch = []
+nightly = ["dropck_eyepatch"]

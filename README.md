@@ -37,7 +37,7 @@ Changes regarding the current `Alloc` trait
   Personally I think this is a pretty big deal, as kernel programmer can rely on allocation, which will never fail. If
   an allocation can fail, only a `try_*_in` method may be available. To maintain backwards compatibility, [`AbortAlloc`]
   was introduced. [`AbortAlloc`] wraps another allocator, but aborts on OOM thus `AbortAlloc<Global>` may be used as
-  default allocator for `Box` or `Vec`. To realize this, [`AbortAlloc`] implements `AllocRef<Error=!>`.
+  default allocator for [`Box`] or `Vec`. To realize this, [`AbortAlloc`] implements `AllocRef<Error=!>`.
 
   Issue: [rust-lang/wg-allocators#23](https://github.com/rust-lang/wg-allocators/issues/23)
 
@@ -48,18 +48,11 @@ Changes regarding the current `Alloc` trait
 
   Issue: [rust-lang/wg-allocators#16](https://github.com/rust-lang/wg-allocators/issues/16)
 
-
-To Do
------
-
-- provide a minimal implementation for `Box<T, B: BuildDealloc>`. So far I'm basically done with this, but things has 
-  to be cleaned up a bit before.
-- provide a decent documentation for the new traits
-
 [`Alloc`]: https://doc.rust-lang.org/1.38.0/alloc/alloc/trait.Alloc.html
 [`AllocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.AllocRef.html
 [`AllocRef::alloc`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.AllocRef.html#tymethod.alloc
 [`AllocRef::alloc_zeroed`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.AllocRef.html#method.alloc_zeroed
+[`Box`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/boxed/struct.Box.html
 [`DeallocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.DeallocRef.html
 [`ReallocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.ReallocRef.html
 [`BuildAlloc`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.BuildAlloc.html

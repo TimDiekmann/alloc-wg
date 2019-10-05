@@ -19,6 +19,11 @@ jobs:
         cargo_flags:
           - ""
           - "--no-default-features"
+        include:
+          - rust: nightly
+            cargo_flags: "--features nightly"
+          - rust: nightly
+            cargo_flags: "--features nightly --no-default-features"
     steps:
       - name: Install Rust
         uses: hecrj/setup-rust-action@master
