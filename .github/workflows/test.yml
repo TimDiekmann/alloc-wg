@@ -8,16 +8,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
+        rust:
+          - nightly
         cargo_flags:
           - ""
           - "--no-default-features"
     steps:
+      - uses: hecrj/setup-rust-action@master
+        with:
+          rust-version: ${{ matrix.rust }}
+
       - name: Checkout the source code
         uses: actions/checkout@master
-
-      - name: Install Rust nightly
-        run: rustup default nightly
 
       - name: Build
         run: cargo build --all ${{ matrix.cargo_flags }}
