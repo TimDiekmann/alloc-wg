@@ -10,6 +10,9 @@ keywords = ["alloc"]
 categories = ["data-structures"]
 license = "MIT OR Apache-2.0"
 
+[badges]
+maintenance = { status = "actively-developed" }
+
 [features]
 std = []
 default = ["std"]
