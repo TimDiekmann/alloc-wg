@@ -1,6 +1,9 @@
 name: Documentation
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   docs:
@@ -14,7 +17,9 @@ jobs:
         run: rustup default nightly
 
       - name: Build documentation
-        run: cargo doc --no-deps
+        run: |
+          cargo doc --no-deps
+          echo '<meta http-equiv=\"refresh\" content=\"0; url=alloc_wg\">' > target/doc/index.html
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@master
