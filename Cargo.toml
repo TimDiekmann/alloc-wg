@@ -1,6 +1,6 @@
 [package]
 name = "alloc-wg"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Tim Diekmann <tim.diekmann@3dvision.de>"]
 edition = "2018"
 description = "Attempt of collection several proposals of the allocators-wg"
