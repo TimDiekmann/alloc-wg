@@ -2,24 +2,25 @@ name: Test
 
 on: [push, pull_request]
 
-runs-on: ${{ matrix.os }}
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        cargo_flags:
+          - ""
+          - "--no-default-features"
+    steps:
+      - name: Checkout the source code
+        uses: actions/checkout@master
 
-strategy:
-  matrix:
-    os: [ubuntu-latest, windows-latest]
-    cargo_flags:
-      - ""
-      - "--no-default-features"
+      - name: Install Rust nightly
+        run: rustup default nightly
 
-steps:
-  - name: Checkout the source code
-    uses: actions/checkout@master
+      - name: Build
+        run: cargo build --all ${{ matrix.cargo_flags }}
 
-  - name: Install Rust nightly
-    run: rustup default nightly
-
-  - name: Build
-    run: cargo build --all ${{ matrix.cargo_flags }}
-
-  - name: Test
-    run: cargo test --all ${{ matrix.cargo_flags }}
+      - name: Test
+        run: cargo test --all ${{ matrix.cargo_flags }}

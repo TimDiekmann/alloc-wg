@@ -2,19 +2,21 @@ name: Lint
 
 on: [push, pull_request]
 
-runs-on: ubuntu-latest
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the source code
+        uses: actions/checkout@master
 
-steps:
-  - name: Checkout the source code
-    uses: actions/checkout@master
+      - name: Install Rust nightly
+        run: |
+          rustup default nightly-2019-10-04
+          rustup component add clippy rustfmt
 
-  - name: Install Rust nightly
-    run: |
-      rustup default nightly-2019-10-04
-      rustup component add clippy rustfmt
+      - name: Run rustfmt
+        run: cargo fmt -- --check
 
-  - name: Run rustfmt
-    run: cargo fmt -- --check
-
-  - name: Run clippy
-    run: cargo clippy -- -D clippy::all -D clippy::pedantic -D clippy::nursery -D clippy::cargo
+      - name: Run clippy
+        run: cargo clippy -- -D clippy::all -D clippy::pedantic -D clippy::nursery -D clippy::cargo
