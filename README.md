@@ -47,6 +47,11 @@ Changes regarding the current `Alloc` trait
   unlocks the possibility to move the extension API like `alloc_array` into a separate trait.
 
   Issue: [rust-lang/wg-allocators#16](https://github.com/rust-lang/wg-allocators/issues/16)
+  
+Currently associated containers
+-------------------------------
+  
+- [`Box`] (Only methods and basic traits)
 
 [`Alloc`]: https://doc.rust-lang.org/1.38.0/alloc/alloc/trait.Alloc.html
 [`AllocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.AllocRef.html
