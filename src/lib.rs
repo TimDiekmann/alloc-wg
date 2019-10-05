@@ -1,3 +1,4 @@
+#![feature(alloc_layout_extra, allocator_api, never_type)]
 #![doc(test(attr(
     deny(
         future_incompatible,
@@ -29,3 +30,10 @@
     unused_lifetimes,
     unused_qualifications
 )]
+#[allow(clippy::module_name_repetitions)]
+pub mod alloc;
+
+extern crate alloc as liballoc;
+
+mod unchecked_unwrap;
+pub use self::unchecked_unwrap::*;

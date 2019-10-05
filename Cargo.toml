@@ -9,3 +9,7 @@ readme = "README.md"
 keywords = ["alloc"]
 categories = ["data-structures"]
 license = "MIT OR Apache-2.0"
+
+[features]
+std = []
+default = ["std"]
