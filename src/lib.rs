@@ -16,13 +16,13 @@
 //!   Issue: [rust-lang/wg-allocators#9](https://github.com/rust-lang/wg-allocators/issues/9)
 //!
 //! - All three traits were associated with a Builder: [`BuildAlloc`], [`BuildDealloc`], and [`BuildRealloc`] such those
-//!   traits are related to their association similar how `BuildHasher` is related to `Hasher`. Although the signatures are
+//!   traits are related to their association similar how [`BuildHasher`] is related to [`Hasher`]. Although the signatures are
 //!   different, it makes an even more flexible allocator design possible.
 //!
 //!   Issue: [rust-lang/wg-allocators#12](https://github.com/rust-lang/wg-allocators/issues/12)
 //!
-//! - Add an associative error type to [`AllocRef`]. Besides adding the possibility of returning additional information on
-//!   allocation failure, it's also possible to split the usage of the `AllocRef` into a fallible and an infallible case.
+//! - Added an associative error type to [`AllocRef`]. Besides adding the possibility of returning additional information on
+//!   allocation failure, it's also possible to split the usage of the [`AllocRef`] into a fallible and an infallible case.
 //!   Personally I think this is a pretty big deal, as kernel programmer can rely on allocation, which will never fail. If
 //!   an allocation can fail, only a `try_*_in` method may be available. To maintain backwards compatibility, [`AbortAlloc`]
 //!   was introduced. [`AbortAlloc`] wraps another allocator, but aborts on OOM thus `AbortAlloc<Global>` may be used as
