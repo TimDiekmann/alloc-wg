@@ -10,16 +10,16 @@ jobs:
     name: Documentation
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout the source code
-        uses: actions/checkout@master
-
-      - name: Install Rust nightly
+      - name: Install Rust
         run: rustup default nightly
+
+      - name: Checkout source code
+        uses: actions/checkout@master
 
       - name: Build documentation
         run: |
           cargo doc --no-deps
-          echo '<meta http-equiv=\"refresh\" content=\"0; url=alloc_wg\">' > target/doc/index.html
+          echo '<meta http-equiv="refresh" content="0; url=alloc_wg">' > target/doc/index.html
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@master
