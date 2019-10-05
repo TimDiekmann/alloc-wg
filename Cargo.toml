@@ -8,7 +8,7 @@ repository = "https://github.com/TimDiekmann/alloc-wg"
 documentation = "https://docs.rs/alloc-wg"
 readme = "README.md"
 keywords = ["alloc"]
-categories = ["data-structures"]
+categories = ["data-structures", "no-std"]
 license = "MIT OR Apache-2.0"
 
 [badges]

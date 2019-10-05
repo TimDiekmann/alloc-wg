@@ -1,4 +1,5 @@
 #![feature(alloc_layout_extra, allocator_api, never_type)]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![doc(test(attr(
     deny(
         future_incompatible,
