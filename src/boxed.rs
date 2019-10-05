@@ -199,7 +199,7 @@ where
         } else {
             NonNull::dangling()
         };
-        Ok(Self(ptr.into(), a.get_build_alloc(), PhantomData))
+        Ok(Self(ptr, a.get_build_alloc(), PhantomData))
     }
 
     /// Constructs a new box with uninitialized contents in a specified allocator.
@@ -549,10 +549,8 @@ impl<T: ?Sized, B: BuildDealloc> Box<T, B> {
 
     pub fn get_alloc(&mut self) -> B::DeallocRef {
         unsafe {
-            self.1.build_dealloc_ref(
-                NonNull::from(self.0).cast::<u8>(),
-                Layout::for_value(self.as_ref()),
-            )
+            self.1
+                .build_dealloc_ref(self.0.cast(), Layout::for_value(self.as_ref()))
         }
     }
     /// Consumes the `Box`, returning a wrapped raw pointer.
