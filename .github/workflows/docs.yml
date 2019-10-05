@@ -1,0 +1,25 @@
+name: Documentation
+
+on: [push, pull_request]
+
+jobs:
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the source code
+        uses: actions/checkout@master
+
+      - name: Install Rust nightly
+        run: rustup default nightly
+
+      - name: Build documentation
+        run: cargo doc --no-deps
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@master
+        env:
+          ACCESS_TOKEN: ${{ secrets.GH_PAT }}
+          BASE_BRANCH: master
+          BRANCH: gh-pages
+          FOLDER: target/doc
