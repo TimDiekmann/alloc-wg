@@ -12,7 +12,6 @@ jobs:
 
       - name: Install Rust nightly
         run: |
-          rustup toolchain update --no-self-update stable
           rustup default nightly-2019-10-04
           rustup component add clippy rustfmt
           
