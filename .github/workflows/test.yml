@@ -21,9 +21,7 @@ jobs:
           - "--no-default-features"
         include:
           - rust: nightly
-            cargo_flags: "--features nightly"
-          - rust: nightly
-            cargo_flags: "--features nightly --no-default-features"
+            additional_flags: "--features nightly"
     steps:
       - name: Install Rust
         uses: hecrj/setup-rust-action@master
@@ -34,7 +32,7 @@ jobs:
         uses: actions/checkout@master
 
       - name: Build
-        run: cargo build --all ${{ matrix.cargo_flags }}
+        run: cargo build --all ${{ matrix.cargo_flags }} ${{ matrix.additional_flags }}
 
       - name: Test
-        run: cargo test --all ${{ matrix.cargo_flags }}
+        run: cargo test --all ${{ matrix.cargo_flags }} ${{ matrix.additional_flags }}
