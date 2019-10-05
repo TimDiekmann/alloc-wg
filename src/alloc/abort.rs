@@ -11,6 +11,7 @@ use crate::alloc::{
     ReallocRef,
 };
 use core::ptr::NonNull;
+use liballoc::alloc::handle_alloc_error;
 
 #[derive(Default, Copy, Clone)]
 pub struct AbortAlloc<A>(pub A);
@@ -39,19 +40,6 @@ impl<A: BuildRealloc> BuildRealloc for AbortAlloc<A> {
     }
 }
 
-#[cold]
-#[cfg(feature = "std")]
-fn alloc_abort(layout: NonZeroLayout) -> ! {
-    eprintln!("Allocator error with layout: {:?}", layout);
-    std::process::abort()
-}
-
-#[cold]
-#[cfg(not(feature = "std"))]
-fn alloc_abort(_layout: NonZeroLayout) -> ! {
-    unsafe { core::intrinsics::abort() }
-}
-
 impl<A: AllocRef> AllocRef for AbortAlloc<A> {
     type BuildAlloc = AbortAlloc<A::BuildAlloc>;
     type Error = !;
@@ -61,11 +49,15 @@ impl<A: AllocRef> AllocRef for AbortAlloc<A> {
     }
 
     fn alloc(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
-        self.0.alloc(layout).map_err(|_| alloc_abort(layout))
+        self.0
+            .alloc(layout)
+            .map_err(|_| handle_alloc_error(layout.into()))
     }
 
     fn alloc_zeroed(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
-        self.0.alloc_zeroed(layout).map_err(|_| alloc_abort(layout))
+        self.0
+            .alloc_zeroed(layout)
+            .map_err(|_| handle_alloc_error(layout.into()))
     }
 }
 
@@ -97,6 +89,6 @@ impl<A: ReallocRef> ReallocRef for AbortAlloc<A> {
     ) -> Result<NonNull<u8>, Self::Error> {
         self.0
             .realloc(ptr, layout, new_size)
-            .map_err(|_| alloc_abort(layout))
+            .map_err(|_| handle_alloc_error(layout.into()))
     }
 }
