@@ -4,7 +4,7 @@ Alloc-WG
 
 [![Test Status](https://github.com/TimDiekmann/alloc-wg/workflows/Test/badge.svg)](https://github.com/TimDiekmann/alloc-wg/actions?workflow=Test)
 [![Lint Status](https://github.com/TimDiekmann/alloc-wg/workflows/Lint/badge.svg)](https://github.com/TimDiekmann/alloc-wg/actions?workflow=Lint)
-[![Docs master](https://img.shields.io/static/v1?label=Docs&message=master&color=5479ab)](https://timdiekmann.github.io/alloc-wg/alloc_wg/index.html)
+[![Docs master](https://img.shields.io/static/v1?label=docs&message=master&color=5479ab)](https://timdiekmann.github.io/alloc-wg/alloc_wg/index.html)
 [![Docs.rs](https://docs.rs/alloc-wg/badge.svg)](https://docs.rs/alloc-wg)
 [![Crates.io](https://img.shields.io/crates/v/alloc-wg)](https://crates.io/crates/alloc-wg)
 ![Crates.io](https://img.shields.io/crates/l/alloc-wg)
