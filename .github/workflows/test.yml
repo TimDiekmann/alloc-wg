@@ -21,7 +21,7 @@ jobs:
           - "--no-default-features"
           - "--features nightly"
           - "--features nightly --no-default-features"
-        include:
+        exclude:
           - rust: stable
             cargo_flags: "--features nightly"
           - rust: stable
