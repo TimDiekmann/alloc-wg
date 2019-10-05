@@ -42,7 +42,7 @@ impl<A: BuildRealloc> BuildRealloc for AbortAlloc<A> {
 
 impl<A: AllocRef> AllocRef for AbortAlloc<A> {
     type BuildAlloc = AbortAlloc<A::BuildAlloc>;
-    type Error = !;
+    type Error = crate::Never;
 
     fn get_build_alloc(&mut self) -> Self::BuildAlloc {
         Self(self.0.get_build_alloc())
@@ -75,7 +75,7 @@ impl<A: DeallocRef> DeallocRef for AbortAlloc<A> {
 
 impl<A: ReallocRef> ReallocRef for AbortAlloc<A> {
     type BuildRealloc = AbortAlloc<A::BuildRealloc>;
-    type Error = !;
+    type Error = crate::Never;
 
     fn get_build_realloc(&mut self) -> Self::BuildRealloc {
         Self(self.0.get_build_realloc())

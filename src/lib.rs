@@ -1,4 +1,3 @@
-#![feature(alloc_layout_extra, allocator_api, never_type)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![doc(test(attr(
     deny(
@@ -38,3 +37,5 @@ extern crate alloc as liballoc;
 
 mod unchecked_unwrap;
 pub use self::unchecked_unwrap::*;
+
+pub type Never = core::convert::Infallible;

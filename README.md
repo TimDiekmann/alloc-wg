@@ -10,7 +10,7 @@ Alloc-WG
 ![Crates.io](https://img.shields.io/crates/l/alloc-wg)
 
 An attempt to collect several proposals of [rust-lang/wg-allocators](https://github.com/rust-lang/wg-allocators) into an 
-MVP
+MVP.
 
 License
 -------

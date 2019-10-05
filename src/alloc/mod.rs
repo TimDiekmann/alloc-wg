@@ -6,10 +6,11 @@ pub use self::{
     layout::{LayoutErr, NonZeroLayout},
 };
 use core::{
-    alloc::{AllocErr, Layout},
+    alloc::{GlobalAlloc, Layout},
+    fmt,
     ptr::{self, NonNull},
 };
-use liballoc::alloc::{Alloc, Global};
+use liballoc::alloc::{alloc, alloc_zeroed, dealloc, realloc};
 #[cfg(feature = "std")]
 use std::alloc::System;
 
@@ -71,7 +72,28 @@ pub trait ReallocRef: Sized {
     ) -> Result<NonNull<u8>, Self::Error>;
 }
 
-macro_rules! impl_alloc_zst {
+/// The `AllocErr` error indicates an allocation failure
+/// that may be due to resource exhaustion or to
+/// something wrong when combining the given input arguments with this
+/// allocator.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct AllocErr;
+
+impl fmt::Display for AllocErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("memory allocation failed")
+    }
+}
+
+/// The global memory allocator.
+///
+/// This type implements the allocation traits by forwarding calls
+/// to the allocator registered with the `#[global_allocator]` attribute
+/// if there is one, or the `std` crate’s default.
+#[derive(Copy, Clone, Default, Debug)]
+pub struct Global;
+
+macro_rules! impl_common_alloc_zst {
     ($ty:tt) => {
         impl BuildAlloc for $ty {
             type AllocRef = Self;
@@ -108,56 +130,112 @@ macro_rules! impl_alloc_zst {
                 Self
             }
         }
-
-        impl AllocRef for $ty {
-            type BuildAlloc = Self;
-            type Error = AllocErr;
-
-            fn get_build_alloc(&mut self) -> Self::BuildAlloc {
-                Self
-            }
-
-            fn alloc(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
-                unsafe { Alloc::alloc(self, layout.into()) }
-            }
-
-            fn alloc_zeroed(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
-                unsafe { Alloc::alloc_zeroed(self, layout.into()) }
-            }
-        }
-
-        impl DeallocRef for $ty {
-            type BuildDealloc = Self;
-
-            fn get_build_dealloc(&mut self) -> Self::BuildDealloc {
-                Self
-            }
-
-            unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: NonZeroLayout) {
-                Alloc::dealloc(self, ptr, layout.into())
-            }
-        }
-
-        impl ReallocRef for $ty {
-            type BuildRealloc = Self;
-            type Error = AllocErr;
-
-            fn get_build_realloc(&mut self) -> Self::BuildRealloc {
-                Self
-            }
-
-            unsafe fn realloc(
-                &mut self,
-                ptr: NonNull<u8>,
-                layout: NonZeroLayout,
-                new_size: usize,
-            ) -> Result<NonNull<u8>, Self::Error> {
-                Alloc::realloc(self, ptr, layout.into(), new_size)
-            }
-        }
     };
 }
 
-impl_alloc_zst!(Global);
+impl_common_alloc_zst!(Global);
 #[cfg(feature = "std")]
-impl_alloc_zst!(System);
+impl_common_alloc_zst!(System);
+
+impl AllocRef for Global {
+    type BuildAlloc = Self;
+    type Error = AllocErr;
+
+    fn get_build_alloc(&mut self) -> Self::BuildAlloc {
+        Self
+    }
+
+    fn alloc(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
+        unsafe { NonNull::new(alloc(layout.into())).ok_or(AllocErr) }
+    }
+
+    fn alloc_zeroed(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
+        unsafe { NonNull::new(alloc_zeroed(layout.into())).ok_or(AllocErr) }
+    }
+}
+
+impl DeallocRef for Global {
+    type BuildDealloc = Self;
+
+    fn get_build_dealloc(&mut self) -> Self::BuildDealloc {
+        Self
+    }
+
+    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: NonZeroLayout) {
+        dealloc(ptr.as_ptr(), layout.into())
+    }
+}
+
+impl ReallocRef for Global {
+    type BuildRealloc = Self;
+    type Error = AllocErr;
+
+    fn get_build_realloc(&mut self) -> Self::BuildRealloc {
+        Self
+    }
+
+    unsafe fn realloc(
+        &mut self,
+        ptr: NonNull<u8>,
+        layout: NonZeroLayout,
+        new_size: usize,
+    ) -> Result<NonNull<u8>, Self::Error> {
+        NonNull::new(realloc(ptr.as_ptr(), layout.into(), new_size)).ok_or(AllocErr)
+    }
+}
+
+#[cfg(feature = "std")]
+impl AllocRef for System {
+    type BuildAlloc = Self;
+    type Error = AllocErr;
+
+    fn get_build_alloc(&mut self) -> Self::BuildAlloc {
+        Self
+    }
+
+    fn alloc(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
+        unsafe { NonNull::new(GlobalAlloc::alloc(self, layout.into())).ok_or(AllocErr) }
+    }
+
+    fn alloc_zeroed(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
+        unsafe { NonNull::new(GlobalAlloc::alloc_zeroed(self, layout.into())).ok_or(AllocErr) }
+    }
+}
+
+#[cfg(feature = "std")]
+impl DeallocRef for System {
+    type BuildDealloc = Self;
+
+    fn get_build_dealloc(&mut self) -> Self::BuildDealloc {
+        Self
+    }
+
+    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: NonZeroLayout) {
+        GlobalAlloc::dealloc(self, ptr.as_ptr(), layout.into())
+    }
+}
+
+#[cfg(feature = "std")]
+impl ReallocRef for System {
+    type BuildRealloc = Self;
+    type Error = AllocErr;
+
+    fn get_build_realloc(&mut self) -> Self::BuildRealloc {
+        Self
+    }
+
+    unsafe fn realloc(
+        &mut self,
+        ptr: NonNull<u8>,
+        layout: NonZeroLayout,
+        new_size: usize,
+    ) -> Result<NonNull<u8>, Self::Error> {
+        NonNull::new(GlobalAlloc::realloc(
+            self,
+            ptr.as_ptr(),
+            layout.into(),
+            new_size,
+        ))
+        .ok_or(AllocErr)
+    }
+}

@@ -13,6 +13,8 @@ jobs:
           - windows-latest
           - macOS-latest
         rust:
+          - stable
+          - beta
           - nightly
         cargo_flags:
           - ""
