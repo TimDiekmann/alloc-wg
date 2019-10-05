@@ -3,10 +3,6 @@ edition = "2018"
 version = "Two"
 unstable_features = true
 
-# Reporting
-report_todo = "Unnumbered"
-report_fixme = "Unnumbered"
-
 # Line breaking
 newline_style = "Unix"
 
