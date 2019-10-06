@@ -372,7 +372,7 @@ where
         len: usize,
         mut a: B::AllocRef,
     ) -> Result<Box<[mem::MaybeUninit<T>], B>, <B::AllocRef as AllocRef>::Error> {
-        let ptr = if mem::size_of::<T>() == 0 {
+        let ptr = if mem::size_of::<T>() == 0 || len == 0 {
             NonNull::dangling()
         } else {
             let layout =
