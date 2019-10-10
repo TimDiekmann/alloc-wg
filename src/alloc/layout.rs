@@ -95,8 +95,8 @@ impl NonZeroLayout {
     ///
     /// Returns `Err` if `T` is a ZST.
     #[inline]
-    pub fn for_value<T: ?Sized>(t: &T) -> Result<Self, LayoutErr> {
-        Layout::for_value(t).try_into()
+    pub fn for_value<T: ?Sized>(t: &T) -> Option<Self> {
+        Layout::for_value(t).try_into().ok()
     }
 
     /// Returns the amount of padding we must insert after `self` to ensure that the following

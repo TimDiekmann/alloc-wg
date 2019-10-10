@@ -88,7 +88,6 @@ use crate::{
 #[cfg(feature = "ptr_internals")]
 use core::ptr::Unique;
 use core::{
-    alloc::Layout,
     fmt,
     marker::PhantomData,
     mem,
@@ -373,12 +372,9 @@ where
         let ptr = if mem::size_of::<T>() == 0 || len == 0 {
             NonNull::dangling()
         } else {
-            let layout_builder = || NonZeroLayout::array::<mem::MaybeUninit<T>>(len);
-            a.alloc(layout_builder()?)
-                .map_err(|inner| CollectionAllocErr::AllocError {
-                    layout: unsafe { layout_builder().unwrap_unchecked() },
-                    inner,
-                })?
+            let layout = NonZeroLayout::array::<mem::MaybeUninit<T>>(len)?;
+            a.alloc(layout)
+                .map_err(|inner| CollectionAllocErr::AllocError { layout, inner })?
         };
         unsafe {
             let slice = slice::from_raw_parts_mut(ptr.cast().as_ptr(), len);
@@ -553,7 +549,7 @@ impl<T: ?Sized, B: BuildAlloc> Box<T, B> {
     pub fn alloc_ref(&mut self) -> B::Ref {
         unsafe {
             self.1
-                .build_alloc_ref(self.0.cast(), Layout::for_value(self.as_ref()))
+                .build_alloc_ref(self.0.cast(), NonZeroLayout::for_value(self.as_ref()))
         }
     }
     /// Consumes the `Box`, returning a wrapped raw pointer.

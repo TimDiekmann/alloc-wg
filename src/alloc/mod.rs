@@ -17,7 +17,11 @@ use std::alloc::System;
 pub trait BuildAlloc: Sized {
     type Ref: DeallocRef<BuildAlloc = Self>;
 
-    unsafe fn build_alloc_ref(&mut self, ptr: NonNull<u8>, layout: Layout) -> Self::Ref;
+    unsafe fn build_alloc_ref(
+        &mut self,
+        ptr: NonNull<u8>,
+        layout: Option<NonZeroLayout>,
+    ) -> Self::Ref;
 }
 
 pub trait DeallocRef: Sized {
@@ -78,7 +82,11 @@ macro_rules! impl_buildalloc_alloc_zst {
         impl BuildAlloc for $ty {
             type Ref = Self;
 
-            unsafe fn build_alloc_ref(&mut self, _ptr: NonNull<u8>, _layout: Layout) -> Self::Ref {
+            unsafe fn build_alloc_ref(
+                &mut self,
+                _ptr: NonNull<u8>,
+                _layout: Option<NonZeroLayout>,
+            ) -> Self::Ref {
                 Self
             }
         }
