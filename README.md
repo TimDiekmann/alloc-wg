@@ -26,9 +26,9 @@ Changes regarding the current `Alloc` trait
 
   Issue: [rust-lang/wg-allocators#9](https://github.com/rust-lang/wg-allocators/issues/9)
 
-- All three traits were associated with a Builder: [`BuildAlloc`], [`BuildDealloc`], and [`BuildRealloc`] such those
-  traits are related to their association similar how [`BuildHasher`] is related to [`Hasher`]. Although the signatures 
-  are different, it makes an even more flexible allocator design possible.
+- The allocators has to be associated with a Builder: [`BuildAlloc`]. It is related to the allocator traits similar how 
+  [`BuildHasher`] is related to [`Hasher`]. Although the signatures are different, it makes an even more flexible 
+  allocator design possible.
 
   Issue: [rust-lang/wg-allocators#12](https://github.com/rust-lang/wg-allocators/issues/12)
 
@@ -61,8 +61,6 @@ Currently associated containers
 [`DeallocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.DeallocRef.html
 [`ReallocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.ReallocRef.html
 [`BuildAlloc`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.BuildAlloc.html
-[`BuildDealloc`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.BuildDealloc.html
-[`BuildRealloc`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.BuildRealloc.html
 [`BuildHasher`]: https://doc.rust-lang.org/1.38.0/core/hash/trait.BuildHasher.html
 [`Hasher`]: https://doc.rust-lang.org/1.38.0/core/hash/trait.Hasher.html
 [`NonZeroLayout`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/struct.NonZeroLayout.html

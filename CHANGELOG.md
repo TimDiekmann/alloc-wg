@@ -1,6 +1,7 @@
 # v0.3
 
-- Change methods for retrieving `B` and allocator in `Box<T, B>` 
+- Change methods for retrieving `B` and allocator in `Box<T, B>`
+- Unify all builder traits into `BuildAlloc`
 
 # v0.2
 

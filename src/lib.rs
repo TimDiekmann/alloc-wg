@@ -15,9 +15,9 @@
 //!
 //!   Issue: [rust-lang/wg-allocators#9](https://github.com/rust-lang/wg-allocators/issues/9)
 //!
-//! - All three traits were associated with a Builder: [`BuildAlloc`], [`BuildDealloc`], and [`BuildRealloc`] such those
-//!   traits are related to their association similar how [`BuildHasher`] is related to [`Hasher`]. Although the signatures are
-//!   different, it makes an even more flexible allocator design possible.
+//! - The allocators has to be associated with a Builder: [`BuildAlloc`]. It is related to the allocator traits similar how
+//!   [`BuildHasher`] is related to [`Hasher`]. Although the signatures are different, it makes an even more flexible
+//!   allocator design possible.
 //!
 //!   Issue: [rust-lang/wg-allocators#12](https://github.com/rust-lang/wg-allocators/issues/12)
 //!
@@ -43,11 +43,9 @@
 //! [`AllocRef::alloc`]: crate::alloc::AllocRef::alloc
 //! [`AllocRef::alloc_zeroed`]: crate::alloc::AllocRef::alloc_zeroed
 //! [`Box`]: crate::boxed::Box
-//! [`DeallocRef`]: crate::alloc::AllocRef
-//! [`ReallocRef`]: crate::alloc::AllocRef
-//! [`BuildAlloc`]: crate::alloc::AllocRef
-//! [`BuildDealloc`]: crate::alloc::AllocRef
-//! [`BuildRealloc`]: crate::alloc::AllocRef
+//! [`DeallocRef`]: crate::alloc::DeallocRef
+//! [`ReallocRef`]: crate::alloc::ReallocRef
+//! [`BuildAlloc`]: crate::alloc::BuildAlloc
 //! [`BuildHasher`]: https://doc.rust-lang.org/1.38.0/core/hash/trait.BuildHasher.html
 //! [`Hasher`]: https://doc.rust-lang.org/1.38.0/core/hash/trait.Hasher.html
 //! [`NonZeroLayout`]: crate::alloc::NonZeroLayout
