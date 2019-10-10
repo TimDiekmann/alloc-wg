@@ -15,7 +15,7 @@
 //!
 //!   Issue: [rust-lang/wg-allocators#9](https://github.com/rust-lang/wg-allocators/issues/9)
 //!
-//! - The allocators has to be associated with a Builder: [`BuildAlloc`]. It is related to the allocator traits similar how
+//! - The allocators has to be associated with [`BuildAlloc`]. It is related to the allocator traits similar how
 //!   [`BuildHasher`] is related to [`Hasher`]. Although the signatures are different, it makes an even more flexible
 //!   allocator design possible.
 //!
