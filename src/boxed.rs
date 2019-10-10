@@ -85,6 +85,8 @@ use crate::{
     collections::CollectionAllocErr,
     UncheckedResultExt,
 };
+#[cfg(feature = "ptr_internals")]
+use core::ptr::Unique;
 use core::{
     alloc::Layout,
     fmt,
@@ -92,7 +94,7 @@ use core::{
     mem,
     ops::{Deref, DerefMut},
     pin::Pin,
-    ptr::NonNull,
+    ptr::{self, NonNull},
     slice,
 };
 
@@ -416,10 +418,9 @@ impl<T, B: BuildAlloc> Box<mem::MaybeUninit<T>, B> {
     /// assert_eq!(*five, 5)
     /// ```
     #[inline]
-    pub unsafe fn assume_init(mut self) -> Box<T, B> {
-        let a = self.get_alloc();
-        let ptr = Self::into_raw(self);
-        Box::from_raw_in(ptr as _, a)
+    pub unsafe fn assume_init(self) -> Box<T, B> {
+        let (ptr, b) = Self::into_raw_alloc(self);
+        Box::from_raw_in(ptr as _, b)
     }
 }
 
@@ -456,10 +457,9 @@ impl<T, B: BuildAlloc> Box<[mem::MaybeUninit<T>], B> {
     /// assert_eq!(*values, [1, 2, 3])
     /// ```
     #[inline]
-    pub unsafe fn assume_init(mut self) -> Box<[T], B> {
-        let a = self.get_alloc();
-        let ptr = Self::into_raw(self);
-        Box::from_raw_in(ptr as _, a)
+    pub unsafe fn assume_init(self) -> Box<[T], B> {
+        let (ptr, b) = Self::into_raw_alloc(self);
+        Box::from_raw_in(ptr as _, b)
     }
 }
 
@@ -538,15 +538,19 @@ impl<T: ?Sized, B: BuildAlloc> Box<T, B> {
     /// }
     /// ```
     #[inline]
-    pub unsafe fn from_raw_in(raw: *mut T, mut d: B::Ref) -> Self {
-        Self(
-            NonNull::new_unchecked(raw),
-            d.get_build_alloc(),
-            PhantomData,
-        )
+    pub unsafe fn from_raw_in(raw: *mut T, d: B) -> Self {
+        Self(NonNull::new_unchecked(raw), d, PhantomData)
     }
 
-    pub fn get_alloc(&mut self) -> B::Ref {
+    pub fn alloc_builder(&self) -> &B {
+        &self.1
+    }
+
+    pub fn alloc_builder_mut(&mut self) -> &mut B {
+        &mut self.1
+    }
+
+    pub fn alloc_ref(&mut self) -> B::Ref {
         unsafe {
             self.1
                 .build_alloc_ref(self.0.cast(), Layout::for_value(self.as_ref()))
@@ -596,7 +600,13 @@ impl<T: ?Sized, B: BuildAlloc> Box<T, B> {
     /// [memory layout]: index.html#memory-layout
     #[inline]
     pub fn into_raw(b: Self) -> *mut T {
-        Self::into_raw_non_null(b).as_ptr()
+        Self::into_raw_alloc(b).0
+    }
+
+    #[inline]
+    pub fn into_raw_alloc(b: Self) -> (*mut T, B) {
+        let (p, b) = Self::into_raw_non_null_alloc(b);
+        (p.as_ptr(), b)
     }
 
     /// Consumes the `Box`, returning the wrapped pointer as `NonNull<T>`.
@@ -626,27 +636,45 @@ impl<T: ?Sized, B: BuildAlloc> Box<T, B> {
     /// ```
     #[inline]
     pub fn into_raw_non_null(b: Self) -> NonNull<T> {
-        // TODO: Replace with `Self::into_unique(b).into()`
-        let mut ptr = b.0;
-        mem::forget(b);
-        unsafe { NonNull::new_unchecked(ptr.as_mut()) }
+        Self::into_raw_non_null_alloc(b).0
     }
 
-    // TODO: Uncomment this when changing `NonNull` to `Unique`
-    // #[inline]
-    // #[doc(hidden)]
-    // pub fn into_unique(b: Self) -> Unique<T> {
-    //     let mut unique = b.0;
-    //     mem::forget(b);
-    //
-    //     // Box is kind-of a library type, but recognized as a "unique pointer" by
-    //     // Stacked Borrows.  This function here corresponds to "reborrowing to
-    //     // a raw pointer", but there is no actual reborrow here -- so
-    //     // without some care, the pointer we are returning here still carries
-    //     // the tag of `b`, with `Unique` permission.
-    //     // We round-trip through a mutable reference to avoid that.
-    //     unsafe { Unique::new_unchecked(unique.as_mut()) }
-    // }
+    #[inline]
+    pub fn into_raw_non_null_alloc(b: Self) -> (NonNull<T>, B) {
+        // TODO: Replace with `Self::into_unique_alloc(b).into()`
+        let mut ptr = b.0;
+        unsafe {
+            let alloc = ptr::read(&b.1);
+            mem::forget(b);
+            (NonNull::new_unchecked(ptr.as_mut()), alloc)
+        }
+    }
+
+    #[inline]
+    #[doc(hidden)]
+    #[cfg(feature = "ptr_internals")]
+    pub fn into_unique(b: Self) -> Unique<T> {
+        Self::into_unique_alloc(b).0
+    }
+
+    #[inline]
+    #[doc(hidden)]
+    #[cfg(feature = "ptr_internals")]
+    pub fn into_unique_alloc(b: Self) -> (Unique<T>, B) {
+        let mut ptr = b.0;
+        unsafe {
+            let alloc = ptr::read(&b.1);
+            mem::forget(b);
+
+            // Box is kind-of a library type, but recognized as a "unique pointer" by
+            // Stacked Borrows.  This function here corresponds to "reborrowing to
+            // a raw pointer", but there is no actual reborrow here -- so
+            // without some care, the pointer we are returning here still carries
+            // the tag of `b`, with `Unique` permission.
+            // We round-trip through a mutable reference to avoid that.
+            (Unique::new_unchecked(ptr.as_mut()), alloc)
+        }
+    }
 
     /// Consumes and leaks the `Box`, returning a mutable reference,
     /// `&'a mut T`. Note that the type `T` must outlive the chosen lifetime
@@ -746,7 +774,7 @@ impl<T: ?Sized, B: BuildAlloc> AsMut<T> for Box<T, B> {
 unsafe impl<#[may_dangle] T: ?Sized, B: BuildAlloc> Drop for Box<T, B> {
     fn drop(&mut self) {
         unsafe {
-            self.get_alloc().dealloc(
+            self.alloc_ref().dealloc(
                 self.0.cast(),
                 NonZeroLayout::for_value_unchecked(self.0.as_ref()),
             )
@@ -758,7 +786,7 @@ unsafe impl<#[may_dangle] T: ?Sized, B: BuildAlloc> Drop for Box<T, B> {
 impl<T: ?Sized, B: BuildAlloc> Drop for Box<T, B> {
     fn drop(&mut self) {
         unsafe {
-            self.get_alloc().dealloc(
+            self.alloc_ref().dealloc(
                 self.0.cast(),
                 NonZeroLayout::for_value_unchecked(self.0.as_ref()),
             )

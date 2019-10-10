@@ -18,4 +18,5 @@ maintenance = { status = "actively-developed" }
 std = []
 default = ["std"]
 dropck_eyepatch = []
-nightly = ["dropck_eyepatch"]
+ptr_internals = []
+nightly = ["dropck_eyepatch", "ptr_internals"]

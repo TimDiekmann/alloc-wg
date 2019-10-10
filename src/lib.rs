@@ -54,6 +54,7 @@
 //! [`AbortAlloc`]: crate::alloc::AbortAlloc
 
 #![cfg_attr(feature = "dropck_eyepatch", feature(dropck_eyepatch))]
+#![cfg_attr(feature = "ptr_internals", feature(ptr_internals))]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![doc(test(attr(
     deny(

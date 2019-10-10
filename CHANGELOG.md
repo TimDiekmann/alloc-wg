@@ -1,3 +1,7 @@
+# v0.3
+
+- Change methods for retrieving `B` and allocator in `Box<T, B>` 
+
 # v0.2
 
 - Add `Box<T, B: BuildDealloc>`
