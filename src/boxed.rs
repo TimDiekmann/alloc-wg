@@ -538,20 +538,21 @@ impl<T: ?Sized, B: BuildAlloc> Box<T, B> {
         Self(NonNull::new_unchecked(raw), d, PhantomData)
     }
 
-    pub fn alloc_builder(&self) -> &B {
+    pub fn build_alloc(&self) -> &B {
         &self.1
     }
 
-    pub fn alloc_builder_mut(&mut self) -> &mut B {
+    pub fn build_alloc_mut(&mut self) -> &mut B {
         &mut self.1
     }
 
-    pub fn alloc_ref(&mut self) -> B::Ref {
-        unsafe {
-            self.1
-                .build_alloc_ref(self.0.cast(), NonZeroLayout::for_value(self.as_ref()))
-        }
+    pub fn alloc_ref(&mut self) -> (B::Ref, Option<NonZeroLayout>) {
+        let layout = NonZeroLayout::for_value(self.as_ref());
+        let ptr = self.0.cast();
+        let alloc = unsafe { self.build_alloc_mut().build_alloc_ref(ptr, layout) };
+        (alloc, layout)
     }
+
     /// Consumes the `Box`, returning a wrapped raw pointer.
     ///
     /// The pointer will be properly aligned and non-null.
@@ -770,10 +771,9 @@ impl<T: ?Sized, B: BuildAlloc> AsMut<T> for Box<T, B> {
 unsafe impl<#[may_dangle] T: ?Sized, B: BuildAlloc> Drop for Box<T, B> {
     fn drop(&mut self) {
         unsafe {
-            self.alloc_ref().dealloc(
-                self.0.cast(),
-                NonZeroLayout::for_value_unchecked(self.0.as_ref()),
-            )
+            if let (mut alloc, Some(layout)) = self.alloc_ref() {
+                alloc.dealloc(self.0.cast(), layout)
+            }
         }
     }
 }
@@ -782,10 +782,9 @@ unsafe impl<#[may_dangle] T: ?Sized, B: BuildAlloc> Drop for Box<T, B> {
 impl<T: ?Sized, B: BuildAlloc> Drop for Box<T, B> {
     fn drop(&mut self) {
         unsafe {
-            self.alloc_ref().dealloc(
-                self.0.cast(),
-                NonZeroLayout::for_value_unchecked(self.0.as_ref()),
-            )
+            if let (mut alloc, Some(layout)) = self.alloc_ref() {
+                alloc.dealloc(self.0.cast(), layout)
+            }
         }
     }
 }
