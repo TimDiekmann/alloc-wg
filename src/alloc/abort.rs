@@ -4,6 +4,7 @@ use crate::alloc::{AllocRef, BuildAlloc, DeallocRef, NonZeroLayout, ReallocRef};
 use core::ptr::NonNull;
 use liballoc::alloc::handle_alloc_error;
 
+/// An allocator, which wraps another allocator and aborts on OOM.
 #[derive(Default, Copy, Clone)]
 pub struct AbortAlloc<A>(pub A);
 
