@@ -59,7 +59,7 @@ Currently associated containers
 [`AllocRef::alloc`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.AllocRef.html#tymethod.alloc
 [`AllocRef::alloc_zeroed`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.AllocRef.html#method.alloc_zeroed
 [`Box`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/boxed/struct.Box.html
-[`Box`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/raw_vec/struct.RawVec.html
+[`RawVec`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/raw_vec/struct.RawVec.html
 [`DeallocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.DeallocRef.html
 [`ReallocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.ReallocRef.html
 [`BuildAlloc`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.BuildAlloc.html
