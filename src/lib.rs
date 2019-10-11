@@ -90,6 +90,7 @@
 pub mod alloc;
 pub mod boxed;
 pub mod collections;
+pub mod raw_vec;
 
 extern crate alloc as liballoc;
 

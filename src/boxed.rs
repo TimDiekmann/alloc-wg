@@ -101,7 +101,11 @@ use core::{
 ///
 /// See the [module-level documentation](index.html) for more.
 // Using `NonNull` + `PhantomData` instead of `Unique` to stay on stable as long as possible
-pub struct Box<T: ?Sized, B: BuildAlloc = AbortAlloc<Global>>(NonNull<T>, B, PhantomData<T>);
+pub struct Box<T: ?Sized, B: BuildAlloc = AbortAlloc<Global>> {
+    ptr: NonNull<T>,
+    build_alloc: B,
+    _owned: PhantomData<T>,
+}
 
 #[allow(clippy::use_self)]
 impl<T> Box<T> {
@@ -201,7 +205,7 @@ where
         } else {
             NonNull::dangling()
         };
-        Ok(Self(ptr, a.get_build_alloc(), PhantomData))
+        unsafe { Ok(Self::from_raw_in(ptr.as_ptr(), a.get_build_alloc())) }
     }
 
     /// Constructs a new box with uninitialized contents in a specified allocator.
@@ -255,12 +259,12 @@ where
         mut a: B::Ref,
     ) -> Result<Box<mem::MaybeUninit<T>, B>, <B::Ref as AllocRef>::Error> {
         let ptr = if let Ok(layout) = NonZeroLayout::new::<T>() {
-            let ptr: NonNull<T> = a.alloc(layout)?.cast();
+            let ptr: NonNull<mem::MaybeUninit<T>> = a.alloc(layout)?.cast();
             ptr
         } else {
             NonNull::dangling()
         };
-        Ok(Self(ptr.cast(), a.get_build_alloc(), PhantomData))
+        unsafe { Ok(Box::from_raw_in(ptr.as_ptr(), a.get_build_alloc())) }
     }
 
     /// Constructs a new `Pin<Box<T, A>>` with the specified allocator. If `T` does not implement
@@ -378,7 +382,10 @@ where
         };
         unsafe {
             let slice = slice::from_raw_parts_mut(ptr.cast().as_ptr(), len);
-            Ok(Self(NonNull::from(slice), a.get_build_alloc(), PhantomData))
+            Ok(Box::from_raw_in(
+                NonNull::from(slice).as_ptr(),
+                a.get_build_alloc(),
+            ))
         }
     }
 }
@@ -534,21 +541,25 @@ impl<T: ?Sized, B: BuildAlloc> Box<T, B> {
     /// }
     /// ```
     #[inline]
-    pub unsafe fn from_raw_in(raw: *mut T, d: B) -> Self {
-        Self(NonNull::new_unchecked(raw), d, PhantomData)
+    pub unsafe fn from_raw_in(raw: *mut T, builder: B) -> Self {
+        Self {
+            ptr: NonNull::new_unchecked(raw),
+            build_alloc: builder,
+            _owned: PhantomData,
+        }
     }
 
     pub fn build_alloc(&self) -> &B {
-        &self.1
+        &self.build_alloc
     }
 
     pub fn build_alloc_mut(&mut self) -> &mut B {
-        &mut self.1
+        &mut self.build_alloc
     }
 
     pub fn alloc_ref(&mut self) -> (B::Ref, Option<NonZeroLayout>) {
         let layout = NonZeroLayout::for_value(self.as_ref());
-        let ptr = self.0.cast();
+        let ptr = self.ptr.cast();
         let alloc = unsafe { self.build_alloc_mut().build_alloc_ref(ptr, layout) };
         (alloc, layout)
     }
@@ -639,9 +650,9 @@ impl<T: ?Sized, B: BuildAlloc> Box<T, B> {
     #[inline]
     pub fn into_raw_non_null_alloc(b: Self) -> (NonNull<T>, B) {
         // TODO: Replace with `Self::into_unique_alloc(b).into()`
-        let mut ptr = b.0;
+        let mut ptr = b.ptr;
         unsafe {
-            let alloc = ptr::read(&b.1);
+            let alloc = ptr::read(b.build_alloc());
             mem::forget(b);
             (NonNull::new_unchecked(ptr.as_mut()), alloc)
         }
@@ -658,9 +669,9 @@ impl<T: ?Sized, B: BuildAlloc> Box<T, B> {
     #[doc(hidden)]
     #[cfg(feature = "ptr_internals")]
     pub fn into_unique_alloc(b: Self) -> (Unique<T>, B) {
-        let mut ptr = b.0;
+        let mut ptr = b.ptr;
         unsafe {
-            let alloc = ptr::read(&b.1);
+            let alloc = ptr::read(b.build_alloc());
             mem::forget(b);
 
             // Box is kind-of a library type, but recognized as a "unique pointer" by
@@ -727,12 +738,12 @@ impl<T: ?Sized, B: BuildAlloc> Deref for Box<T, B> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        unsafe { self.0.as_ref() }
+        unsafe { self.ptr.as_ref() }
     }
 }
 impl<T: ?Sized, B: BuildAlloc> DerefMut for Box<T, B> {
     fn deref_mut(&mut self) -> &mut T {
-        unsafe { self.0.as_mut() }
+        unsafe { self.ptr.as_mut() }
     }
 }
 
@@ -772,7 +783,7 @@ unsafe impl<#[may_dangle] T: ?Sized, B: BuildAlloc> Drop for Box<T, B> {
     fn drop(&mut self) {
         unsafe {
             if let (mut alloc, Some(layout)) = self.alloc_ref() {
-                alloc.dealloc(self.0.cast(), layout)
+                alloc.dealloc(self.ptr.cast(), layout)
             }
         }
     }
@@ -783,7 +794,7 @@ impl<T: ?Sized, B: BuildAlloc> Drop for Box<T, B> {
     fn drop(&mut self) {
         unsafe {
             if let (mut alloc, Some(layout)) = self.alloc_ref() {
-                alloc.dealloc(self.0.cast(), layout)
+                alloc.dealloc(self.ptr.cast(), layout)
             }
         }
     }
