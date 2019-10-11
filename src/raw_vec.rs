@@ -82,14 +82,11 @@ impl<T> RawVec<T> {
     /// zero-sized. Note that if `T` is zero-sized this means you will
     /// *not* get a `RawVec` with the requested capacity.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// * Panics if the requested capacity exceeds `usize::MAX` bytes.
-    /// * Panics on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
-    ///
-    /// # Aborts
-    ///
-    /// Aborts on OOM.
+    /// * `CapacityOverflow` if the requested capacity exceeds `usize::MAX` bytes.
+    /// * `CapacityOverflow` on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
+    /// * `AllocError` on OOM
     #[inline]
     pub fn with_capacity(capacity: usize) -> Result<Self, CollectionAllocErr<Global>> {
         Self::with_capacity_in(capacity, Global)
@@ -103,11 +100,11 @@ impl<T> RawVec<T> {
 
     /// Reconstitutes a RawVec from a pointer, and capacity.
     ///
-    /// # Undefined Behavior
+    /// # Safety
     ///
-    /// The ptr must be allocated (via the default allocator `AbortAlloc<Global>`), and with the
+    /// The ptr must be allocated (via the default allocator `Global`), and with the
     /// given capacity. The capacity cannot exceed `isize::MAX` (only a concern on 32-bit systems).
-    /// If the ptr and capacity come from a RawVec created via `a`, then this is guaranteed.
+    /// If the ptr and capacity come from a RawVec created with `Global`, then this is guaranteed.
     #[inline]
     pub unsafe fn from_raw_parts(ptr: *mut T, capacity: usize) -> Self {
         Self::from_raw_parts_in(ptr, capacity, Global)
@@ -118,8 +115,7 @@ impl<T, B: BuildAlloc> RawVec<T, B>
 where
     B::Ref: AllocRef,
 {
-    /// Like `new` but parameterized over the choice of allocator for
-    /// the returned RawVec.
+    /// Like `new` but parameterized over the choice of allocator for the returned `RawVec`.
     pub fn new_in(mut a: B::Ref) -> Self {
         let cap = if mem::size_of::<T>() == 0 { !0 } else { 0 };
         Self {
@@ -131,11 +127,15 @@ where
     }
 
     #[inline]
+    /// Like `with_capacity` but parameterized over the choice of allocator for the returned
+    /// `RawVec`.
     pub fn with_capacity_in(capacity: usize, a: B::Ref) -> Result<Self, CollectionAllocErr<B>> {
         Self::allocate_in(capacity, false, a)
     }
 
     #[inline]
+    /// Like `with_capacity_zeroed` but parameterized over the choice of allocator for the returned
+    /// `RawVec`.
     pub fn with_capacity_zeroed_in(
         capacity: usize,
         a: B::Ref,
@@ -179,13 +179,14 @@ where
 }
 
 impl<T, B: BuildAlloc> RawVec<T, B> {
-    /// Reconstitutes a RawVec from a pointer, capacity, and allocator.
+    /// Reconstitutes a `RawVec` from a pointer, capacity, and allocator.
     ///
-    /// # Undefined Behavior
+    /// # Safety
     ///
-    /// The ptr must be allocated (via the given allocator `a`), and with the given capacity. The
-    /// capacity cannot exceed `isize::MAX` (only a concern on 32-bit systems).
-    /// If the ptr and capacity come from a RawVec created via `a`, then this is guaranteed.
+    /// The ptr must be allocated (via the given allocator `build_alloc`), and with the given
+    /// capacity. The capacity cannot exceed `isize::MAX` (only a concern on 32-bit systems).
+    /// If the ptr and capacity come from a `RawVec` created via `build_alloc`, then this is
+    /// guaranteed.
     pub unsafe fn from_raw_parts_in(ptr: *mut T, capacity: usize, build_alloc: B) -> Self {
         Self {
             ptr: NonNull::new_unchecked(ptr),
@@ -193,36 +194,6 @@ impl<T, B: BuildAlloc> RawVec<T, B> {
             build_alloc,
             _owned: PhantomData,
         }
-    }
-
-    /// Converts a `Box<[T], B>` into a `RawVec<T, B>`.
-    pub fn from_box(slice: Box<[T], B>) -> Self {
-        let len = slice.len();
-        let (ptr, builder) = Box::into_raw_non_null_alloc(slice);
-        Self {
-            ptr: ptr.cast(),
-            capacity: len,
-            build_alloc: builder,
-            _owned: PhantomData,
-        }
-    }
-
-    /// Converts the entire buffer into `Box<[T]>`.
-    ///
-    /// Note that this will correctly reconstitute any `cap` changes
-    /// that may have been performed. (see description of type for details)
-    ///
-    /// # Undefined Behavior
-    ///
-    /// All elements of `RawVec<T, Global>` must be initialized. Notice that
-    /// the rules around uninitialized boxed values are not finalized yet,
-    /// but until they are, it is advisable to avoid them.
-    pub unsafe fn into_box(self) -> Box<[T], B> {
-        // NOTE: not calling `capacity()` here, actually using the real `cap` field!
-        let slice = slice::from_raw_parts_mut(self.ptr(), self.capacity);
-        let output: Box<[T], B> = Box::from_raw_in(slice, ptr::read(&self.build_alloc));
-        mem::forget(self);
-        output
     }
 
     /// Gets a raw pointer to the start of the allocation. Note that this is
@@ -244,14 +215,18 @@ impl<T, B: BuildAlloc> RawVec<T, B> {
         }
     }
 
+    /// Returns a shared reference to the alloc builder.
     pub fn build_alloc(&self) -> &B {
         &self.build_alloc
     }
 
+    /// Returns a mutable reference to the alloc builder.
     pub fn build_alloc_mut(&mut self) -> &mut B {
         &mut self.build_alloc
     }
 
+    /// Returns the allocator used by this `RawVec` and the used layout, if any.
+    /// The layout is `None` if the capacity of this `RawVec` is `0` or if `T` is a zero sized type.
     pub fn alloc_ref(&mut self) -> (B::Ref, Option<NonZeroLayout>) {
         let size = mem::size_of::<T>() * self.capacity;
         let layout = if size == 0 {
@@ -267,6 +242,31 @@ impl<T, B: BuildAlloc> RawVec<T, B> {
         let ptr = self.ptr.cast();
         let alloc = unsafe { self.build_alloc_mut().build_alloc_ref(ptr, layout) };
         (alloc, layout)
+    }
+}
+
+impl<T, B: BuildAlloc> From<Box<[T], B>> for RawVec<T, B> {
+    fn from(slice: Box<[T], B>) -> Self {
+        let len = slice.len();
+        let (ptr, builder) = Box::into_raw_non_null_alloc(slice);
+        Self {
+            ptr: ptr.cast(),
+            capacity: len,
+            build_alloc: builder,
+            _owned: PhantomData,
+        }
+    }
+}
+
+impl<T, B: BuildAlloc> From<RawVec<T, B>> for Box<[mem::MaybeUninit<T>], B> {
+    fn from(vec: RawVec<T, B>) -> Self {
+        unsafe {
+            let slice: &mut [mem::MaybeUninit<T>] =
+                slice::from_raw_parts_mut(vec.ptr() as _, vec.capacity);
+            let output = Self::from_raw_in(slice, ptr::read(&vec.build_alloc));
+            mem::forget(vec);
+            output
+        }
     }
 }
 
@@ -299,6 +299,55 @@ where
         Ok(cmp::max(double_cap, required_cap))
     }
 
+    /// Ensures that the buffer contains at least enough space to hold
+    /// `used_capacity + needed_extra_capacity` elements. If it doesn't already have
+    /// enough capacity, will reallocate enough space plus comfortable slack
+    /// space to get amortized `O(1)` behavior. Will limit this behavior
+    /// if it would needlessly cause itself to panic.
+    ///
+    /// If `used_capacity` exceeds `self.capacity()`, this may fail to actually allocate
+    /// the requested space. This is not really unsafe, but the unsafe
+    /// code *you* write that relies on the behavior of this function may break.
+    ///
+    /// This is ideal for implementing a bulk-push operation like `extend`.
+    ///
+    /// # Errors
+    ///
+    /// * `CapacityOverflow` if the requested capacity exceeds `usize::MAX` bytes.
+    /// * `CapacityOverflow` on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
+    /// * `AllocError` on OOM
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use alloc_wg::{alloc::Global, collections::CollectionAllocErr, raw_vec::RawVec};
+    /// use core::ptr;
+    ///
+    /// struct MyVec<T> {
+    ///     buf: RawVec<T>,
+    ///     len: usize,
+    /// }
+    ///
+    /// impl<T: Clone> MyVec<T> {
+    ///     pub fn push_all(&mut self, elems: &[T]) -> Result<(), CollectionAllocErr<Global>> {
+    ///         self.buf.reserve(self.len, elems.len())?;
+    ///         // reserve would have aborted or panicked if the len exceeded
+    ///         // `isize::MAX` so this is safe to do unchecked now.
+    ///         for x in elems {
+    ///             unsafe {
+    ///                 ptr::write(self.buf.ptr().add(self.len), x.clone());
+    ///             }
+    ///             self.len += 1;
+    ///         }
+    ///         Ok(())
+    ///     }
+    /// }
+    /// # fn main() -> Result<(), CollectionAllocErr<Global>> {
+    /// #   let mut vector = MyVec { buf: RawVec::new(), len: 0 };
+    /// #   vector.push_all(&[1, 3, 5, 7, 9])?;
+    /// #   Ok(())
+    /// # }
+    /// ```
     pub fn reserve(
         &mut self,
         used_capacity: usize,
@@ -311,6 +360,23 @@ where
         )
     }
 
+    /// Attempts to ensure that the buffer contains at least enough space to hold
+    /// `used_capacity + needed_extra_capacity` elements. If it doesn't already have
+    /// enough capacity, will reallocate in place enough space plus comfortable slack
+    /// space to get amortized `O(1)` behavior. Will limit this behaviour
+    /// if it would needlessly cause itself to panic.
+    ///
+    /// If `used_capacity` exceeds `self.capacity()`, this may fail to actually allocate
+    /// the requested space. This is not really unsafe, but the unsafe
+    /// code *you* write that relies on the behavior of this function may break.
+    ///
+    /// Returns `true` if the reallocation attempt has succeeded.
+    ///
+    /// # Errors
+    ///
+    /// * `CapacityOverflow` if the requested capacity exceeds `usize::MAX` bytes.
+    /// * `CapacityOverflow` on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
+    /// * `AllocError` on OOM
     pub fn reserve_exact(
         &mut self,
         used_capacity: usize,
@@ -326,9 +392,9 @@ where
     ///
     /// Panics if the given amount is *larger* than the current capacity.
     ///
-    /// # Aborts
+    /// # Errors
     ///
-    /// Aborts on OOM.
+    /// * `AllocError` on OOM
     pub fn shrink_to_fit(&mut self, amount: usize) -> Result<(), CollectionAllocErr<B>> {
         let elem_size = mem::size_of::<T>();
 
