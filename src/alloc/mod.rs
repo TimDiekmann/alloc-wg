@@ -14,7 +14,7 @@ pub use liballoc::alloc::{alloc, alloc_zeroed, dealloc, realloc};
 #[cfg(feature = "std")]
 use std::alloc::System;
 
-pub trait BuildAlloc: Sized {
+pub trait BuildAllocRef: Sized {
     type Ref: DeallocRef<BuildAlloc = Self>;
 
     unsafe fn build_alloc_ref(
@@ -25,7 +25,7 @@ pub trait BuildAlloc: Sized {
 }
 
 pub trait DeallocRef: Sized {
-    type BuildAlloc: BuildAlloc<Ref = Self>;
+    type BuildAlloc: BuildAllocRef<Ref = Self>;
 
     fn get_build_alloc(&mut self) -> Self::BuildAlloc;
 
@@ -79,7 +79,7 @@ pub struct Global;
 
 macro_rules! impl_buildalloc_alloc_zst {
     ($ty:tt) => {
-        impl BuildAlloc for $ty {
+        impl BuildAllocRef for $ty {
             type Ref = Self;
 
             unsafe fn build_alloc_ref(

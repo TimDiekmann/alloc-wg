@@ -1,6 +1,6 @@
 #![allow(clippy::use_self)]
 
-use crate::alloc::{AllocRef, BuildAlloc, DeallocRef, NonZeroLayout, ReallocRef};
+use crate::alloc::{AllocRef, BuildAllocRef, DeallocRef, NonZeroLayout, ReallocRef};
 use core::ptr::NonNull;
 use liballoc::alloc::handle_alloc_error;
 
@@ -8,7 +8,7 @@ use liballoc::alloc::handle_alloc_error;
 #[derive(Default, Copy, Clone)]
 pub struct AbortAlloc<A>(pub A);
 
-impl<A: BuildAlloc> BuildAlloc for AbortAlloc<A> {
+impl<A: BuildAllocRef> BuildAllocRef for AbortAlloc<A> {
     type Ref = AbortAlloc<A::Ref>;
 
     unsafe fn build_alloc_ref(

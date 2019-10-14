@@ -81,7 +81,7 @@
 //! [`Layout::for_value(&*value)`]: crate::alloc::Layout::for_value
 
 use crate::{
-    alloc::{AbortAlloc, AllocRef, BuildAlloc, DeallocRef, Global, NonZeroLayout},
+    alloc::{AbortAlloc, AllocRef, BuildAllocRef, DeallocRef, Global, NonZeroLayout},
     collections::CollectionAllocErr,
     UncheckedResultExt,
 };
@@ -101,7 +101,7 @@ use core::{
 ///
 /// See the [module-level documentation](index.html) for more.
 // Using `NonNull` + `PhantomData` instead of `Unique` to stay on stable as long as possible
-pub struct Box<T: ?Sized, B: BuildAlloc = AbortAlloc<Global>> {
+pub struct Box<T: ?Sized, B: BuildAllocRef = AbortAlloc<Global>> {
     ptr: NonNull<T>,
     build_alloc: B,
     _owned: PhantomData<T>,
@@ -156,7 +156,7 @@ impl<T> Box<T> {
 }
 
 #[allow(clippy::use_self)]
-impl<T, B: BuildAlloc> Box<T, B>
+impl<T, B: BuildAllocRef> Box<T, B>
 where
     B::Ref: AllocRef,
 {
@@ -313,7 +313,7 @@ impl<T> Box<[T]> {
 }
 
 #[allow(clippy::use_self)]
-impl<T, B: BuildAlloc> Box<[T], B>
+impl<T, B: BuildAllocRef> Box<[T], B>
 where
     B::Ref: AllocRef,
 {
@@ -391,7 +391,7 @@ where
 }
 
 #[allow(clippy::use_self)]
-impl<T, B: BuildAlloc> Box<mem::MaybeUninit<T>, B> {
+impl<T, B: BuildAllocRef> Box<mem::MaybeUninit<T>, B> {
     /// Converts to `Box<T, B>`.
     ///
     /// # Safety
@@ -428,7 +428,7 @@ impl<T, B: BuildAlloc> Box<mem::MaybeUninit<T>, B> {
 }
 
 #[allow(clippy::use_self)]
-impl<T, B: BuildAlloc> Box<[mem::MaybeUninit<T>], B> {
+impl<T, B: BuildAllocRef> Box<[mem::MaybeUninit<T>], B> {
     /// Converts to `Box<[T], B>`.
     ///
     /// # Safety
@@ -511,7 +511,7 @@ impl<T: ?Sized> Box<T> {
     }
 }
 
-impl<T: ?Sized, B: BuildAlloc> Box<T, B> {
+impl<T: ?Sized, B: BuildAllocRef> Box<T, B> {
     /// Constructs a box from a raw pointer.
     ///
     /// After calling this function, the raw pointer is owned by the resulting `Box`. Specifically,
@@ -734,20 +734,20 @@ impl<T: ?Sized, B: BuildAlloc> Box<T, B> {
     }
 }
 
-impl<T: ?Sized, B: BuildAlloc> Deref for Box<T, B> {
+impl<T: ?Sized, B: BuildAllocRef> Deref for Box<T, B> {
     type Target = T;
 
     fn deref(&self) -> &T {
         unsafe { self.ptr.as_ref() }
     }
 }
-impl<T: ?Sized, B: BuildAlloc> DerefMut for Box<T, B> {
+impl<T: ?Sized, B: BuildAllocRef> DerefMut for Box<T, B> {
     fn deref_mut(&mut self) -> &mut T {
         unsafe { self.ptr.as_mut() }
     }
 }
 
-impl<T: ?Sized, B: BuildAlloc> From<Box<T, B>> for Pin<Box<T, B>> {
+impl<T: ?Sized, B: BuildAllocRef> From<Box<T, B>> for Pin<Box<T, B>> {
     /// Converts a `Box<T, B>` into a `Pin<Box<T, B>>`
     ///
     /// This conversion does not allocate on the heap and happens in place.
@@ -756,30 +756,30 @@ impl<T: ?Sized, B: BuildAlloc> From<Box<T, B>> for Pin<Box<T, B>> {
     }
 }
 
-impl<T: fmt::Display + ?Sized, B: BuildAlloc> fmt::Display for Box<T, B> {
+impl<T: fmt::Display + ?Sized, B: BuildAllocRef> fmt::Display for Box<T, B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&**self, f)
     }
 }
-impl<T: fmt::Debug + ?Sized, B: BuildAlloc> fmt::Debug for Box<T, B> {
+impl<T: fmt::Debug + ?Sized, B: BuildAllocRef> fmt::Debug for Box<T, B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&**self, f)
     }
 }
 
-impl<T: ?Sized, B: BuildAlloc> AsRef<T> for Box<T, B> {
+impl<T: ?Sized, B: BuildAllocRef> AsRef<T> for Box<T, B> {
     fn as_ref(&self) -> &T {
         &**self
     }
 }
-impl<T: ?Sized, B: BuildAlloc> AsMut<T> for Box<T, B> {
+impl<T: ?Sized, B: BuildAllocRef> AsMut<T> for Box<T, B> {
     fn as_mut(&mut self) -> &mut T {
         &mut **self
     }
 }
 
 #[cfg(feature = "dropck_eyepatch")]
-unsafe impl<#[may_dangle] T: ?Sized, B: BuildAlloc> Drop for Box<T, B> {
+unsafe impl<#[may_dangle] T: ?Sized, B: BuildAllocRef> Drop for Box<T, B> {
     fn drop(&mut self) {
         unsafe {
             if let (mut alloc, Some(layout)) = self.alloc_ref() {
@@ -790,7 +790,7 @@ unsafe impl<#[may_dangle] T: ?Sized, B: BuildAlloc> Drop for Box<T, B> {
 }
 
 #[cfg(not(feature = "dropck_eyepatch"))]
-impl<T: ?Sized, B: BuildAlloc> Drop for Box<T, B> {
+impl<T: ?Sized, B: BuildAllocRef> Drop for Box<T, B> {
     fn drop(&mut self) {
         unsafe {
             if let (mut alloc, Some(layout)) = self.alloc_ref() {

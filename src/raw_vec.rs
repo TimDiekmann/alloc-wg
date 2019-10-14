@@ -1,5 +1,5 @@
 use crate::{
-    alloc::{AllocRef, BuildAlloc, DeallocRef, Global, NonZeroLayout, ReallocRef},
+    alloc::{AllocRef, BuildAllocRef, DeallocRef, Global, NonZeroLayout, ReallocRef},
     boxed::Box,
     collections::CollectionAllocErr::{self, AllocError, CapacityOverflow},
 };
@@ -33,7 +33,7 @@ use core::{cmp, marker::PhantomData, mem, ptr, ptr::NonNull, slice};
 /// field. This allows zero-sized types to not be special-cased by consumers of
 /// this type.
 // Using `NonNull` + `PhantomData` instead of `Unique` to stay on stable as long as possible
-pub struct RawVec<T, B: BuildAlloc = Global> {
+pub struct RawVec<T, B: BuildAllocRef = Global> {
     ptr: NonNull<T>,
     capacity: usize,
     build_alloc: B,
@@ -111,7 +111,7 @@ impl<T> RawVec<T> {
     }
 }
 
-impl<T, B: BuildAlloc> RawVec<T, B>
+impl<T, B: BuildAllocRef> RawVec<T, B>
 where
     B::Ref: AllocRef,
 {
@@ -178,7 +178,7 @@ where
     }
 }
 
-impl<T, B: BuildAlloc> RawVec<T, B> {
+impl<T, B: BuildAllocRef> RawVec<T, B> {
     /// Reconstitutes a `RawVec` from a pointer, capacity, and allocator.
     ///
     /// # Safety
@@ -245,7 +245,7 @@ impl<T, B: BuildAlloc> RawVec<T, B> {
     }
 }
 
-impl<T, B: BuildAlloc> From<Box<[T], B>> for RawVec<T, B> {
+impl<T, B: BuildAllocRef> From<Box<[T], B>> for RawVec<T, B> {
     fn from(slice: Box<[T], B>) -> Self {
         let len = slice.len();
         let (ptr, builder) = Box::into_raw_non_null_alloc(slice);
@@ -258,7 +258,7 @@ impl<T, B: BuildAlloc> From<Box<[T], B>> for RawVec<T, B> {
     }
 }
 
-impl<T, B: BuildAlloc> From<RawVec<T, B>> for Box<[mem::MaybeUninit<T>], B> {
+impl<T, B: BuildAllocRef> From<RawVec<T, B>> for Box<[mem::MaybeUninit<T>], B> {
     fn from(vec: RawVec<T, B>) -> Self {
         unsafe {
             let slice: &mut [mem::MaybeUninit<T>] =
@@ -277,7 +277,7 @@ enum ReserveStrategy {
     Amortized,
 }
 
-impl<T, B: BuildAlloc> RawVec<T, B>
+impl<T, B: BuildAllocRef> RawVec<T, B>
 where
     B::Ref: ReallocRef,
 {
@@ -505,7 +505,7 @@ where
     }
 }
 
-impl<T, B: BuildAlloc> RawVec<T, B> {
+impl<T, B: BuildAllocRef> RawVec<T, B> {
     /// Frees the memory owned by the RawVec *without* trying to Drop its contents.
     pub unsafe fn dealloc_buffer(&mut self) {
         if let (mut alloc, Some(layout)) = self.alloc_ref() {
@@ -515,7 +515,7 @@ impl<T, B: BuildAlloc> RawVec<T, B> {
 }
 
 #[cfg(feature = "dropck_eyepatch")]
-unsafe impl<#[may_dangle] T, B: BuildAlloc> Drop for RawVec<T, B> {
+unsafe impl<#[may_dangle] T, B: BuildAllocRef> Drop for RawVec<T, B> {
     /// Frees the memory owned by the RawVec *without* trying to Drop its contents.
     fn drop(&mut self) {
         unsafe {
@@ -525,7 +525,7 @@ unsafe impl<#[may_dangle] T, B: BuildAlloc> Drop for RawVec<T, B> {
 }
 
 #[cfg(not(feature = "dropck_eyepatch"))]
-impl<T, B: BuildAlloc> Drop for RawVec<T, B> {
+impl<T, B: BuildAllocRef> Drop for RawVec<T, B> {
     /// Frees the memory owned by the RawVec *without* trying to Drop its contents.
     fn drop(&mut self) {
         unsafe {
@@ -545,7 +545,7 @@ impl<T, B: BuildAlloc> Drop for RawVec<T, B> {
 
 #[inline]
 #[allow(clippy::cast_sign_loss)]
-fn alloc_guard<B: BuildAlloc>(alloc_size: usize) -> Result<(), CollectionAllocErr<B>>
+fn alloc_guard<B: BuildAllocRef>(alloc_size: usize) -> Result<(), CollectionAllocErr<B>>
 where
     B::Ref: AllocRef,
 {

@@ -26,7 +26,7 @@ Changes regarding the current `Alloc` trait
 
   Issue: [rust-lang/wg-allocators#9](https://github.com/rust-lang/wg-allocators/issues/9)
 
-- The allocators has to be associated with [`BuildAlloc`]. It is related to the allocator traits similar how 
+- The allocators has to be associated with [`BuildAllocRef`]. It is related to the allocator traits similar how 
   [`BuildHasher`] is related to [`Hasher`]. Although the signatures are different, it makes an even more flexible 
   allocator design possible.
 
@@ -62,7 +62,7 @@ Currently associated containers
 [`RawVec`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/raw_vec/struct.RawVec.html
 [`DeallocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.DeallocRef.html
 [`ReallocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.ReallocRef.html
-[`BuildAlloc`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.BuildAlloc.html
+[`BuildAllocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.BuildAllocRef.html
 [`BuildHasher`]: https://doc.rust-lang.org/1.38.0/core/hash/trait.BuildHasher.html
 [`Hasher`]: https://doc.rust-lang.org/1.38.0/core/hash/trait.Hasher.html
 [`NonZeroLayout`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/struct.NonZeroLayout.html

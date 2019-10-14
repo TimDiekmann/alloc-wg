@@ -15,7 +15,7 @@
 //!
 //!   Issue: [rust-lang/wg-allocators#9](https://github.com/rust-lang/wg-allocators/issues/9)
 //!
-//! - The allocators has to be associated with [`BuildAlloc`]. It is related to the allocator traits similar how
+//! - The allocators has to be associated with [`BuildAllocRef`]. It is related to the allocator traits similar how
 //!   [`BuildHasher`] is related to [`Hasher`]. Although the signatures are different, it makes an even more flexible
 //!   allocator design possible.
 //!
@@ -45,7 +45,7 @@
 //! [`Box`]: crate::boxed::Box
 //! [`DeallocRef`]: crate::alloc::DeallocRef
 //! [`ReallocRef`]: crate::alloc::ReallocRef
-//! [`BuildAlloc`]: crate::alloc::BuildAlloc
+//! [`BuildAllocRef`]: crate::alloc::BuildAllocRef
 //! [`BuildHasher`]: https://doc.rust-lang.org/1.38.0/core/hash/trait.BuildHasher.html
 //! [`Hasher`]: https://doc.rust-lang.org/1.38.0/core/hash/trait.Hasher.html
 //! [`NonZeroLayout`]: crate::alloc::NonZeroLayout

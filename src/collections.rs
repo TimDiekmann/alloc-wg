@@ -1,8 +1,8 @@
-use crate::alloc::{AllocRef, BuildAlloc, LayoutErr, NonZeroLayout};
+use crate::alloc::{AllocRef, BuildAllocRef, LayoutErr, NonZeroLayout};
 use core::fmt;
 
 /// Augments `AllocErr` with a `CapacityOverflow` variant.
-pub enum CollectionAllocErr<B: BuildAlloc>
+pub enum CollectionAllocErr<B: BuildAllocRef>
 where
     B::Ref: AllocRef,
 {
@@ -20,7 +20,7 @@ where
     },
 }
 
-impl<B: BuildAlloc> fmt::Debug for CollectionAllocErr<B>
+impl<B: BuildAllocRef> fmt::Debug for CollectionAllocErr<B>
 where
     B::Ref: AllocRef,
     <B::Ref as AllocRef>::Error: fmt::Debug,
@@ -37,7 +37,7 @@ where
     }
 }
 
-impl<B: BuildAlloc> Clone for CollectionAllocErr<B>
+impl<B: BuildAllocRef> Clone for CollectionAllocErr<B>
 where
     B::Ref: AllocRef,
     <B::Ref as AllocRef>::Error: Clone,
@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<B: BuildAlloc> PartialEq for CollectionAllocErr<B>
+impl<B: BuildAllocRef> PartialEq for CollectionAllocErr<B>
 where
     B::Ref: AllocRef,
     <B::Ref as AllocRef>::Error: PartialEq,
@@ -73,14 +73,14 @@ where
     }
 }
 
-impl<B: BuildAlloc> Eq for CollectionAllocErr<B>
+impl<B: BuildAllocRef> Eq for CollectionAllocErr<B>
 where
     B::Ref: AllocRef,
     <B::Ref as AllocRef>::Error: Eq,
 {
 }
 
-impl<B: BuildAlloc> From<core::alloc::LayoutErr> for CollectionAllocErr<B>
+impl<B: BuildAllocRef> From<core::alloc::LayoutErr> for CollectionAllocErr<B>
 where
     B::Ref: AllocRef,
 {
@@ -90,7 +90,7 @@ where
     }
 }
 
-impl<B: BuildAlloc> From<LayoutErr> for CollectionAllocErr<B>
+impl<B: BuildAllocRef> From<LayoutErr> for CollectionAllocErr<B>
 where
     B::Ref: AllocRef,
 {
