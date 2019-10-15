@@ -1,6 +1,8 @@
 # v0.4
 
-- Add `Box<T, B: BuildAlloc>`
+- Add `RawVec<T, B: BuildAlloc>`
+- Rename `BuildAlloc` to `BuildAllocRef`
+- Use `Option<NonZeroLayout>` for `BuildAllocRef`
 
 # v0.3
 
