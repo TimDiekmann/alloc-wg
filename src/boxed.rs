@@ -1302,7 +1302,7 @@ impl_dispatch_from_dyn!(AbortAlloc<std::alloc::System>);
 #[allow(clippy::items_after_statements)]
 impl<T: Clone, B: BuildAllocRef + Clone> Clone for Box<[T], B>
 where
-    B::Ref: Default + AllocRef<Error = crate::Never>,
+    B::Ref: AllocRef<Error = crate::Never>,
 {
     fn clone(&self) -> Self {
         let mut b = self.build_alloc().clone();
