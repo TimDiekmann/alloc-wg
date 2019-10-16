@@ -52,7 +52,24 @@
 //! [`AbortAlloc`]: crate::alloc::AbortAlloc
 
 #![cfg_attr(feature = "dropck_eyepatch", feature(dropck_eyepatch))]
+#![cfg_attr(feature = "coerce_unsized", feature(coerce_unsized))]
+#![cfg_attr(feature = "dispatch_from_dyn", feature(dispatch_from_dyn))]
+#![cfg_attr(
+    any(feature = "coerce_unsized", feature = "dispatch_from_dyn"),
+    feature(unsize)
+)]
 #![cfg_attr(feature = "ptr_internals", feature(ptr_internals))]
+#![cfg_attr(feature = "exact_size_is_empty", feature(exact_size_is_empty))]
+#![cfg_attr(feature = "receiver_trait", feature(receiver_trait))]
+#![cfg_attr(
+    feature = "boxed_slice_try_from",
+    feature(const_generics, const_generic_impls_guard),
+    allow(incomplete_features)
+)]
+#![cfg_attr(
+    feature = "fn_traits",
+    feature(unboxed_closures, unsized_locals, fn_traits)
+)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![doc(test(attr(
     deny(

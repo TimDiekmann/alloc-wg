@@ -19,4 +19,19 @@ std = []
 default = ["std"]
 dropck_eyepatch = []
 ptr_internals = []
-nightly = ["dropck_eyepatch", "ptr_internals"]
+coerce_unsized = []
+dispatch_from_dyn = []
+exact_size_is_empty = []
+fn_traits = []
+boxed_slice_try_from = []
+receiver_trait = []
+nightly = [
+    "dropck_eyepatch",
+    "ptr_internals",
+    "coerce_unsized",
+    "dispatch_from_dyn",
+    "exact_size_is_empty",
+    "fn_traits",
+    "boxed_slice_try_from",
+    "receiver_trait",
+]

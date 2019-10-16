@@ -88,14 +88,25 @@ impl<T> RawVec<T> {
     /// * `CapacityOverflow` on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     /// * `AllocError` on OOM
     #[inline]
-    pub fn with_capacity(capacity: usize) -> Result<Self, CollectionAllocErr<Global>> {
-        Self::with_capacity_in(capacity, Global)
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self::try_with_capacity(capacity).unwrap_or_else(|_| capacity_overflow())
+    }
+
+    #[inline]
+    pub fn try_with_capacity(capacity: usize) -> Result<Self, CollectionAllocErr<Global>> {
+        Self::try_with_capacity_in(capacity, Global)
     }
 
     /// Like `with_capacity`, but guarantees the buffer is zeroed.
     #[inline]
-    pub fn with_capacity_zeroed(capacity: usize) -> Result<Self, CollectionAllocErr<Global>> {
-        Self::with_capacity_zeroed_in(capacity, Global)
+    pub fn with_capacity_zeroed(capacity: usize) -> Self {
+        Self::try_with_capacity_zeroed(capacity).unwrap_or_else(|_| capacity_overflow())
+    }
+
+    /// Like `with_capacity`, but guarantees the buffer is zeroed.
+    #[inline]
+    pub fn try_with_capacity_zeroed(capacity: usize) -> Result<Self, CollectionAllocErr<Global>> {
+        Self::try_with_capacity_zeroed_in(capacity, Global)
     }
 
     /// Reconstitutes a RawVec from a pointer, and capacity.
@@ -129,14 +140,28 @@ where
     #[inline]
     /// Like `with_capacity` but parameterized over the choice of allocator for the returned
     /// `RawVec`.
-    pub fn with_capacity_in(capacity: usize, a: B::Ref) -> Result<Self, CollectionAllocErr<B>> {
+    pub fn with_capacity_in(capacity: usize, a: B::Ref) -> Self {
+        Self::try_with_capacity_in(capacity, a).unwrap_or_else(|_| capacity_overflow())
+    }
+
+    #[inline]
+    /// Like `with_capacity` but parameterized over the choice of allocator for the returned
+    /// `RawVec`.
+    pub fn try_with_capacity_in(capacity: usize, a: B::Ref) -> Result<Self, CollectionAllocErr<B>> {
         Self::allocate_in(capacity, false, a)
     }
 
     #[inline]
     /// Like `with_capacity_zeroed` but parameterized over the choice of allocator for the returned
     /// `RawVec`.
-    pub fn with_capacity_zeroed_in(
+    pub fn with_capacity_zeroed_in(capacity: usize, a: B::Ref) -> Self {
+        Self::try_with_capacity_zeroed_in(capacity, a).unwrap_or_else(|_| capacity_overflow())
+    }
+
+    #[inline]
+    /// Like `with_capacity_zeroed` but parameterized over the choice of allocator for the returned
+    /// `RawVec`.
+    pub fn try_with_capacity_zeroed_in(
         capacity: usize,
         a: B::Ref,
     ) -> Result<Self, CollectionAllocErr<B>> {
@@ -243,6 +268,16 @@ impl<T, B: BuildAllocRef> RawVec<T, B> {
         let alloc = unsafe { self.build_alloc_mut().build_alloc_ref(ptr, layout) };
         (alloc, layout)
     }
+
+    pub fn into_box(self) -> Box<[mem::MaybeUninit<T>], B> {
+        unsafe {
+            let slice: &mut [mem::MaybeUninit<T>] =
+                slice::from_raw_parts_mut(self.ptr() as _, self.capacity);
+            let output = Box::from_raw_in(slice, ptr::read(&self.build_alloc));
+            mem::forget(self);
+            output
+        }
+    }
 }
 
 impl<T, B: BuildAllocRef> From<Box<[T], B>> for RawVec<T, B> {
@@ -254,18 +289,6 @@ impl<T, B: BuildAllocRef> From<Box<[T], B>> for RawVec<T, B> {
             capacity: len,
             build_alloc: builder,
             _owned: PhantomData,
-        }
-    }
-}
-
-impl<T, B: BuildAllocRef> From<RawVec<T, B>> for Box<[mem::MaybeUninit<T>], B> {
-    fn from(vec: RawVec<T, B>) -> Self {
-        unsafe {
-            let slice: &mut [mem::MaybeUninit<T>] =
-                slice::from_raw_parts_mut(vec.ptr() as _, vec.capacity);
-            let output = Self::from_raw_in(slice, ptr::read(&vec.build_alloc));
-            mem::forget(vec);
-            output
         }
     }
 }
@@ -554,4 +577,11 @@ where
     } else {
         Ok(())
     }
+}
+
+// One central function responsible for reporting capacity overflows. This'll
+// ensure that the code generation related to these panics is minimal as there's
+// only one location which panics rather than a bunch throughout the module.
+fn capacity_overflow() -> ! {
+    panic!("capacity overflow")
 }

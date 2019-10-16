@@ -51,7 +51,11 @@ Changes regarding the current `Alloc` trait
 Currently associated containers
 -------------------------------
   
-- [`Box`] (Only methods and basic traits)
+- [`Box`] Missing Items:
+  - `FromIterator<A> for Box<[A]>` as `Vec` is not implemented yet.
+  - specialization of sized iterators as it's not possible for downstream crates.
+  - Limited `T: Copy` for `Fn`-traits as it's not possible for downstream crates.
+   
 - [`RawVec`] (Only methods and basic traits)
 
 [`Alloc`]: https://doc.rust-lang.org/1.38.0/alloc/alloc/trait.Alloc.html
