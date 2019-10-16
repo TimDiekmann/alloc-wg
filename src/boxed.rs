@@ -87,22 +87,19 @@ use crate::{
 #[cfg(feature = "ptr_internals")]
 use core::ptr::Unique;
 use core::{
+    any::Any,
     borrow,
     cmp::Ordering,
     fmt,
+    future::Future,
     hash::{Hash, Hasher},
+    iter::FusedIterator,
     marker::PhantomData,
     mem,
     ops::{Deref, DerefMut},
     pin::Pin,
     ptr::{self, NonNull},
     slice,
-};
-use std::{
-    any::Any,
-    future::Future,
-    iter::{FromIterator, FusedIterator},
-    mem::MaybeUninit,
     task::{Context, Poll},
 };
 
@@ -1107,7 +1104,6 @@ impl<B: BuildAllocRef> Box<dyn Any, B> {
     /// # Examples
     ///
     /// ```
-    /// use alloc_wg::boxed::Box;
     /// use std::any::Any;
     ///
     /// fn print_if_string(value: Box<dyn Any>) {
@@ -1140,7 +1136,6 @@ impl<B: BuildAllocRef> Box<dyn Any + Send, B> {
     /// # Examples
     ///
     /// ```
-    /// use alloc_wg::boxed::Box;
     /// use std::any::Any;
     ///
     /// fn print_if_string(value: Box<dyn Any + Send>) {
