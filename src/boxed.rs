@@ -1299,6 +1299,7 @@ impl_dispatch_from_dyn!(std::alloc::System);
 #[cfg(feature = "std")]
 impl_dispatch_from_dyn!(AbortAlloc<std::alloc::System>);
 
+#[allow(clippy::items_after_statements)]
 impl<T: Clone, B: BuildAllocRef + Clone> Clone for Box<[T], B>
 where
     B::Ref: Default + AllocRef<Error = crate::Never>,
