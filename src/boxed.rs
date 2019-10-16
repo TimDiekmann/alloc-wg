@@ -84,8 +84,6 @@ use crate::{
     raw_vec::RawVec,
     UncheckedResultExt,
 };
-#[cfg(feature = "ptr_internals")]
-use core::ptr::Unique;
 use core::{
     any::Any,
     borrow,
@@ -680,14 +678,14 @@ impl<T: ?Sized, B: BuildAllocRef> Box<T, B> {
     #[inline]
     #[doc(hidden)]
     #[cfg(feature = "ptr_internals")]
-    pub fn into_unique(b: Self) -> Unique<T> {
+    pub fn into_unique(b: Self) -> core::ptr::Unique<T> {
         Self::into_unique_alloc(b).0
     }
 
     #[inline]
     #[doc(hidden)]
     #[cfg(feature = "ptr_internals")]
-    pub fn into_unique_alloc(b: Self) -> (Unique<T>, B) {
+    pub fn into_unique_alloc(b: Self) -> (core::ptr::Unique<T>, B) {
         let mut ptr = b.ptr;
         unsafe {
             let alloc = ptr::read(b.build_alloc());
@@ -699,7 +697,7 @@ impl<T: ?Sized, B: BuildAllocRef> Box<T, B> {
             // without some care, the pointer we are returning here still carries
             // the tag of `b`, with `Unique` permission.
             // We round-trip through a mutable reference to avoid that.
-            (Unique::new_unchecked(ptr.as_mut()), alloc)
+            (core::ptr::Unique::new_unchecked(ptr.as_mut()), alloc)
         }
     }
 
