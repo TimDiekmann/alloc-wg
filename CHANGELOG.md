@@ -4,7 +4,8 @@
 - Add `(try_)reserve_in_place` and `(try_)double(_in_place)` for `RawVec`
 - Add `CloneIn` trait for `Box`
 - Use `AbortAlloc<Global>` as default for `RawVec` instead of `Global`
-
+- Use `NonZeroUsize` in `NonZeroLayout`
+- Add `#[must_use]` as proposed by clippy
 
 # v0.4
 
