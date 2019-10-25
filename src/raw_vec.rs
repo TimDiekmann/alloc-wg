@@ -11,7 +11,7 @@ use crate::{
         ReallocRef,
     },
     boxed::Box,
-    collections::CollectionAllocErr::{self},
+    collections::CollectionAllocErr,
 };
 use core::{
     cmp,
