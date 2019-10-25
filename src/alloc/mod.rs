@@ -8,39 +8,19 @@ pub use self::{
 pub use core::alloc::{GlobalAlloc, Layout};
 use core::{
     fmt,
+    num::NonZeroUsize,
     ptr::{self, NonNull},
 };
 pub use liballoc::alloc::{alloc, alloc_zeroed, dealloc, realloc};
 #[cfg(feature = "std")]
 use std::alloc::System;
 
-/// The `CannotReallocInPlace` error is used when [`grow_in_place`] or
-/// [`shrink_in_place`] were unable to reuse the given memory block for
-/// a requested layout.
-///
-/// [`grow_in_place`]: ./trait.Alloc.html#method.grow_in_place
-/// [`shrink_in_place`]: ./trait.Alloc.html#method.shrink_in_place
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct CannotReallocInPlace;
-
-impl CannotReallocInPlace {
-    pub fn description(&self) -> &str {
-        "cannot reallocate allocator's memory in place"
-    }
-}
-
-// (we need this for downstream impl of trait Error)
-impl fmt::Display for CannotReallocInPlace {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.description())
-    }
-}
-
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct CapacityOverflow;
 
 impl From<core::alloc::LayoutErr> for CapacityOverflow {
     #[inline]
+    #[must_use]
     fn from(_: core::alloc::LayoutErr) -> Self {
         Self
     }
@@ -48,6 +28,7 @@ impl From<core::alloc::LayoutErr> for CapacityOverflow {
 
 impl From<LayoutErr> for CapacityOverflow {
     #[inline]
+    #[must_use]
     fn from(_: LayoutErr) -> Self {
         Self
     }
@@ -56,6 +37,13 @@ impl From<LayoutErr> for CapacityOverflow {
 pub trait BuildAllocRef: Sized {
     type Ref: DeallocRef<BuildAlloc = Self>;
 
+    #[must_use]
+    /// # Safety
+    ///
+    /// * `ptr` must denote a block of memory currently allocated via this allocator
+    /// * `layout` must *fit* that block of memory
+    /// * the alignment of the `layout` must match the alignment used to allocate that block of
+    ///   memory
     unsafe fn build_alloc_ref(
         &mut self,
         ptr: NonNull<u8>,
@@ -68,6 +56,12 @@ pub trait DeallocRef: Sized {
 
     fn get_build_alloc(&mut self) -> Self::BuildAlloc;
 
+    /// # Safety
+    ///
+    /// * `ptr` must denote a block of memory currently allocated via this allocator
+    /// * `layout` must *fit* that block of memory
+    /// * the alignment of the `layout` must match the alignment used to allocate that block of
+    ///   memory
     unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: NonZeroLayout);
 }
 
@@ -80,50 +74,83 @@ pub trait AllocRef: DeallocRef {
         let size = layout.size();
         let p = self.alloc(layout)?;
         unsafe {
-            ptr::write_bytes(p.as_ptr(), 0, size);
+            ptr::write_bytes(p.as_ptr(), 0, size.get());
         }
         Ok(p)
     }
 
     fn usable_size(&self, layout: NonZeroLayout) -> (usize, usize) {
-        (layout.size(), layout.size())
+        (layout.size().get(), layout.size().get())
     }
 
+    /// # Safety
+    ///
+    /// * `ptr` must be currently allocated via this allocator
+    /// * `layout` must *fit* the `ptr` (see above); note the `new_size` argument need not fit it
+    /// * `new_size` must not be less than `layout.size()`
     unsafe fn grow_in_place(
         &mut self,
         ptr: NonNull<u8>,
         layout: NonZeroLayout,
-        new_size: usize,
+        new_size: NonZeroUsize,
     ) -> bool {
         let _ = ptr; // this default implementation doesn't care about the actual address.
-        debug_assert!(new_size >= layout.size());
+        debug_assert!(new_size.get() >= layout.size().get());
         let (_l, u) = self.usable_size(layout);
         // _l <= layout.size()                       [guaranteed by usable_size()]
         //       layout.size() <= new_layout.size()  [required by this method]
-        new_size <= u
+        new_size.get() <= u
     }
 
+    /// # Safety
+    ///
+    /// * `ptr` must be currently allocated via this allocator
+    /// * `layout` must *fit* the `ptr` (see above); note the `new_size` argument need not fit it
+    /// * `new_size` must not be greater than `layout.size()` (and must be greater than zero)
     unsafe fn shrink_in_place(
         &mut self,
         ptr: NonNull<u8>,
         layout: NonZeroLayout,
-        new_size: usize,
+        new_size: NonZeroUsize,
     ) -> bool {
         let _ = ptr; // this default implementation doesn't care about the actual address.
-        debug_assert!(new_size <= layout.size());
+        debug_assert!(new_size.get() <= layout.size().get());
         let (l, _u) = self.usable_size(layout);
         //                      layout.size() <= _u  [guaranteed by usable_size()]
         // new_layout.size() <= layout.size()        [required by this method]
-        l <= new_size
+        l <= new_size.get()
     }
 }
 
 pub trait ReallocRef: AllocRef {
+    /// # Safety
+    ///
+    /// * `ptr` must be currently allocated via this allocator,
+    /// * `layout` must *fit* the `ptr` (see above). (The `new_size` argument need not fit it.)
+    /// * `new_size`, when rounded up to the nearest multiple of `layout.align()`,
+    ///   must not overflow (i.e., the rounded value must be less than `usize::MAX`).
+    ///
+    /// (Extension subtraits might provide more specific bounds on
+    /// behavior, e.g., guarantee a sentinel address or a null pointer
+    /// in response to a zero-size allocation request.)
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` only if the new layout
+    /// does not meet the allocator's size
+    /// and alignment constraints of the allocator, or if reallocation
+    /// otherwise fails.
+    ///
+    /// Implementations are encouraged to return `Err` on memory
+    /// exhaustion rather than panicking or aborting, but this is not
+    /// a strict requirement. (Specifically: it is *legal* to
+    /// implement this trait atop an underlying native allocation
+    /// library that aborts on memory exhaustion.)
     unsafe fn realloc(
         &mut self,
         ptr: NonNull<u8>,
-        layout: NonZeroLayout,
-        new_size: usize,
+        old_layout: NonZeroLayout,
+        new_layout: NonZeroLayout,
     ) -> Result<NonNull<u8>, Self::Error>;
 }
 
@@ -196,10 +223,15 @@ impl ReallocRef for Global {
     unsafe fn realloc(
         &mut self,
         ptr: NonNull<u8>,
-        layout: NonZeroLayout,
-        new_size: usize,
+        old_layout: NonZeroLayout,
+        new_layout: NonZeroLayout,
     ) -> Result<NonNull<u8>, Self::Error> {
-        NonNull::new(realloc(ptr.as_ptr(), layout.into(), new_size)).ok_or(AllocErr)
+        NonNull::new(realloc(
+            ptr.as_ptr(),
+            old_layout.into(),
+            new_layout.size().get(),
+        ))
+        .ok_or(AllocErr)
     }
 }
 
@@ -234,14 +266,14 @@ impl ReallocRef for System {
     unsafe fn realloc(
         &mut self,
         ptr: NonNull<u8>,
-        layout: NonZeroLayout,
-        new_size: usize,
+        old_layout: NonZeroLayout,
+        new_layout: NonZeroLayout,
     ) -> Result<NonNull<u8>, Self::Error> {
         NonNull::new(GlobalAlloc::realloc(
             self,
             ptr.as_ptr(),
-            layout.into(),
-            new_size,
+            old_layout.into(),
+            new_layout.size().get(),
         ))
         .ok_or(AllocErr)
     }

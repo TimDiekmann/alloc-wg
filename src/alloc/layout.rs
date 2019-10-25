@@ -4,6 +4,7 @@ use core::{
     fmt,
     mem,
 };
+use std::num::NonZeroUsize;
 
 /// The parameters given to `Layout::from_size_align` or some other `Layout` constructor do not
 /// satisfy its documented constraints.
@@ -13,6 +14,7 @@ pub struct LayoutErr {
 }
 
 impl From<core::alloc::LayoutErr> for LayoutErr {
+    #[must_use]
     fn from(_: core::alloc::LayoutErr) -> Self {
         Self { private: () }
     }
@@ -55,20 +57,23 @@ impl NonZeroLayout {
     /// This function is unsafe as it does not verify the preconditions from
     /// [`NonZeroLayout::from_size_align`][].
     #[inline]
-    pub const unsafe fn from_size_align_unchecked(size: usize, align: usize) -> Self {
-        Self(Layout::from_size_align_unchecked(size, align))
+    #[must_use]
+    pub const unsafe fn from_size_align_unchecked(size: NonZeroUsize, align: NonZeroUsize) -> Self {
+        Self(Layout::from_size_align_unchecked(size.get(), align.get()))
     }
 
     /// The minimum size in bytes for a memory block of this layout.
     #[inline]
-    pub fn size(&self) -> usize {
-        self.0.size()
+    #[must_use]
+    pub fn size(&self) -> NonZeroUsize {
+        unsafe { NonZeroUsize::new_unchecked(self.0.size()) }
     }
 
     /// The minimum byte alignment for a memory block of this layout.
     #[inline]
-    pub fn align(&self) -> usize {
-        self.0.align()
+    #[must_use]
+    pub fn align(&self) -> NonZeroUsize {
+        unsafe { NonZeroUsize::new_unchecked(self.0.align()) }
     }
 
     /// Constructs a `NonZeroLayout` suitable for holding a value of type `T`.
@@ -86,14 +91,18 @@ impl NonZeroLayout {
     /// This function is unsafe as it does not verify the preconditions from
     /// [`NonZeroLayout::new`][].
     #[inline]
+    #[must_use]
     pub const unsafe fn new_unchecked<T>() -> Self {
-        Self::from_size_align_unchecked(mem::size_of::<T>(), mem::align_of::<T>())
+        Self::from_size_align_unchecked(
+            NonZeroUsize::new_unchecked(mem::size_of::<T>()),
+            NonZeroUsize::new_unchecked(mem::align_of::<T>()),
+        )
     }
 
     /// Produces layout describing a record that could be used to allocate backing structure
     /// for `T` (which could be a trait or other unsized type like a slice).
     ///
-    /// Returns `Err` if `T` is a ZST.
+    /// Returns `None` if `T` is a ZST.
     #[inline]
     pub fn for_value<T: ?Sized>(t: &T) -> Option<Self> {
         Layout::for_value(t).try_into().ok()
@@ -112,9 +121,8 @@ impl NonZeroLayout {
     /// alignment of the starting address for the whole allocated block of memory. One way to
     /// satisfy this constraint is to ensure `align <= self.align()`.
     #[inline]
-    pub fn padding_needed_for(&self, align: usize) -> usize {
-        let len = self.size();
-
+    #[must_use]
+    pub fn padding_needed_for(&self, align: NonZeroUsize) -> NonZeroUsize {
         // Rounded up value is:
         //   len_rounded_up = (len + align - 1) & !(align - 1);
         // and then we return the padding difference: `len_rounded_up - len`.
@@ -131,8 +139,10 @@ impl NonZeroLayout {
         // (Of course, attempts to allocate blocks of memory whose size and padding overflow in the
         // above manner should cause the allocator to yield an error anyway.)
 
+        let len = self.size().get();
+        let align = align.get();
         let len_rounded_up = len.wrapping_add(align).wrapping_sub(1) & !align.wrapping_sub(1);
-        len_rounded_up.wrapping_sub(len)
+        unsafe { NonZeroUsize::new_unchecked(len_rounded_up.wrapping_sub(len)) }
     }
 
     /// Produces layout describing a record that could be used to allocate backing structure
@@ -144,7 +154,12 @@ impl NonZeroLayout {
     /// [`NonZeroLayout::for_value`][].
     #[inline]
     pub unsafe fn for_value_unchecked<T: ?Sized>(t: &T) -> Self {
-        Self::from_size_align_unchecked(mem::size_of_val(t), mem::align_of_val(t))
+        debug_assert!(mem::size_of_val(t) > 0);
+        debug_assert!(mem::align_of_val(t) > 0);
+        Self::from_size_align_unchecked(
+            NonZeroUsize::new_unchecked(mem::size_of_val(t)),
+            NonZeroUsize::new_unchecked(mem::align_of_val(t)),
+        )
     }
 
     /// Creates a layout describing the record for `n` instances of `self`, with a suitable amount
@@ -154,21 +169,25 @@ impl NonZeroLayout {
     ///
     /// On arithmetic overflow, returns `LayoutErr`.
     #[inline]
-    pub fn repeat(&self, n: usize) -> Result<(Self, usize), LayoutErr> {
+    pub fn repeat(&self, n: NonZeroUsize) -> Result<(Self, NonZeroUsize), LayoutErr> {
         let padded_size = self
             .size()
-            .checked_add(self.padding_needed_for(self.align()))
+            .get()
+            .checked_add(self.padding_needed_for(self.align()).get())
             .ok_or(LayoutErr { private: () })?;
         let alloc_size = padded_size
-            .checked_mul(n)
+            .checked_mul(n.get())
             .ok_or(LayoutErr { private: () })?;
 
         unsafe {
             // self.align is already known to be valid and alloc_size has been
             // padded already.
             Ok((
-                Self::from_size_align_unchecked(alloc_size, self.align()),
-                padded_size,
+                Self::from_size_align_unchecked(
+                    NonZeroUsize::new_unchecked(alloc_size),
+                    self.align(),
+                ),
+                NonZeroUsize::new_unchecked(padded_size),
             ))
         }
     }
@@ -177,17 +196,18 @@ impl NonZeroLayout {
     ///
     /// On arithmetic overflow, returns `LayoutErr`.
     #[inline]
-    pub fn array<T>(n: usize) -> Result<Self, LayoutErr> {
+    pub fn array<T>(n: NonZeroUsize) -> Result<Self, LayoutErr> {
         Self::new::<T>()?.repeat(n).map(|(k, offs)| {
-            debug_assert!(offs == mem::size_of::<T>());
+            debug_assert!(offs.get() == mem::size_of::<T>());
             k
         })
     }
 }
 
 impl Into<Layout> for NonZeroLayout {
+    #[must_use]
     fn into(self) -> Layout {
-        unsafe { Layout::from_size_align_unchecked(self.size(), self.align()) }
+        unsafe { Layout::from_size_align_unchecked(self.size().get(), self.align().get()) }
     }
 }
 
@@ -195,11 +215,11 @@ impl TryFrom<Layout> for NonZeroLayout {
     type Error = LayoutErr;
 
     fn try_from(layout: Layout) -> Result<Self, Self::Error> {
-        let size = layout.size();
-        if size == 0 {
-            Err(LayoutErr { private: () })
-        } else {
-            unsafe { Ok(Self::from_size_align_unchecked(size, layout.align())) }
+        unsafe {
+            Ok(Self::from_size_align_unchecked(
+                NonZeroUsize::new(layout.size()).ok_or(LayoutErr { private: {} })?,
+                NonZeroUsize::new_unchecked(layout.align()),
+            ))
         }
     }
 }

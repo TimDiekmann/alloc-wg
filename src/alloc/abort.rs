@@ -52,11 +52,11 @@ impl<A: ReallocRef> ReallocRef for AbortAlloc<A> {
     unsafe fn realloc(
         &mut self,
         ptr: NonNull<u8>,
-        layout: NonZeroLayout,
-        new_size: usize,
+        old_layout: NonZeroLayout,
+        new_layout: NonZeroLayout,
     ) -> Result<NonNull<u8>, Self::Error> {
         self.0
-            .realloc(ptr, layout, new_size)
-            .map_err(|_| handle_alloc_error(layout.into()))
+            .realloc(ptr, old_layout, new_layout)
+            .map_err(|_| handle_alloc_error(new_layout.into()))
     }
 }

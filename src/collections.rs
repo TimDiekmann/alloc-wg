@@ -1,11 +1,4 @@
-use crate::alloc::{
-    AllocRef,
-    BuildAllocRef,
-    CannotReallocInPlace,
-    CapacityOverflow,
-    LayoutErr,
-    NonZeroLayout,
-};
+use crate::alloc::{AllocRef, BuildAllocRef, CapacityOverflow, LayoutErr, NonZeroLayout};
 use core::fmt;
 
 /// Augments `AllocErr` with a `CapacityOverflow` variant.
@@ -92,6 +85,7 @@ where
     B::Ref: AllocRef,
 {
     #[inline]
+    #[must_use]
     fn from(_: CapacityOverflow) -> Self {
         Self::CapacityOverflow
     }
@@ -102,6 +96,7 @@ where
     B::Ref: AllocRef,
 {
     #[inline]
+    #[must_use]
     fn from(_: core::alloc::LayoutErr) -> Self {
         Self::CapacityOverflow
     }
@@ -112,6 +107,7 @@ where
     B::Ref: AllocRef,
 {
     #[inline]
+    #[must_use]
     fn from(_: LayoutErr) -> Self {
         Self::CapacityOverflow
     }

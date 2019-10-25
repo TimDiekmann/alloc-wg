@@ -101,6 +101,7 @@ use core::{
     slice,
     task::{Context, Poll},
 };
+use std::num::NonZeroUsize;
 
 /// A pointer type for heap allocation.
 ///
@@ -130,6 +131,7 @@ impl<T> Box<T> {
     /// let five = Box::new(5);
     /// ```
     #[inline(always)]
+    #[must_use]
     pub fn new(x: T) -> Self {
         Self::new_in(x, AbortAlloc(Global))
     }
@@ -153,6 +155,7 @@ impl<T> Box<T> {
     /// assert_eq!(*five, 5)
     /// ```
     #[inline(always)]
+    #[must_use]
     pub fn new_uninit() -> Box<mem::MaybeUninit<T>> {
         Self::new_uninit_in(AbortAlloc(Global))
     }
@@ -320,6 +323,7 @@ impl<T> Box<[T]> {
     /// assert_eq!(*values, [1, 2, 3]);
     /// ```
     #[inline(always)]
+    #[must_use]
     pub fn new_uninit_slice(len: usize) -> Box<[mem::MaybeUninit<T>]> {
         Self::new_uninit_slice_in(len, AbortAlloc(Global))
     }
@@ -390,6 +394,7 @@ where
         let ptr = if mem::size_of::<T>() == 0 || len == 0 {
             NonNull::dangling()
         } else {
+            let len = unsafe { NonZeroUsize::new_unchecked(len) };
             let layout = NonZeroLayout::array::<mem::MaybeUninit<T>>(len)?;
             a.alloc(layout)
                 .map_err(|inner| CollectionAllocErr::AllocError { layout, inner })?
@@ -774,6 +779,7 @@ where
     T: Default,
     B::Ref: Default + AllocRef<Error = crate::Never>,
 {
+    #[must_use]
     fn default() -> Self {
         Self::new_in(T::default(), <B as BuildAllocRef>::Ref::default())
     }
@@ -784,6 +790,7 @@ impl<T, B: BuildAllocRef> Default for Box<[T], B>
 where
     B::Ref: Default + AllocRef<Error = crate::Never>,
 {
+    #[must_use]
     fn default() -> Self {
         Box::<[T; 0], B>::new_in([], <B as BuildAllocRef>::Ref::default())
     }
@@ -800,6 +807,7 @@ impl<B: BuildAllocRef> Default for Box<str, B>
 where
     B::Ref: Default + AllocRef<Error = crate::Never>,
 {
+    #[must_use]
     fn default() -> Self {
         unsafe { from_boxed_utf8_unchecked(Box::default()) }
     }
@@ -1061,6 +1069,7 @@ where
     /// println!("{}", boxed);
     /// ```
     #[inline]
+    #[must_use]
     fn from(s: &str) -> Self {
         unsafe { from_boxed_utf8_unchecked(Box::from(s.as_bytes())) }
     }

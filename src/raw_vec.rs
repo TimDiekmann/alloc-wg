@@ -14,7 +14,7 @@ use crate::{
     collections::CollectionAllocErr::{self},
 };
 use core::{cmp, marker::PhantomData, mem, ptr, ptr::NonNull, slice};
-use std::convert::TryInto;
+use std::{convert::TryInto, num::NonZeroUsize};
 
 /// A low-level utility for more ergonomically allocating, reallocating, and deallocating
 /// a buffer of memory on the heap without having to worry about all the corner cases
@@ -70,6 +70,7 @@ impl<T> RawVec<T> {
     /// `RawVec` with capacity `0`. If `T` is zero-sized, then it makes a
     /// `RawVec` with capacity `usize::MAX`. Useful for implementing
     /// delayed allocation.
+    #[must_use]
     pub const fn new() -> Self {
         // FIXME(Centril): Reintegrate this with `fn new_in` when we can.
 
@@ -102,23 +103,25 @@ impl<T> RawVec<T> {
     ///
     /// * on OOM
     #[inline]
+    #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self::with_capacity_in(capacity, AbortAlloc(Global))
     }
 
     /// Like `with_capacity`, but guarantees the buffer is zeroed.
     #[inline]
+    #[must_use]
     pub fn with_capacity_zeroed(capacity: usize) -> Self {
         Self::with_capacity_zeroed_in(capacity, AbortAlloc(Global))
     }
 
-    /// Reconstitutes a RawVec from a pointer, and capacity.
+    /// Reconstitutes a `RawVec` from a pointer, and capacity.
     ///
     /// # Safety
     ///
     /// The ptr must be allocated (via the default allocator `Global`), and with the
     /// given capacity. The capacity cannot exceed `isize::MAX` (only a concern on 32-bit systems).
-    /// If the ptr and capacity come from a RawVec created with `Global`, then this is guaranteed.
+    /// If the ptr and capacity come from a `RawVec` created with `Global`, then this is guaranteed.
     #[inline]
     pub unsafe fn from_raw_parts(ptr: *mut T, capacity: usize) -> Self {
         Self::from_raw_parts_in(ptr, capacity, AbortAlloc(Global))
@@ -223,15 +226,12 @@ impl<T, B: BuildAllocRef> RawVec<T, B> {
         let alloc_size = capacity
             .checked_mul(elem_size)
             .ok_or(CollectionAllocErr::CapacityOverflow)?;
-        alloc_guard(alloc_size)?;
 
         // handles ZSTs and `capacity = 0` alike
         let ptr = if alloc_size == 0 {
             NonNull::<T>::dangling()
         } else {
-            let layout = unsafe {
-                NonZeroLayout::from_size_align_unchecked(alloc_size, mem::align_of::<T>())
-            };
+            let layout = alloc_guard(alloc_size, mem::align_of::<T>())?;
             let result = if zeroed {
                 alloc.alloc_zeroed(layout)
             } else {
@@ -242,23 +242,22 @@ impl<T, B: BuildAllocRef> RawVec<T, B> {
                 .cast()
         };
 
-        unsafe {
-            Ok(Self::from_raw_parts_in(
-                ptr.as_ptr(),
-                capacity,
-                alloc.get_build_alloc(),
-            ))
-        }
+        Ok(Self {
+            ptr,
+            capacity,
+            build_alloc: alloc.get_build_alloc(),
+            _owned: PhantomData,
+        })
     }
 
     /// Reconstitutes a `RawVec` from a pointer, capacity, and allocator.
     ///
     /// # Safety
     ///
-    /// The ptr must be allocated via `build_alloc`, and with the given capacity. The capacity
-    /// cannot exceed `isize::MAX` (only a concern on 32-bit systems). If the ptr and capacity come
-    /// from a `RawVec` created via `build_alloc`, then this is guaranteed.
+    /// * The ptr must be allocated via `build_alloc`, and with the given capacity.
+    /// * The capacity cannot exceed `isize::MAX` (only a concern on 32-bit systems).
     pub unsafe fn from_raw_parts_in(ptr: *mut T, capacity: usize, build_alloc: B) -> Self {
+        debug_assert!(!ptr.is_null());
         Self {
             ptr: NonNull::new_unchecked(ptr),
             capacity,
@@ -386,10 +385,8 @@ impl<T, B: BuildAllocRef> RawVec<T, B> {
     ///         self.len += 1;
     ///     }
     /// }
-    /// # fn main() {
-    /// #   let mut vec = MyVec { buf: RawVec::new(), len: 0 };
-    /// #   vec.push(1);
-    /// # }
+    /// # let mut vec = MyVec { buf: RawVec::new(), len: 0 };
+    /// # vec.push(1);
     /// ```
     pub fn double(&mut self)
     where
@@ -419,7 +416,7 @@ impl<T, B: BuildAllocRef> RawVec<T, B> {
             }
 
             let (mut alloc, old_layout) = self.alloc_ref();
-            let (new_cap, ptr) = if let Some(layout) = old_layout {
+            let (new_cap, ptr) = if let Some(old_layout) = old_layout {
                 // Since we guarantee that we never allocate more than
                 // `isize::MAX` bytes, `elem_size * self.cap <= isize::MAX` as
                 // a precondition, so this can't overflow. Additionally the
@@ -431,27 +428,27 @@ impl<T, B: BuildAllocRef> RawVec<T, B> {
                 // in this module, allowing us to use
                 // `from_size_align_unchecked`.
                 let new_cap = 2 * self.capacity;
-                let new_size = new_cap * elem_size;
-                alloc_guard(new_size)?;
+                let new_layout = alloc_guard(new_cap * elem_size, mem::align_of::<T>())?;
                 let ptr = alloc
-                    .realloc(self.ptr.cast(), layout, new_size)
-                    .map_err(|inner| CollectionAllocErr::AllocError {
-                        inner,
-                        layout: NonZeroLayout::from_size_align_unchecked(new_size, layout.align()),
-                    })?;
-                (new_cap, ptr.cast())
-            } else {
-                // Skip to 4 because tiny `Vec`'s are dumb; but not if that
-                // would cause overflow.
-                let new_cap = if elem_size > (!0) / 8 { 1 } else { 4 };
-                let new_layout = NonZeroLayout::array::<T>(new_cap)?;
-                let ptr = alloc
-                    .alloc(NonZeroLayout::array::<T>(new_cap)?)
+                    .realloc(self.ptr.cast(), old_layout, new_layout)
                     .map_err(|inner| CollectionAllocErr::AllocError {
                         inner,
                         layout: new_layout,
                     })?;
                 (new_cap, ptr.cast())
+            } else {
+                // Skip to 4 because tiny `Vec`'s are dumb; but not if that
+                // would cause overflow.
+                let new_cap = NonZeroUsize::new_unchecked(if elem_size > (!0) / 8 { 1 } else { 4 });
+                let new_layout = NonZeroLayout::array::<T>(new_cap)?;
+                let ptr =
+                    alloc
+                        .alloc(new_layout)
+                        .map_err(|inner| CollectionAllocErr::AllocError {
+                            inner,
+                            layout: new_layout,
+                        })?;
+                (new_cap.get(), ptr.cast())
             };
 
             self.ptr = ptr;
@@ -513,9 +510,9 @@ impl<T, B: BuildAllocRef> RawVec<T, B> {
             // `Layout::from_size_align_unchecked` as we know this won't
             // overflow and the alignment is sufficiently small.
             let new_cap = 2 * self.capacity;
-            let new_size = new_cap * elem_size;
-            alloc_guard(new_size)?;
-            Ok(alloc.grow_in_place(self.ptr.cast(), old_layout, new_size))
+            let new_layout = alloc_guard(new_cap * elem_size, mem::align_of::<T>())?;
+            debug_assert_eq!(old_layout.align(), new_layout.align());
+            Ok(alloc.grow_in_place(self.ptr.cast(), old_layout, new_layout.size()))
         }
     }
 
@@ -558,10 +555,8 @@ impl<T, B: BuildAllocRef> RawVec<T, B> {
     ///         }
     ///     }
     /// }
-    /// # fn main() {
-    /// #   let mut vector = MyVec { buf: RawVec::new(), len: 0 };
-    /// #   vector.push_all(&[1, 3, 5, 7, 9]);
-    /// # }
+    /// # let mut vector = MyVec { buf: RawVec::new(), len: 0 };
+    /// # vector.push_all(&[1, 3, 5, 7, 9]);
     /// ```
     pub fn reserve(&mut self, used_capacity: usize, needed_extra_capacity: usize)
     where
@@ -666,34 +661,34 @@ impl<T, B: BuildAllocRef> RawVec<T, B> {
     where
         B::Ref: AllocRef,
     {
+        // NOTE: we don't early branch on ZSTs here because we want this
+        // to actually catch "asking for more than usize::MAX" in that case.
+        // If we make it past the first branch then we are guaranteed to
+        // return.
+
+        // Don't actually need any more capacity. If the current `cap` is 0, we can't
+        // reallocate in place.
+        // Wrapping in case they give a bad `used_capacity`
+        if self.capacity().wrapping_sub(used_capacity) >= needed_extra_capacity {
+            return Ok(false);
+        }
+
+        let (mut alloc, old_layout) = if let (alloc, Some(layout)) = self.alloc_ref() {
+            (alloc, layout)
+        } else {
+            return Ok(false); // nothing to double
+        };
+
+        let new_cap = self.amortized_new_size(used_capacity, needed_extra_capacity)?;
+        let new_layout = alloc_guard(new_cap * mem::size_of::<T>(), mem::align_of::<T>())?;
+        debug_assert_eq!(new_layout.align(), old_layout.align());
+
         unsafe {
-            // NOTE: we don't early branch on ZSTs here because we want this
-            // to actually catch "asking for more than usize::MAX" in that case.
-            // If we make it past the first branch then we are guaranteed to
-            // return.
-
-            // Don't actually need any more capacity. If the current `cap` is 0, we can't
-            // reallocate in place.
-            // Wrapping in case they give a bad `used_capacity`
-            if self.capacity().wrapping_sub(used_capacity) >= needed_extra_capacity {
-                return Ok(false);
-            }
-
-            let (mut alloc, old_layout) = if let (alloc, Some(layout)) = self.alloc_ref() {
-                (alloc, layout)
-            } else {
-                return Ok(false); // nothing to double
-            };
-
-            let new_cap = self.amortized_new_size(used_capacity, needed_extra_capacity)?;
-            let new_size = new_cap * mem::size_of::<T>();
-
             // Here, `cap < used_capacity + needed_extra_capacity <= new_cap`
             // (regardless of whether `self.cap - used_capacity` wrapped).
             // Therefore, we can safely call `grow_in_place`.
             // FIXME: may crash and burn on over-reserve
-            alloc_guard(new_size)?;
-            if alloc.grow_in_place(self.ptr.cast(), old_layout, new_size) {
+            if alloc.grow_in_place(self.ptr.cast(), old_layout, new_layout.size()) {
                 self.capacity = new_cap;
                 Ok(true)
             } else {
@@ -764,14 +759,15 @@ impl<T, B: BuildAllocRef> RawVec<T, B> {
                 // We also know that `self.cap` is greater than `amount`, and
                 // consequently we don't need runtime checks for creating either
                 // layout
-                let old_size = elem_size * self.capacity;
-                let new_size = elem_size * amount;
-                let align = mem::align_of::<T>();
+                let old_size = NonZeroUsize::new_unchecked(elem_size * self.capacity);
+                let new_size = NonZeroUsize::new_unchecked(elem_size * amount);
+                let align = align_of_nonzero::<T>();
                 let old_layout = NonZeroLayout::from_size_align_unchecked(old_size, align);
+                let new_layout = alloc_guard(new_size.get(), align.get())?;
                 let ptr = self.ptr.cast();
                 self.build_alloc
                     .build_alloc_ref(ptr, Some(old_layout))
-                    .realloc(ptr, old_layout, new_size)
+                    .realloc(ptr, old_layout, new_layout)
                     .map_err(|inner| CollectionAllocErr::AllocError {
                         layout: NonZeroLayout::from_size_align_unchecked(new_size, align),
                         inner,
@@ -791,49 +787,50 @@ impl<T, B: BuildAllocRef> RawVec<T, B> {
     where
         B::Ref: ReallocRef,
     {
-        unsafe {
-            // NOTE: we don't early branch on ZSTs here because we want this
-            // to actually catch "asking for more than usize::MAX" in that case.
-            // If we make it past the first branch then we are guaranteed to
-            // panic.
+        // NOTE: we don't early branch on ZSTs here because we want this
+        // to actually catch "asking for more than usize::MAX" in that case.
+        // If we make it past the first branch then we are guaranteed to
+        // panic.
 
-            // Don't actually need any more capacity.
-            // Wrapping in case they gave a bad `used_capacity`.
-            if self.capacity().wrapping_sub(used_capacity) >= needed_extra_capacity {
-                return Ok(());
-            }
-
-            // Nothing we can really do about these checks :(
-            let new_cap = match strategy {
-                ReserveStrategy::Exact => used_capacity
-                    .checked_add(needed_extra_capacity)
-                    .ok_or(CollectionAllocErr::CapacityOverflow)?,
-                ReserveStrategy::Amortized => {
-                    self.amortized_new_size(used_capacity, needed_extra_capacity)?
-                }
-            };
-            let new_layout = NonZeroLayout::array::<T>(new_cap)?;
-
-            alloc_guard(new_layout.size())?;
-
-            let (mut alloc, old_layout) = self.alloc_ref();
-            let result = if let Some(layout) = old_layout {
-                debug_assert_eq!(new_layout.align(), layout.align());
-                alloc.realloc(self.ptr.cast(), layout, new_layout.size())
-            } else {
-                alloc.alloc(new_layout)
-            };
-
-            self.ptr = result
-                .map_err(|inner| CollectionAllocErr::AllocError {
-                    layout: new_layout,
-                    inner,
-                })?
-                .cast();
-            self.capacity = new_cap;
-
-            Ok(())
+        // Don't actually need any more capacity.
+        // Wrapping in case they gave a bad `used_capacity`.
+        if self.capacity().wrapping_sub(used_capacity) >= needed_extra_capacity {
+            return Ok(());
         }
+
+        // Nothing we can really do about these checks :(
+        let new_cap = match strategy {
+            ReserveStrategy::Exact => used_capacity
+                .checked_add(needed_extra_capacity)
+                .ok_or(CollectionAllocErr::CapacityOverflow)?,
+            ReserveStrategy::Amortized => {
+                self.amortized_new_size(used_capacity, needed_extra_capacity)?
+            }
+        };
+        let new_cap = unsafe {
+            debug_assert_ne!(new_cap, 0);
+            NonZeroUsize::new_unchecked(new_cap)
+        };
+        let new_layout = NonZeroLayout::array::<T>(new_cap)?;
+
+        let _ = alloc_guard(new_layout.size().get(), new_layout.align().get())?;
+
+        let (mut alloc, old_layout) = self.alloc_ref();
+        let result = if let Some(layout) = old_layout {
+            unsafe { alloc.realloc(self.ptr.cast(), layout, new_layout) }
+        } else {
+            alloc.alloc(new_layout)
+        };
+
+        self.ptr = result
+            .map_err(|inner| CollectionAllocErr::AllocError {
+                layout: new_layout,
+                inner,
+            })?
+            .cast();
+        self.capacity = new_cap.get();
+
+        Ok(())
     }
 }
 
@@ -858,51 +855,58 @@ enum ReserveStrategy {
 }
 
 impl<T, B: BuildAllocRef> RawVec<T, B> {
-    /// Frees the memory owned by the RawVec *without* trying to Drop its contents.
-    pub unsafe fn dealloc_buffer(&mut self) {
+    /// Frees the memory owned by the `RawVec` *without* trying to Drop its contents.
+    pub fn dealloc_buffer(&mut self) {
         if let (mut alloc, Some(layout)) = self.alloc_ref() {
-            alloc.dealloc(self.ptr.cast(), layout)
+            unsafe { alloc.dealloc(self.ptr.cast(), layout) }
         }
     }
 }
 
 #[cfg(feature = "dropck_eyepatch")]
 unsafe impl<#[may_dangle] T, B: BuildAllocRef> Drop for RawVec<T, B> {
-    /// Frees the memory owned by the RawVec *without* trying to Drop its contents.
+    /// Frees the memory owned by the `RawVec` *without* trying to Drop its contents.
     fn drop(&mut self) {
-        unsafe {
-            self.dealloc_buffer();
-        }
+        self.dealloc_buffer();
     }
 }
 
 #[cfg(not(feature = "dropck_eyepatch"))]
 impl<T, B: BuildAllocRef> Drop for RawVec<T, B> {
-    /// Frees the memory owned by the RawVec *without* trying to Drop its contents.
+    /// Frees the memory owned by the `RawVec` *without* trying to Drop its contents.
     fn drop(&mut self) {
-        unsafe {
-            self.dealloc_buffer();
-        }
+        self.dealloc_buffer();
     }
 }
 
 // We need to guarantee the following:
 // * We don't ever allocate `> isize::MAX` byte-size objects.
 // * We don't overflow `usize::MAX` and actually allocate too little.
+// * `alloc_size` and `align` is non-zero (only checked in debug builds)
 //
 // On 64-bit we just need to check for overflow since trying to allocate
 // `> isize::MAX` bytes will surely fail. On 32-bit and 16-bit we need to add
 // an extra guard for this in case we're running on a platform which can use
 // all 4GB in user-space, e.g., PAE or x32.
-
 #[inline]
 #[allow(clippy::cast_sign_loss)]
-fn alloc_guard(alloc_size: usize) -> Result<(), CapacityOverflow> {
+fn alloc_guard(alloc_size: usize, align: usize) -> Result<NonZeroLayout, CapacityOverflow> {
     if mem::size_of::<usize>() < 8 && alloc_size > isize::max_value() as usize {
         Err(CapacityOverflow)
     } else {
-        Ok(())
+        debug_assert!(NonZeroLayout::from_size_align(alloc_size, align).is_ok());
+
+        unsafe {
+            Ok(NonZeroLayout::from_size_align_unchecked(
+                NonZeroUsize::new_unchecked(alloc_size),
+                NonZeroUsize::new_unchecked(align),
+            ))
+        }
     }
+}
+
+const fn align_of_nonzero<T>() -> NonZeroUsize {
+    unsafe { NonZeroUsize::new_unchecked(mem::align_of::<T>()) }
 }
 
 // One central function responsible for reporting capacity overflows. This'll
