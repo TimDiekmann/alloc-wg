@@ -36,12 +36,6 @@ impl fmt::Display for CannotReallocInPlace {
     }
 }
 
-/// The `CannotReallocInPlace` error is used when [`grow_in_place`] or
-/// [`shrink_in_place`] were unable to reuse the given memory block for
-/// a requested layout.
-///
-/// [`grow_in_place`]: ./trait.Alloc.html#method.grow_in_place
-/// [`shrink_in_place`]: ./trait.Alloc.html#method.shrink_in_place
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct CapacityOverflow;
 
