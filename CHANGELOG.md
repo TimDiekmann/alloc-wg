@@ -2,7 +2,7 @@
 
 - Provide default implementation for `realloc`
 - Don't reexport `Layout`
-- Make `NonZeroLayout::size` and `align` const
+- Make `NonZeroLayout::size`, `padding_needed_for` and `align` const
 
 # v0.5
 

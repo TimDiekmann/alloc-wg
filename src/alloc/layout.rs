@@ -134,7 +134,7 @@ impl NonZeroLayout {
     /// satisfy this constraint is to ensure `align <= self.align()`.
     #[inline]
     #[must_use]
-    pub fn padding_needed_for(&self, align: NonZeroUsize) -> usize {
+    pub const fn padding_needed_for(&self, align: NonZeroUsize) -> usize {
         // Rounded up value is:
         //   len_rounded_up = (len + align - 1) & !(align - 1);
         // and then we return the padding difference: `len_rounded_up - len`.
