@@ -7,6 +7,7 @@ pub use self::{
 };
 pub use core::alloc::{GlobalAlloc, Layout};
 use core::{
+    cmp,
     fmt,
     num::NonZeroUsize,
     ptr::{self, NonNull},
@@ -151,7 +152,29 @@ pub trait ReallocRef: AllocRef {
         ptr: NonNull<u8>,
         old_layout: NonZeroLayout,
         new_layout: NonZeroLayout,
-    ) -> Result<NonNull<u8>, Self::Error>;
+    ) -> Result<NonNull<u8>, Self::Error> {
+        let old_size = old_layout.size();
+        let new_size = new_layout.size();
+
+        if old_layout.align() == new_layout.align()
+            && ((new_size > old_size && self.grow_in_place(ptr, old_layout, new_size))
+                || (new_size < old_size && self.shrink_in_place(ptr, old_layout, new_size)))
+        {
+            return Ok(ptr);
+        }
+
+        // otherwise, fall back on alloc + copy + dealloc.
+        let result = self.alloc(new_layout);
+        if let Ok(new_ptr) = result {
+            ptr::copy_nonoverlapping(
+                ptr.as_ptr(),
+                new_ptr.as_ptr(),
+                cmp::min(old_size.get(), new_size.get()),
+            );
+            self.dealloc(ptr, old_layout);
+        }
+        result
+    }
 }
 
 /// The `AllocErr` error indicates an allocation failure
