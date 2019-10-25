@@ -95,13 +95,13 @@ use core::{
     iter::FusedIterator,
     marker::PhantomData,
     mem,
+    num::NonZeroUsize,
     ops::{Deref, DerefMut},
     pin::Pin,
     ptr::{self, NonNull},
     slice,
     task::{Context, Poll},
 };
-use std::num::NonZeroUsize;
 
 /// A pointer type for heap allocation.
 ///

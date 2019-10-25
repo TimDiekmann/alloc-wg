@@ -13,8 +13,16 @@ use crate::{
     boxed::Box,
     collections::CollectionAllocErr::{self},
 };
-use core::{cmp, marker::PhantomData, mem, ptr, ptr::NonNull, slice};
-use std::{convert::TryInto, num::NonZeroUsize};
+use core::{
+    cmp,
+    convert::TryInto,
+    marker::PhantomData,
+    mem,
+    num::NonZeroUsize,
+    ptr,
+    ptr::NonNull,
+    slice,
+};
 
 /// A low-level utility for more ergonomically allocating, reallocating, and deallocating
 /// a buffer of memory on the heap without having to worry about all the corner cases

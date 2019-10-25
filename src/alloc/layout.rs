@@ -3,8 +3,8 @@ use core::{
     convert::{TryFrom, TryInto},
     fmt,
     mem,
+    num::NonZeroUsize,
 };
-use std::num::NonZeroUsize;
 
 /// The parameters given to `Layout::from_size_align` or some other `Layout` constructor do not
 /// satisfy its documented constraints.
