@@ -80,6 +80,7 @@
 
 use crate::{
     alloc::{AbortAlloc, AllocRef, BuildAllocRef, DeallocRef, Global, NonZeroLayout},
+    clone::CloneIn,
     collections::CollectionAllocErr,
     raw_vec::RawVec,
     UncheckedResultExt,
@@ -839,15 +840,8 @@ where
         let old_layout = NonZeroLayout::for_value(self.as_ref());
 
         unsafe {
-            let mut a = b.build_alloc_ref(old_ptr, old_layout);
-            let ptr = if let Ok(layout) = NonZeroLayout::new::<T>() {
-                let ptr = a.alloc(layout).unwrap_unchecked().cast::<T>();
-                ptr.as_ptr().write(self.as_ref().clone());
-                ptr
-            } else {
-                NonNull::dangling()
-            };
-            Self::from_raw_in(ptr.as_ptr(), b)
+            let a = b.build_alloc_ref(old_ptr, old_layout);
+            self.clone_in(a)
         }
     }
 
@@ -873,6 +867,25 @@ where
     #[inline]
     fn clone_from(&mut self, source: &Self) {
         (**self).clone_from(&(**source));
+    }
+}
+
+#[allow(clippy::use_self)]
+impl<T: Clone, A: AllocRef, B: BuildAllocRef> CloneIn<A> for Box<T, B>
+where
+    B::Ref: AllocRef,
+{
+    type Cloned = Box<T, A::BuildAlloc>;
+
+    fn clone_in(&self, a: A) -> Self::Cloned
+    where
+        A: AllocRef<Error = crate::Never>,
+    {
+        Box::new_in(self.as_ref().clone(), a)
+    }
+
+    fn try_clone_in(&self, a: A) -> Result<Self::Cloned, A::Error> {
+        Box::try_new_in(self.as_ref().clone(), a)
     }
 }
 

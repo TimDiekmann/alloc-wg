@@ -58,7 +58,6 @@
     any(feature = "coerce_unsized", feature = "dispatch_from_dyn"),
     feature(unsize)
 )]
-#![cfg_attr(feature = "ptr_internals", feature(ptr_internals))]
 #![cfg_attr(feature = "exact_size_is_empty", feature(exact_size_is_empty))]
 #![cfg_attr(feature = "receiver_trait", feature(receiver_trait))]
 #![cfg_attr(
@@ -106,6 +105,7 @@
 
 pub mod alloc;
 pub mod boxed;
+pub mod clone;
 pub mod collections;
 pub mod raw_vec;
 

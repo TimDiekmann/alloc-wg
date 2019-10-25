@@ -14,6 +14,51 @@ pub use liballoc::alloc::{alloc, alloc_zeroed, dealloc, realloc};
 #[cfg(feature = "std")]
 use std::alloc::System;
 
+/// The `CannotReallocInPlace` error is used when [`grow_in_place`] or
+/// [`shrink_in_place`] were unable to reuse the given memory block for
+/// a requested layout.
+///
+/// [`grow_in_place`]: ./trait.Alloc.html#method.grow_in_place
+/// [`shrink_in_place`]: ./trait.Alloc.html#method.shrink_in_place
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct CannotReallocInPlace;
+
+impl CannotReallocInPlace {
+    pub fn description(&self) -> &str {
+        "cannot reallocate allocator's memory in place"
+    }
+}
+
+// (we need this for downstream impl of trait Error)
+impl fmt::Display for CannotReallocInPlace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.description())
+    }
+}
+
+/// The `CannotReallocInPlace` error is used when [`grow_in_place`] or
+/// [`shrink_in_place`] were unable to reuse the given memory block for
+/// a requested layout.
+///
+/// [`grow_in_place`]: ./trait.Alloc.html#method.grow_in_place
+/// [`shrink_in_place`]: ./trait.Alloc.html#method.shrink_in_place
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct CapacityOverflow;
+
+impl From<core::alloc::LayoutErr> for CapacityOverflow {
+    #[inline]
+    fn from(_: core::alloc::LayoutErr) -> Self {
+        Self
+    }
+}
+
+impl From<LayoutErr> for CapacityOverflow {
+    #[inline]
+    fn from(_: LayoutErr) -> Self {
+        Self
+    }
+}
+
 pub trait BuildAllocRef: Sized {
     type Ref: DeallocRef<BuildAlloc = Self>;
 
@@ -44,6 +89,38 @@ pub trait AllocRef: DeallocRef {
             ptr::write_bytes(p.as_ptr(), 0, size);
         }
         Ok(p)
+    }
+
+    fn usable_size(&self, layout: NonZeroLayout) -> (usize, usize) {
+        (layout.size(), layout.size())
+    }
+
+    unsafe fn grow_in_place(
+        &mut self,
+        ptr: NonNull<u8>,
+        layout: NonZeroLayout,
+        new_size: usize,
+    ) -> bool {
+        let _ = ptr; // this default implementation doesn't care about the actual address.
+        debug_assert!(new_size >= layout.size());
+        let (_l, u) = self.usable_size(layout);
+        // _l <= layout.size()                       [guaranteed by usable_size()]
+        //       layout.size() <= new_layout.size()  [required by this method]
+        new_size <= u
+    }
+
+    unsafe fn shrink_in_place(
+        &mut self,
+        ptr: NonNull<u8>,
+        layout: NonZeroLayout,
+        new_size: usize,
+    ) -> bool {
+        let _ = ptr; // this default implementation doesn't care about the actual address.
+        debug_assert!(new_size <= layout.size());
+        let (l, _u) = self.usable_size(layout);
+        //                      layout.size() <= _u  [guaranteed by usable_size()]
+        // new_layout.size() <= layout.size()        [required by this method]
+        l <= new_size
     }
 }
 

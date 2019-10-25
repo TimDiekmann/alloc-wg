@@ -1,3 +1,11 @@
+# v0.5
+
+- Add `usable_size`, `grow_in_place`, and `shrink_in_place` to `AllocRef`
+- Add `(try_)reserve_in_place` and `(try_)double(_in_place)` for `RawVec`
+- Add `CloneIn` trait for `Box`
+- Use `AbortAlloc<Global>` as default for `RawVec` instead of `Global`
+
+
 # v0.4
 
 - Add `RawVec<T, B: BuildAlloc>`
