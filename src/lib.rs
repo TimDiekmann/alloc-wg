@@ -37,6 +37,10 @@
 //!
 //!   Issue: [rust-lang/wg-allocators#16](https://github.com/rust-lang/wg-allocators/issues/16)
 //!
+//! - Support reallocating to a different alignment.
+//!
+//!   Issue: [rust-lang/wg-allocators#5](https://github.com/rust-lang/wg-allocators/issues/5)
+//!
 //!
 //! [`Alloc`]: https://doc.rust-lang.org/1.38.0/alloc/alloc/trait.Alloc.html
 //! [`AllocRef`]: crate::alloc::AllocRef

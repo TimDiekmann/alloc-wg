@@ -60,12 +60,12 @@
 //!
 //! For non-zero-sized values, a [`Box`] will use the [`Global`] allocator for its allocation if no
 //! allocator was specified. It is valid to convert both ways between a [`Box`] and a raw pointer
-//! allocated with the same allocator, given that the [`Layout`] used with the allocator is
+//! allocated with the same allocator, given that the [`NonZeroLayout`] used with the allocator is
 //! correct for the type. More precisely, a `value: *mut T` that has been allocated with the
 //! [`Global`] allocator with `Layout::for_value(&*value)` may be converted into a box using
 //! [`Box::<T>::from_raw(value)`]. For other allocators, [`Box::<T>::from_raw_in(value, alloc)`] may
 //! be used. Conversely, the memory backing a `value: *mut T` obtained from [`Box::<T>::into_raw`]
-//! may be deallocated using the specific allocator with [`Layout::for_value(&*value)`].
+//! may be deallocated using the specific allocator with [`NonZeroLayout::for_value(&*value)`].
 //!
 //!
 //! [dereferencing]: core::ops::Deref
@@ -75,8 +75,8 @@
 //! [`Box::<T>::from_raw(value, alloc)`]: crate::boxed::Box::from_raw_in
 //! [`Box::<T>::into_raw`]: crate::boxed::Box::into_raw
 //! [`Global`]: crate::alloc::Global
-//! [`Layout`]: crate::alloc::Layout
-//! [`Layout::for_value(&*value)`]: crate::alloc::Layout::for_value
+//! [`NonZeroLayout`]: crate::alloc::NonZeroLayout
+//! [`NonZeroLayout::for_value(&*value)`]: crate::alloc::NonZeroLayout::for_value
 
 use crate::{
     alloc::{AbortAlloc, AllocRef, BuildAllocRef, DeallocRef, Global, NonZeroLayout},

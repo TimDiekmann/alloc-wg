@@ -47,7 +47,11 @@ Changes regarding the current `Alloc` trait
   unlocks the possibility to move the extension API like `alloc_array` into a separate trait.
 
   Issue: [rust-lang/wg-allocators#16](https://github.com/rust-lang/wg-allocators/issues/16)
-  
+
+- Support reallocating to a different alignment.
+
+  Issue: [rust-lang/wg-allocators#5](https://github.com/rust-lang/wg-allocators/issues/5)
+
 Currently associated containers
 -------------------------------
   
