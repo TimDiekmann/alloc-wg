@@ -60,7 +60,7 @@ Currently associated containers
   - specialization of sized iterators as it's not possible for downstream crates.
   - Limited `T: Copy` for `Fn`-traits as it's not possible for downstream crates.
    
-- [`RawVec`] (Only methods and basic traits)
+- [`RawVec`]
 
 [`Alloc`]: https://doc.rust-lang.org/1.38.0/alloc/alloc/trait.Alloc.html
 [`AllocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.AllocRef.html
