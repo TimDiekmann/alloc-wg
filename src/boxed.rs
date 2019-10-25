@@ -511,10 +511,8 @@ impl<T: ?Sized> Box<T> {
     /// ```
     /// Manually create a `Box` from scratch by using the global allocator:
     /// ```
-    /// use alloc_wg::{
-    ///     alloc::{alloc, Layout},
-    ///     boxed::Box,
-    /// };
+    /// use alloc_wg::{alloc::alloc, boxed::Box};
+    /// use core::alloc::Layout;
     ///
     /// unsafe {
     ///     let ptr = alloc(Layout::new::<i32>()) as *mut i32;
@@ -549,9 +547,10 @@ impl<T: ?Sized, B: BuildAllocRef> Box<T, B> {
     /// Manually create a `Box` from scratch by using the global allocator:
     /// ```
     /// use alloc_wg::{
-    ///     alloc::{alloc, Global, Layout},
+    ///     alloc::{alloc, Global},
     ///     boxed::Box,
     /// };
+    /// use core::alloc::Layout;
     ///
     /// unsafe {
     ///     let ptr = alloc(Layout::new::<i32>()) as *mut i32;
@@ -614,11 +613,8 @@ impl<T: ?Sized, B: BuildAllocRef> Box<T, B> {
     /// Manual cleanup by explicitly running the destructor and deallocating
     /// the memory:
     /// ```
-    /// use alloc_wg::{
-    ///     alloc::{dealloc, Layout},
-    ///     boxed::Box,
-    /// };
-    /// use core::ptr;
+    /// use alloc_wg::{alloc::dealloc, boxed::Box};
+    /// use core::{alloc::Layout, ptr};
     ///
     /// let x = Box::new(String::from("Hello"));
     /// let p = Box::into_raw(x);

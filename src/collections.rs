@@ -91,17 +91,6 @@ where
     }
 }
 
-impl<B: BuildAllocRef> From<core::alloc::LayoutErr> for CollectionAllocErr<B>
-where
-    B::Ref: AllocRef,
-{
-    #[inline]
-    #[must_use]
-    fn from(_: core::alloc::LayoutErr) -> Self {
-        Self::CapacityOverflow
-    }
-}
-
 impl<B: BuildAllocRef> From<LayoutErr> for CollectionAllocErr<B>
 where
     B::Ref: AllocRef,

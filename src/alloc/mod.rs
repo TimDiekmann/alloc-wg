@@ -5,7 +5,7 @@ pub use self::{
     abort::AbortAlloc,
     layout::{LayoutErr, NonZeroLayout},
 };
-pub use core::alloc::{GlobalAlloc, Layout};
+pub use core::alloc::GlobalAlloc;
 use core::{
     cmp,
     fmt,

@@ -77,14 +77,14 @@ impl NonZeroLayout {
     /// The minimum size in bytes for a memory block of this layout.
     #[inline]
     #[must_use]
-    pub fn size(&self) -> NonZeroUsize {
+    pub const fn size(&self) -> NonZeroUsize {
         self.size
     }
 
     /// The minimum byte alignment for a memory block of this layout.
     #[inline]
     #[must_use]
-    pub fn align(&self) -> NonZeroUsize {
+    pub const fn align(&self) -> NonZeroUsize {
         self.align
     }
 

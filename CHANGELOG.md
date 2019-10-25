@@ -1,3 +1,9 @@
+# v0.6
+
+- Provide default implementation for `realloc`
+- Don't reexport `Layout`
+- Make `NonZeroLayout::size` and `align` const
+
 # v0.5
 
 - Add `usable_size`, `grow_in_place`, and `shrink_in_place` to `AllocRef`

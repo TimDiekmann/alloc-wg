@@ -6,7 +6,6 @@ use crate::{
         CapacityOverflow,
         DeallocRef,
         Global,
-        Layout,
         NonZeroLayout,
         ReallocRef,
     },
@@ -14,6 +13,7 @@ use crate::{
     collections::CollectionAllocErr,
 };
 use core::{
+    alloc::Layout,
     cmp,
     convert::TryInto,
     marker::PhantomData,
@@ -769,7 +769,7 @@ impl<T, B: BuildAllocRef> RawVec<T, B> {
                 // layout
                 let old_size = NonZeroUsize::new_unchecked(elem_size * self.capacity);
                 let new_size = NonZeroUsize::new_unchecked(elem_size * amount);
-                let align = align_of_nonzero::<T>();
+                let align = NonZeroUsize::new_unchecked(mem::align_of::<T>());
                 let old_layout = NonZeroLayout::from_size_align_unchecked(old_size, align);
                 let new_layout = alloc_guard(new_size.get(), align.get())?;
                 let ptr = self.ptr.cast();
@@ -911,10 +911,6 @@ fn alloc_guard(alloc_size: usize, align: usize) -> Result<NonZeroLayout, Capacit
             ))
         }
     }
-}
-
-const fn align_of_nonzero<T>() -> NonZeroUsize {
-    unsafe { NonZeroUsize::new_unchecked(mem::align_of::<T>()) }
 }
 
 // One central function responsible for reporting capacity overflows. This'll
