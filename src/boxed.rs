@@ -1098,22 +1098,22 @@ impl<B: BuildAllocRef> From<Box<str, B>> for Box<[u8], B> {
     }
 }
 
-#[cfg(feature = "boxed_slice_try_from")]
-#[allow(clippy::use_self)]
-impl<T, const N: usize> core::convert::TryFrom<Box<[T]>> for Box<[T; N]>
-where
-    [T; N]: core::array::LengthAtMost32,
-{
-    type Error = Box<[T]>;
-
-    fn try_from(boxed_slice: Box<[T]>) -> Result<Self, Self::Error> {
-        if boxed_slice.len() == N {
-            Ok(unsafe { Self::from_raw(Box::into_raw(boxed_slice) as *mut [T; N]) })
-        } else {
-            Err(boxed_slice)
-        }
-    }
-}
+//#[cfg(feature = "boxed_slice_try_from")]
+//#[allow(clippy::use_self)]
+//impl<T, const N: usize> core::convert::TryFrom<Box<[T]>> for Box<[T; N]>
+//where
+//    [T; N]: core::array::LengthAtMost32,
+//{
+//    type Error = Box<[T]>;
+//
+//    fn try_from(boxed_slice: Box<[T]>) -> Result<Self, Self::Error> {
+//        if boxed_slice.len() == N {
+//            Ok(unsafe { Self::from_raw(Box::into_raw(boxed_slice) as *mut [T; N]) })
+//        } else {
+//            Err(boxed_slice)
+//        }
+//    }
+//}
 
 #[allow(clippy::use_self)]
 impl<B: BuildAllocRef> Box<dyn Any, B> {
