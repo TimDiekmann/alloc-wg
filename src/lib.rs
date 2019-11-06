@@ -113,9 +113,25 @@ pub mod clone;
 pub mod collections;
 pub mod raw_vec;
 
+#[cfg(feature = "std")]
+pub mod vec;
+
 extern crate alloc as liballoc;
 
 mod unchecked_unwrap;
 pub use self::unchecked_unwrap::*;
 
 pub type Never = core::convert::Infallible;
+
+#[macro_export]
+macro_rules! vec {
+    ($elem:expr; $n:expr) => (
+        $crate::vec::from_elem($elem, $n)
+    );
+    ($($x:expr),*) => ({
+        let mut v = Vec::new();
+        $( v.push($x); )*
+        v
+    });
+    ($($x:expr,)*) => ($crate::vec![$($x),*])
+}
