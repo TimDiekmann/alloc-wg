@@ -1535,9 +1535,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// assert_eq!(static_ref, &[2, 2, 3]);
     /// ```
     #[inline]
-    pub fn leak<'a>(vec: Vec<T>) -> &'a mut [T]
+    pub fn leak<'a>(vec: Vec<T, B>) -> &'a mut [T]
     where
         T: 'a, // Technically not needed, but kept to be explicit.
+        B::Ref: ReallocRef<Error = crate::Never>,
     {
         Box::leak(vec.into_boxed_slice())
     }
