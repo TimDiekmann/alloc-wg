@@ -1454,7 +1454,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
         assert!(at <= self.len(), "`at` out of bounds");
 
         let other_len = self.len - at;
-        let mut other = Vec::new_in(self.buf.alloc_ref().0);
+        let mut other = Vec::with_capacity_in(other_len, self.buf.alloc_ref().0);
 
         // Unsafely `set_len` and copy items to `other`.
         unsafe {
