@@ -57,6 +57,7 @@
 
 #![cfg_attr(feature = "dropck_eyepatch", feature(dropck_eyepatch))]
 #![cfg_attr(feature = "coerce_unsized", feature(coerce_unsized))]
+#![cfg_attr(feature = "core_intrinsics", feature(core_intrinsics))]
 #![cfg_attr(feature = "dispatch_from_dyn", feature(dispatch_from_dyn))]
 #![cfg_attr(
     any(feature = "coerce_unsized", feature = "dispatch_from_dyn"),

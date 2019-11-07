@@ -879,11 +879,15 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     ///
     /// [`as_mut_ptr`]: #method.as_mut_ptr
     #[inline]
+    #[allow(clippy::let_and_return)]
     pub fn as_ptr(&self) -> *const T {
         // We shadow the slice method of the same name to avoid going through
         // `deref`, which creates an intermediate reference.
         let ptr = self.buf.ptr();
-        // unsafe { assume(!ptr.is_null()); }
+        #[cfg(feature = "core_intrinsics")]
+        unsafe {
+            core::intrinsics::assume(!ptr.is_null());
+        }
         ptr
     }
 
@@ -913,11 +917,15 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// assert_eq!(&*x, &[0, 1, 2, 3]);
     /// ```
     #[inline]
+    #[allow(clippy::let_and_return)]
     pub fn as_mut_ptr(&mut self) -> *mut T {
         // We shadow the slice method of the same name to avoid going through
         // `deref_mut`, which creates an intermediate reference.
         let ptr = self.buf.ptr();
-        // unsafe { assume(!ptr.is_null()); }
+        #[cfg(feature = "core_intrinsics")]
+        unsafe {
+            core::intrinsics::assume(!ptr.is_null());
+        }
         ptr
     }
 
@@ -2034,6 +2042,7 @@ macro_rules! __impl_slice_eq1 {
             #[inline]
             fn eq(&self, other: &$rhs) -> bool { self[..] == other[..] }
             #[inline]
+            #[allow(clippy::partialeq_ne_impl)]
             fn ne(&self, other: &$rhs) -> bool { self[..] != other[..] }
         }
     }
@@ -2130,7 +2139,7 @@ impl<T> AsMut<[T]> for Vec<T> {
 impl<T: Clone> From<&[T]> for Vec<T> {
     fn from(s: &[T]) -> Vec<T> {
         let mut v = Vec::new();
-        v.extend(s.into_iter().cloned());
+        v.extend(s.iter().cloned());
         v
     }
 }
@@ -2275,21 +2284,19 @@ impl<T> Iterator for IntoIter<T> {
         unsafe {
             if self.ptr == self.end {
                 None
+            } else if mem::size_of::<T>() == 0 {
+                // purposefully don't use 'ptr.offset' because for
+                // vectors with 0-size elements this would return the
+                // same pointer.
+                self.ptr = arith_offset(self.ptr as *const i8, 1) as *mut T;
+
+                // Make up a value of this ZST.
+                Some(mem::zeroed())
             } else {
-                if mem::size_of::<T>() == 0 {
-                    // purposefully don't use 'ptr.offset' because for
-                    // vectors with 0-size elements this would return the
-                    // same pointer.
-                    self.ptr = arith_offset(self.ptr as *const i8, 1) as *mut T;
+                let old = self.ptr;
+                self.ptr = self.ptr.offset(1);
 
-                    // Make up a value of this ZST.
-                    Some(mem::zeroed())
-                } else {
-                    let old = self.ptr;
-                    self.ptr = self.ptr.offset(1);
-
-                    Some(ptr::read(old))
-                }
+                Some(ptr::read(old))
             }
         }
     }
@@ -2316,18 +2323,16 @@ impl<T> DoubleEndedIterator for IntoIter<T> {
         unsafe {
             if self.end == self.ptr {
                 None
+            } else if mem::size_of::<T>() == 0 {
+                // See above for why 'ptr.offset' isn't used
+                self.end = arith_offset(self.end as *const i8, -1) as *mut T;
+
+                // Make up a value of this ZST.
+                Some(mem::zeroed())
             } else {
-                if mem::size_of::<T>() == 0 {
-                    // See above for why 'ptr.offset' isn't used
-                    self.end = arith_offset(self.end as *const i8, -1) as *mut T;
+                self.end = self.end.offset(-1);
 
-                    // Make up a value of this ZST.
-                    Some(mem::zeroed())
-                } else {
-                    self.end = self.end.offset(-1);
-
-                    Some(ptr::read(self.end))
-                }
+                Some(ptr::read(self.end))
             }
         }
     }
