@@ -113,7 +113,6 @@ pub mod clone;
 pub mod collections;
 pub mod raw_vec;
 
-#[cfg(feature = "std")]
 pub mod vec;
 
 extern crate alloc as liballoc;
