@@ -61,6 +61,7 @@
 
 use core::{
     cmp::{self, Ordering},
+    convert::TryFrom,
     fmt,
     hash::{self, Hash},
     iter::{FromIterator, FusedIterator},
@@ -330,8 +331,9 @@ impl<T> Vec<T> {
     /// let mut vec: Vec<i32> = Vec::new();
     /// ```
     #[inline]
-    pub const fn new() -> Vec<T> {
-        Vec {
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
             buf: RawVec::NEW,
             len: 0,
         }
@@ -367,8 +369,9 @@ impl<T> Vec<T> {
     /// vec.push(11);
     /// ```
     #[inline]
-    pub fn with_capacity(capacity: usize) -> Vec<T> {
-        Vec {
+    #[must_use]
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
             buf: RawVec::with_capacity(capacity),
             len: 0,
         }
@@ -432,8 +435,8 @@ impl<T> Vec<T> {
     ///     assert_eq!(rebuilt, [4, 5, 6]);
     /// }
     /// ```
-    pub unsafe fn from_raw_parts(ptr: *mut T, length: usize, capacity: usize) -> Vec<T> {
-        Vec {
+    pub unsafe fn from_raw_parts(ptr: *mut T, length: usize, capacity: usize) -> Self {
+        Self {
             buf: RawVec::from_raw_parts(ptr, capacity),
             len: length,
         }
@@ -443,11 +446,11 @@ impl<T> Vec<T> {
 impl<T, B: BuildAllocRef> Vec<T, B> {
     /// Like `new` but parameterized over the choice of allocator for the returned `Vec`.
     #[inline]
-    pub fn new_in(a: B::Ref) -> Vec<T, B>
+    pub fn new_in(a: B::Ref) -> Self
     where
         B::Ref: AllocRef<Error = crate::Never>,
     {
-        Vec {
+        Self {
             buf: RawVec::new_in(a),
             len: 0,
         }
@@ -456,11 +459,11 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// Like `with_capacity` but parameterized over the choice of allocator for the returned
     /// `Vec`.
     #[inline]
-    pub fn with_capacity_in(capacity: usize, a: B::Ref) -> Vec<T, B>
+    pub fn with_capacity_in(capacity: usize, a: B::Ref) -> Self
     where
         B::Ref: AllocRef<Error = crate::Never>,
     {
-        Vec {
+        Self {
             buf: RawVec::with_capacity_in(capacity, a),
             len: 0,
         }
@@ -1462,7 +1465,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
         assert!(at <= self.len(), "`at` out of bounds");
 
         let other_len = self.len - at;
-        let mut other = Vec::with_capacity_in(other_len, self.buf.alloc_ref().0);
+        let mut other = Self::with_capacity_in(other_len, self.buf.alloc_ref().0);
 
         // Unsafely `set_len` and copy items to `other`.
         unsafe {
@@ -1543,7 +1546,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// assert_eq!(static_ref, &[2, 2, 3]);
     /// ```
     #[inline]
-    pub fn leak<'a>(vec: Vec<T, B>) -> &'a mut [T]
+    pub fn leak<'a>(vec: Self) -> &'a mut [T]
     where
         T: 'a, // Technically not needed, but kept to be explicit.
         B::Ref: ReallocRef<Error = crate::Never>,
@@ -1776,8 +1779,9 @@ pub fn from_elem<T: Clone>(elem: T, n: usize) -> Vec<T> {
 ////////////////////////////////////////////////////////////////////////////////
 
 impl<T: Clone> Clone for Vec<T> {
-    fn clone(&self) -> Vec<T> {
-        let mut v = Vec::with_capacity(self.len());
+    #[must_use]
+    fn clone(&self) -> Self {
+        let mut v = Self::with_capacity(self.len());
         v.extend(self.iter().cloned());
         v
     }
@@ -1794,6 +1798,7 @@ impl<T, B: BuildAllocRef, I: SliceIndex<[T]>> Index<I> for Vec<T, B> {
     type Output = I::Output;
 
     #[inline]
+    #[must_use]
     fn index(&self, index: I) -> &Self::Output {
         Index::index(&**self, index)
     }
@@ -1801,6 +1806,7 @@ impl<T, B: BuildAllocRef, I: SliceIndex<[T]>> Index<I> for Vec<T, B> {
 
 impl<T, B: BuildAllocRef, I: SliceIndex<[T]>> IndexMut<I> for Vec<T, B> {
     #[inline]
+    #[must_use]
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         IndexMut::index_mut(&mut **self, index)
     }
@@ -1809,12 +1815,14 @@ impl<T, B: BuildAllocRef, I: SliceIndex<[T]>> IndexMut<I> for Vec<T, B> {
 impl<T, B: BuildAllocRef> ops::Deref for Vec<T, B> {
     type Target = [T];
 
+    #[must_use]
     fn deref(&self) -> &[T] {
         unsafe { slice::from_raw_parts(self.as_ptr(), self.len) }
     }
 }
 
 impl<T, B: BuildAllocRef> ops::DerefMut for Vec<T, B> {
+    #[must_use]
     fn deref_mut(&mut self) -> &mut [T] {
         unsafe { slice::from_raw_parts_mut(self.as_mut_ptr(), self.len) }
     }
@@ -1822,8 +1830,9 @@ impl<T, B: BuildAllocRef> ops::DerefMut for Vec<T, B> {
 
 impl<T> FromIterator<T> for Vec<T> {
     #[inline]
-    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Vec<T> {
-        let mut v = Vec::new();
+    #[must_use]
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let mut v = Self::new();
         v.extend(iter.into_iter());
         v
     }
@@ -1848,6 +1857,8 @@ impl<T> IntoIterator for Vec<T> {
     /// }
     /// ```
     #[inline]
+    #[must_use]
+    #[allow(clippy::cast_possible_wrap)]
     fn into_iter(mut self) -> IntoIter<T> {
         unsafe {
             let begin = self.as_mut_ptr();
@@ -1873,6 +1884,7 @@ impl<'a, T> IntoIterator for &'a Vec<T> {
     type Item = &'a T;
     type IntoIter = slice::Iter<'a, T>;
 
+    #[must_use]
     fn into_iter(self) -> slice::Iter<'a, T> {
         self.iter()
     }
@@ -2084,7 +2096,8 @@ array_impls! {
 /// Implements comparison of vectors, lexicographically.
 impl<T: PartialOrd> PartialOrd for Vec<T> {
     #[inline]
-    fn partial_cmp(&self, other: &Vec<T>) -> Option<Ordering> {
+    #[must_use]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         PartialOrd::partial_cmp(&**self, &**other)
     }
 }
@@ -2094,15 +2107,17 @@ impl<T: Eq> Eq for Vec<T> {}
 /// Implements ordering of vectors, lexicographically.
 impl<T: Ord> Ord for Vec<T> {
     #[inline]
-    fn cmp(&self, other: &Vec<T>) -> Ordering {
+    #[must_use]
+    fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(&**self, &**other)
     }
 }
 
 impl<T> Default for Vec<T> {
     /// Creates an empty `Vec<T>`.
-    fn default() -> Vec<T> {
-        Vec::new()
+    #[must_use]
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -2113,39 +2128,45 @@ impl<T: fmt::Debug> fmt::Debug for Vec<T> {
 }
 
 impl<T> AsRef<Vec<T>> for Vec<T> {
-    fn as_ref(&self) -> &Vec<T> {
+    #[must_use]
+    fn as_ref(&self) -> &Self {
         self
     }
 }
 
 impl<T> AsMut<Vec<T>> for Vec<T> {
-    fn as_mut(&mut self) -> &mut Vec<T> {
+    #[must_use]
+    fn as_mut(&mut self) -> &mut Self {
         self
     }
 }
 
 impl<T> AsRef<[T]> for Vec<T> {
+    #[must_use]
     fn as_ref(&self) -> &[T] {
         self
     }
 }
 
 impl<T> AsMut<[T]> for Vec<T> {
+    #[must_use]
     fn as_mut(&mut self) -> &mut [T] {
         self
     }
 }
 
 impl<T: Clone> From<&[T]> for Vec<T> {
-    fn from(s: &[T]) -> Vec<T> {
-        let mut v = Vec::new();
+    #[must_use]
+    fn from(s: &[T]) -> Self {
+        let mut v = Self::new();
         v.extend(s.iter().cloned());
         v
     }
 }
 
 impl<T: Clone> From<&mut [T]> for Vec<T> {
-    fn from(s: &mut [T]) -> Vec<T> {
+    #[must_use]
+    fn from(s: &mut [T]) -> Self {
         From::<&[T]>::from(s)
     }
 }
@@ -2154,7 +2175,8 @@ impl<T: Clone> From<&mut [T]> for Vec<T> {
 // where
 //     [T]: ToOwned<Owned = Vec<T>>,
 // {
-//     fn from(s: Cow<'a, [T]>) -> Vec<T> {
+//     #[must_use]
+//     fn from(s: Cow<'a, [T]>) -> Self {
 //         s.into_owned()
 //     }
 // }
@@ -2162,7 +2184,8 @@ impl<T: Clone> From<&mut [T]> for Vec<T> {
 // note: test pulls in libstd, which causes errors here
 // #[cfg(not(test))]
 // impl<T> From<Box<[T]>> for Vec<T> {
-//     fn from(s: Box<[T]>) -> Vec<T> {
+//     #[must_use]
+//     fn from(s: Box<[T]>) -> Self {
 //         s.into_vec()
 //     }
 // }
@@ -2170,13 +2193,15 @@ impl<T: Clone> From<&mut [T]> for Vec<T> {
 // note: test pulls in libstd, which causes errors here
 #[cfg(not(test))]
 impl<T> From<Vec<T>> for Box<[T]> {
-    fn from(v: Vec<T>) -> Box<[T]> {
+    #[must_use]
+    fn from(v: Vec<T>) -> Self {
         v.into_boxed_slice()
     }
 }
 
 impl From<&str> for Vec<u8> {
-    fn from(s: &str) -> Vec<u8> {
+    #[must_use]
+    fn from(s: &str) -> Self {
         From::from(s.as_bytes())
     }
 }
@@ -2250,6 +2275,7 @@ impl<T> IntoIter<T> {
     /// let _ = into_iter.next().unwrap();
     /// assert_eq!(into_iter.as_slice(), &['b', 'c']);
     /// ```
+    #[must_use]
     pub fn as_slice(&self) -> &[T] {
         unsafe { slice::from_raw_parts(self.ptr, self.len()) }
     }
@@ -2268,6 +2294,7 @@ impl<T> IntoIter<T> {
     /// assert_eq!(into_iter.next().unwrap(), 'b');
     /// assert_eq!(into_iter.next().unwrap(), 'z');
     /// ```
+    #[must_use]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         unsafe { slice::from_raw_parts_mut(self.ptr as *mut T, self.len()) }
     }
@@ -2302,6 +2329,8 @@ impl<T> Iterator for IntoIter<T> {
     }
 
     #[inline]
+    #[must_use]
+    #[allow(clippy::cast_sign_loss)]
     fn size_hint(&self) -> (usize, Option<usize>) {
         let exact = if mem::size_of::<T>() == 0 {
             (self.end as usize).wrapping_sub(self.ptr as usize)
@@ -2312,6 +2341,7 @@ impl<T> Iterator for IntoIter<T> {
     }
 
     #[inline]
+    #[must_use]
     fn count(self) -> usize {
         self.len()
     }
@@ -2343,7 +2373,8 @@ impl<T> ExactSizeIterator for IntoIter<T> {}
 impl<T> FusedIterator for IntoIter<T> {}
 
 impl<T: Clone> Clone for IntoIter<T> {
-    fn clone(&self) -> IntoIter<T> {
+    #[must_use]
+    fn clone(&self) -> Self {
         let mut v = Vec::new();
         v.extend(self.as_slice().iter().cloned());
         v.into_iter()
@@ -2395,6 +2426,7 @@ impl<T, B: BuildAllocRef> Drain<'_, T, B> {
     /// let _ = drain.next().unwrap();
     /// assert_eq!(drain.as_slice(), &['b', 'c']);
     /// ```
+    #[must_use]
     pub fn as_slice(&self) -> &[T] {
         self.iter.as_slice()
     }
@@ -2411,6 +2443,7 @@ impl<T, B: BuildAllocRef> Iterator for Drain<'_, T, B> {
         self.iter.next().map(|elt| unsafe { ptr::read(elt) })
     }
 
+    #[must_use]
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
     }
@@ -2780,12 +2813,13 @@ where
     s.split_at_mut(next_write)
 }
 
+#[allow(clippy::cast_possible_wrap)]
 unsafe fn offset_from<T>(p: *const T, origin: *const T) -> isize
 where
     T: Sized,
 {
     let pointee_size = mem::size_of::<T>();
-    assert!(0 < pointee_size && pointee_size <= isize::max_value() as usize);
+    assert!(0 < pointee_size && isize::try_from(pointee_size).is_ok());
 
     // This is the same sequence that Clang emits for pointer subtraction.
     // It can be neither `nsw` nor `nuw` because the input is treated as
