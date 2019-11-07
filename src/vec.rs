@@ -137,6 +137,7 @@ use crate::{boxed::Box, raw_vec::RawVec};
 /// Use a `Vec<T>` as an efficient stack:
 ///
 /// ```
+/// # use alloc_wg::vec::Vec;
 /// let mut stack = Vec::new();
 ///
 /// stack.push(1);
@@ -325,6 +326,7 @@ impl<T> Vec<T> {
     /// # Examples
     ///
     /// ```unused_variables, unused_mut
+    /// # use alloc_wg::vec::Vec;
     /// let mut vec: Vec<i32> = Vec::new();
     /// ```
     #[inline]
@@ -350,6 +352,7 @@ impl<T> Vec<T> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// let mut vec = Vec::with_capacity(10);
     ///
     /// // The vector contains no items, even though it has capacity for more
@@ -416,7 +419,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// # use alloc_wg::{vec, vec::Vec};
     /// let v: Vec<i32> = vec![-1, 0, 1];
     ///
     /// let (ptr, len, cap) = v.into_raw_parts();
@@ -506,6 +509,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// let vec: Vec<i32> = Vec::with_capacity(10);
     /// assert_eq!(vec.capacity(), 10);
     /// ```
@@ -581,10 +585,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// use alloc_wg::{
     ///     alloc::{AbortAlloc, Global},
     ///     collections::CollectionAllocErr,
-    ///     vec::Vec,
     /// };
     ///
     /// fn process_data(data: &[u32]) -> Result<Vec<u32>, CollectionAllocErr<AbortAlloc<Global>>> {
@@ -626,10 +630,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// use alloc_wg::{
     ///     alloc::{AbortAlloc, Global},
     ///     collections::CollectionAllocErr,
-    ///     vec::Vec,
     /// };
     ///
     /// fn process_data(data: &[u32]) -> Result<Vec<u32>, CollectionAllocErr<AbortAlloc<Global>>> {
@@ -662,6 +666,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// let mut vec = Vec::with_capacity(10);
     /// vec.extend([1, 2, 3].iter().cloned());
     /// assert_eq!(vec.capacity(), 10);
@@ -688,6 +693,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// let mut vec = Vec::with_capacity(10);
     /// vec.extend([1, 2, 3].iter().cloned());
     /// assert_eq!(vec.capacity(), 10);
@@ -721,6 +727,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// Any excess capacity is removed:
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// let mut vec = Vec::with_capacity(10);
     /// vec.extend([1, 2, 3].iter().cloned());
     ///
@@ -890,6 +897,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// // Allocate vector big enough for 4 elements.
     /// let size = 4;
     /// let mut x: Vec<i32> = Vec::with_capacity(size);
@@ -939,6 +947,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     ///
     /// ```no_run
     /// # #![allow(dead_code)]
+    /// # use alloc_wg::vec::Vec;
     /// # // This is just a minimal skeleton for the doc example;
     /// # // don't use this as a starting point for a real library.
     /// # pub struct StreamWrapper { strm: *mut std::ffi::c_void }
@@ -1406,6 +1415,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// let mut v = Vec::new();
     /// assert!(v.is_empty());
     ///
@@ -1518,7 +1528,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// Simple usage:
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// # use alloc_wg::{vec, vec::Vec};
     /// let x = vec![1, 2, 3];
     /// let static_ref: &'static mut [usize] = Vec::leak(x);
     /// static_ref[0] += 1;
