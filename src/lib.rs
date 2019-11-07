@@ -128,7 +128,7 @@ macro_rules! vec {
         $crate::vec::from_elem($elem, $n)
     );
     ($($x:expr),*) => ({
-        let mut v = Vec::new();
+        let mut v = $crate::vec::Vec::new();
         $( v.push($x); )*
         v
     });
