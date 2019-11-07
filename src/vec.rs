@@ -727,7 +727,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// Any excess capacity is removed:
     ///
     /// ```
-    /// # use alloc_wg::vec::Vec;
+    /// # // FIXME: alloc_wg Vec not possible as a slice converts to standard Vec
     /// let mut vec = Vec::with_capacity(10);
     /// vec.extend([1, 2, 3].iter().cloned());
     ///
@@ -1980,7 +1980,7 @@ where
     /// Splitting an array into evens and odds, reusing the original allocation:
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// # use alloc_wg::{vec, vec::Vec};
     /// let mut numbers = vec![1, 2, 3, 4, 5, 6, 8, 9, 11, 13, 14, 15];
     ///
     /// let evens = numbers.drain_filter(|x| *x % 2 == 0).collect::<Vec<_>>();
@@ -2025,9 +2025,9 @@ impl<'a, T: 'a + Copy> Extend<&'a T> for Vec<T> {
 
 macro_rules! __impl_slice_eq1 {
     ([$($vars:tt)*] $lhs:ty, $rhs:ty, $($constraints:tt)*) => {
-        impl<A, B, $($vars)*> PartialEq<$rhs> for $lhs
+        impl<T, U, $($vars)*> PartialEq<$rhs> for $lhs
         where
-            A: PartialEq<B>,
+            T: PartialEq<U>,
             $($constraints)*
         {
             #[inline]
@@ -2038,14 +2038,31 @@ macro_rules! __impl_slice_eq1 {
     }
 }
 
-__impl_slice_eq1! { [] Vec<A>, Vec<B>, }
-__impl_slice_eq1! { [] Vec<A>, &[B], }
-__impl_slice_eq1! { [] Vec<A>, &mut [B], }
+__impl_slice_eq1! { [B1, B2] Vec<T, B1>, Vec<U, B2>, B1: BuildAllocRef, B2: BuildAllocRef }
+__impl_slice_eq1! { [B] Vec<T, B>, &[U], B: BuildAllocRef }
+__impl_slice_eq1! { [B] Vec<T, B>, &mut [U], B: BuildAllocRef }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, &[B], A: Clone }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, &mut [B], A: Clone }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, Vec<B>, A: Clone }
 // __impl_slice_eq1! { [const N: usize] Vec<A>, [B; N], [B; N]: LengthAtMost32 }
 // __impl_slice_eq1! { [const N: usize] Vec<A>, &[B; N], [B; N]: LengthAtMost32 }
+
+macro_rules! array_impls {
+    ($($N: expr)+) => {
+        $(
+            // NOTE: Using macros to avoid const generics.
+            __impl_slice_eq1! { [B] Vec<T, B>, [U; $N], B: BuildAllocRef }
+            __impl_slice_eq1! { [B] Vec<T, B>, &[U; $N], B: BuildAllocRef }
+        )+
+    }
+}
+
+array_impls! {
+     0  1  2  3  4  5  6  7  8  9
+    10 11 12 13 14 15 16 17 18 19
+    20 21 22 23 24 25 26 27 28 29
+    30 31 32
+}
 
 // NOTE: some less important impls are omitted to reduce code bloat
 // FIXME(Centril): Reconsider this?
