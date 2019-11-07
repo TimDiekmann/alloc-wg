@@ -15,7 +15,7 @@ use crate::{
 use core::{
     alloc::Layout,
     cmp,
-    convert::TryInto,
+    convert::{TryFrom, TryInto},
     marker::PhantomData,
     mem,
     num::NonZeroUsize,
@@ -773,13 +773,15 @@ impl<T, B: BuildAllocRef> RawVec<T, B> {
                 let old_layout = NonZeroLayout::from_size_align_unchecked(old_size, align);
                 let new_layout = alloc_guard(new_size.get(), align.get())?;
                 let ptr = self.ptr.cast();
-                self.build_alloc
+                self.ptr = self
+                    .build_alloc
                     .build_alloc_ref(ptr, Some(old_layout))
                     .realloc(ptr, old_layout, new_layout)
                     .map_err(|inner| CollectionAllocErr::AllocError {
                         layout: NonZeroLayout::from_size_align_unchecked(new_size, align),
                         inner,
-                    })?;
+                    })?
+                    .cast();
             }
             self.capacity = amount;
         }
@@ -897,9 +899,8 @@ impl<T, B: BuildAllocRef> Drop for RawVec<T, B> {
 // an extra guard for this in case we're running on a platform which can use
 // all 4GB in user-space, e.g., PAE or x32.
 #[inline]
-#[allow(clippy::cast_sign_loss)]
 fn alloc_guard(alloc_size: usize, align: usize) -> Result<NonZeroLayout, CapacityOverflow> {
-    if mem::size_of::<usize>() < 8 && alloc_size > isize::max_value() as usize {
+    if mem::size_of::<usize>() < 8 && isize::try_from(alloc_size).is_err() {
         Err(CapacityOverflow)
     } else {
         debug_assert!(NonZeroLayout::from_size_align(alloc_size, align).is_ok());
