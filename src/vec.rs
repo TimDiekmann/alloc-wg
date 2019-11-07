@@ -137,6 +137,7 @@ use crate::{boxed::Box, raw_vec::RawVec};
 /// Use a `Vec<T>` as an efficient stack:
 ///
 /// ```
+/// # use alloc_wg::vec::Vec;
 /// let mut stack = Vec::new();
 ///
 /// stack.push(1);
@@ -325,6 +326,7 @@ impl<T> Vec<T> {
     /// # Examples
     ///
     /// ```unused_variables, unused_mut
+    /// # use alloc_wg::vec::Vec;
     /// let mut vec: Vec<i32> = Vec::new();
     /// ```
     #[inline]
@@ -350,6 +352,7 @@ impl<T> Vec<T> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// let mut vec = Vec::with_capacity(10);
     ///
     /// // The vector contains no items, even though it has capacity for more
@@ -369,70 +372,6 @@ impl<T> Vec<T> {
             buf: RawVec::with_capacity(capacity),
             len: 0,
         }
-    }
-}
-
-impl<T, B: BuildAllocRef> Vec<T, B> {
-    /// Like `new` but parameterized over the choice of allocator for the returned `Vec`.
-    #[inline]
-    pub fn new_in(a: B::Ref) -> Vec<T, B>
-    where
-        B::Ref: AllocRef<Error = crate::Never>,
-    {
-        Vec {
-            buf: RawVec::new_in(a),
-            len: 0,
-        }
-    }
-
-    /// Like `with_capacity` but parameterized over the choice of allocator for the returned
-    /// `Vec`.
-    #[inline]
-    pub fn with_capacity_in(capacity: usize, a: B::Ref) -> Vec<T, B>
-    where
-        B::Ref: AllocRef<Error = crate::Never>,
-    {
-        Vec {
-            buf: RawVec::with_capacity_in(capacity, a),
-            len: 0,
-        }
-    }
-
-    /// Decomposes a `Vec<T>` into its raw components.
-    ///
-    /// Returns the raw pointer to the underlying data, the length of
-    /// the vector (in elements), and the allocated capacity of the
-    /// data (in elements). These are the same arguments in the same
-    /// order as the arguments to [`from_raw_parts`].
-    ///
-    /// After calling this function, the caller is responsible for the
-    /// memory previously managed by the `Vec`. The only way to do
-    /// this is to convert the raw pointer, length, and capacity back
-    /// into a `Vec` with the [`from_raw_parts`] function, allowing
-    /// the destructor to perform the cleanup.
-    ///
-    /// [`from_raw_parts`]: #method.from_raw_parts
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use alloc_wg::vec;
-    /// let v: Vec<i32> = vec![-1, 0, 1];
-    ///
-    /// let (ptr, len, cap) = v.into_raw_parts();
-    ///
-    /// let rebuilt = unsafe {
-    ///     // We can now make changes to the components, such as
-    ///     // transmuting the raw pointer to a compatible type.
-    ///     let ptr = ptr as *mut u32;
-    ///
-    ///     Vec::from_raw_parts(ptr, len, cap)
-    /// };
-    /// assert_eq!(rebuilt, [4294967295, 0, 1]);
-    /// ```
-    pub fn into_raw_parts(self) -> (*mut T, usize, usize) {
-        let mut me = mem::ManuallyDrop::new(self);
-        (me.as_mut_ptr(), me.len(), me.capacity())
     }
 
     /// Creates a `Vec<T>` directly from the raw components of another vector.
@@ -499,6 +438,70 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
             len: length,
         }
     }
+}
+
+impl<T, B: BuildAllocRef> Vec<T, B> {
+    /// Like `new` but parameterized over the choice of allocator for the returned `Vec`.
+    #[inline]
+    pub fn new_in(a: B::Ref) -> Vec<T, B>
+    where
+        B::Ref: AllocRef<Error = crate::Never>,
+    {
+        Vec {
+            buf: RawVec::new_in(a),
+            len: 0,
+        }
+    }
+
+    /// Like `with_capacity` but parameterized over the choice of allocator for the returned
+    /// `Vec`.
+    #[inline]
+    pub fn with_capacity_in(capacity: usize, a: B::Ref) -> Vec<T, B>
+    where
+        B::Ref: AllocRef<Error = crate::Never>,
+    {
+        Vec {
+            buf: RawVec::with_capacity_in(capacity, a),
+            len: 0,
+        }
+    }
+
+    /// Decomposes a `Vec<T>` into its raw components.
+    ///
+    /// Returns the raw pointer to the underlying data, the length of
+    /// the vector (in elements), and the allocated capacity of the
+    /// data (in elements). These are the same arguments in the same
+    /// order as the arguments to [`from_raw_parts`].
+    ///
+    /// After calling this function, the caller is responsible for the
+    /// memory previously managed by the `Vec`. The only way to do
+    /// this is to convert the raw pointer, length, and capacity back
+    /// into a `Vec` with the [`from_raw_parts`] function, allowing
+    /// the destructor to perform the cleanup.
+    ///
+    /// [`from_raw_parts`]: #method.from_raw_parts
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloc_wg::{vec, vec::Vec};
+    /// let v: Vec<i32> = vec![-1, 0, 1];
+    ///
+    /// let (ptr, len, cap) = v.into_raw_parts();
+    ///
+    /// let rebuilt = unsafe {
+    ///     // We can now make changes to the components, such as
+    ///     // transmuting the raw pointer to a compatible type.
+    ///     let ptr = ptr as *mut u32;
+    ///
+    ///     Vec::from_raw_parts(ptr, len, cap)
+    /// };
+    /// assert_eq!(rebuilt, [4294967295, 0, 1]);
+    /// ```
+    pub fn into_raw_parts(self) -> (*mut T, usize, usize) {
+        let mut me = mem::ManuallyDrop::new(self);
+        (me.as_mut_ptr(), me.len(), me.capacity())
+    }
 
     /// Returns the number of elements the vector can hold without
     /// reallocating.
@@ -506,6 +509,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// let vec: Vec<i32> = Vec::with_capacity(10);
     /// assert_eq!(vec.capacity(), 10);
     /// ```
@@ -581,10 +585,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// use alloc_wg::{
     ///     alloc::{AbortAlloc, Global},
     ///     collections::CollectionAllocErr,
-    ///     vec::Vec,
     /// };
     ///
     /// fn process_data(data: &[u32]) -> Result<Vec<u32>, CollectionAllocErr<AbortAlloc<Global>>> {
@@ -626,10 +630,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// use alloc_wg::{
     ///     alloc::{AbortAlloc, Global},
     ///     collections::CollectionAllocErr,
-    ///     vec::Vec,
     /// };
     ///
     /// fn process_data(data: &[u32]) -> Result<Vec<u32>, CollectionAllocErr<AbortAlloc<Global>>> {
@@ -662,6 +666,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// let mut vec = Vec::with_capacity(10);
     /// vec.extend([1, 2, 3].iter().cloned());
     /// assert_eq!(vec.capacity(), 10);
@@ -688,6 +693,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// let mut vec = Vec::with_capacity(10);
     /// vec.extend([1, 2, 3].iter().cloned());
     /// assert_eq!(vec.capacity(), 10);
@@ -721,6 +727,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// Any excess capacity is removed:
     ///
     /// ```
+    /// # // FIXME: alloc_wg Vec not possible as a slice converts to standard Vec
     /// let mut vec = Vec::with_capacity(10);
     /// vec.extend([1, 2, 3].iter().cloned());
     ///
@@ -872,11 +879,15 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     ///
     /// [`as_mut_ptr`]: #method.as_mut_ptr
     #[inline]
+    #[allow(clippy::let_and_return)]
     pub fn as_ptr(&self) -> *const T {
         // We shadow the slice method of the same name to avoid going through
         // `deref`, which creates an intermediate reference.
         let ptr = self.buf.ptr();
-        // unsafe { assume(!ptr.is_null()); }
+        #[cfg(feature = "core_intrinsics")]
+        unsafe {
+            core::intrinsics::assume(!ptr.is_null());
+        }
         ptr
     }
 
@@ -890,6 +901,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// // Allocate vector big enough for 4 elements.
     /// let size = 4;
     /// let mut x: Vec<i32> = Vec::with_capacity(size);
@@ -905,11 +917,15 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// assert_eq!(&*x, &[0, 1, 2, 3]);
     /// ```
     #[inline]
+    #[allow(clippy::let_and_return)]
     pub fn as_mut_ptr(&mut self) -> *mut T {
         // We shadow the slice method of the same name to avoid going through
         // `deref_mut`, which creates an intermediate reference.
         let ptr = self.buf.ptr();
-        // unsafe { assume(!ptr.is_null()); }
+        #[cfg(feature = "core_intrinsics")]
+        unsafe {
+            core::intrinsics::assume(!ptr.is_null());
+        }
         ptr
     }
 
@@ -939,6 +955,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     ///
     /// ```no_run
     /// # #![allow(dead_code)]
+    /// # use alloc_wg::vec::Vec;
     /// # // This is just a minimal skeleton for the doc example;
     /// # // don't use this as a starting point for a real library.
     /// # pub struct StreamWrapper { strm: *mut std::ffi::c_void }
@@ -1406,6 +1423,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::vec::Vec;
     /// let mut v = Vec::new();
     /// assert!(v.is_empty());
     ///
@@ -1444,7 +1462,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
         assert!(at <= self.len(), "`at` out of bounds");
 
         let other_len = self.len - at;
-        let mut other = Vec::new_in(self.buf.alloc_ref().0);
+        let mut other = Vec::with_capacity_in(other_len, self.buf.alloc_ref().0);
 
         // Unsafely `set_len` and copy items to `other`.
         unsafe {
@@ -1518,16 +1536,17 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// Simple usage:
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// # use alloc_wg::{vec, vec::Vec};
     /// let x = vec![1, 2, 3];
     /// let static_ref: &'static mut [usize] = Vec::leak(x);
     /// static_ref[0] += 1;
     /// assert_eq!(static_ref, &[2, 2, 3]);
     /// ```
     #[inline]
-    pub fn leak<'a>(vec: Vec<T>) -> &'a mut [T]
+    pub fn leak<'a>(vec: Vec<T, B>) -> &'a mut [T]
     where
         T: 'a, // Technically not needed, but kept to be explicit.
+        B::Ref: ReallocRef<Error = crate::Never>,
     {
         Box::leak(vec.into_boxed_slice())
     }
@@ -1970,7 +1989,7 @@ where
     /// Splitting an array into evens and odds, reusing the original allocation:
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// # use alloc_wg::{vec, vec::Vec};
     /// let mut numbers = vec![1, 2, 3, 4, 5, 6, 8, 9, 11, 13, 14, 15];
     ///
     /// let evens = numbers.drain_filter(|x| *x % 2 == 0).collect::<Vec<_>>();
@@ -2015,27 +2034,45 @@ impl<'a, T: 'a + Copy> Extend<&'a T> for Vec<T> {
 
 macro_rules! __impl_slice_eq1 {
     ([$($vars:tt)*] $lhs:ty, $rhs:ty, $($constraints:tt)*) => {
-        impl<A, B, $($vars)*> PartialEq<$rhs> for $lhs
+        impl<T, U, $($vars)*> PartialEq<$rhs> for $lhs
         where
-            A: PartialEq<B>,
+            T: PartialEq<U>,
             $($constraints)*
         {
             #[inline]
             fn eq(&self, other: &$rhs) -> bool { self[..] == other[..] }
             #[inline]
+            #[allow(clippy::partialeq_ne_impl)]
             fn ne(&self, other: &$rhs) -> bool { self[..] != other[..] }
         }
     }
 }
 
-__impl_slice_eq1! { [] Vec<A>, Vec<B>, }
-__impl_slice_eq1! { [] Vec<A>, &[B], }
-__impl_slice_eq1! { [] Vec<A>, &mut [B], }
+__impl_slice_eq1! { [B1, B2] Vec<T, B1>, Vec<U, B2>, B1: BuildAllocRef, B2: BuildAllocRef }
+__impl_slice_eq1! { [B] Vec<T, B>, &[U], B: BuildAllocRef }
+__impl_slice_eq1! { [B] Vec<T, B>, &mut [U], B: BuildAllocRef }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, &[B], A: Clone }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, &mut [B], A: Clone }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, Vec<B>, A: Clone }
 // __impl_slice_eq1! { [const N: usize] Vec<A>, [B; N], [B; N]: LengthAtMost32 }
 // __impl_slice_eq1! { [const N: usize] Vec<A>, &[B; N], [B; N]: LengthAtMost32 }
+
+macro_rules! array_impls {
+    ($($N: expr)+) => {
+        $(
+            // NOTE: Using macros to avoid const generics.
+            __impl_slice_eq1! { [B] Vec<T, B>, [U; $N], B: BuildAllocRef }
+            __impl_slice_eq1! { [B] Vec<T, B>, &[U; $N], B: BuildAllocRef }
+        )+
+    }
+}
+
+array_impls! {
+     0  1  2  3  4  5  6  7  8  9
+    10 11 12 13 14 15 16 17 18 19
+    20 21 22 23 24 25 26 27 28 29
+    30 31 32
+}
 
 // NOTE: some less important impls are omitted to reduce code bloat
 // FIXME(Centril): Reconsider this?
@@ -2102,7 +2139,7 @@ impl<T> AsMut<[T]> for Vec<T> {
 impl<T: Clone> From<&[T]> for Vec<T> {
     fn from(s: &[T]) -> Vec<T> {
         let mut v = Vec::new();
-        v.extend(s.into_iter().cloned());
+        v.extend(s.iter().cloned());
         v
     }
 }
@@ -2247,21 +2284,19 @@ impl<T> Iterator for IntoIter<T> {
         unsafe {
             if self.ptr == self.end {
                 None
+            } else if mem::size_of::<T>() == 0 {
+                // purposefully don't use 'ptr.offset' because for
+                // vectors with 0-size elements this would return the
+                // same pointer.
+                self.ptr = arith_offset(self.ptr as *const i8, 1) as *mut T;
+
+                // Make up a value of this ZST.
+                Some(mem::zeroed())
             } else {
-                if mem::size_of::<T>() == 0 {
-                    // purposefully don't use 'ptr.offset' because for
-                    // vectors with 0-size elements this would return the
-                    // same pointer.
-                    self.ptr = arith_offset(self.ptr as *const i8, 1) as *mut T;
+                let old = self.ptr;
+                self.ptr = self.ptr.offset(1);
 
-                    // Make up a value of this ZST.
-                    Some(mem::zeroed())
-                } else {
-                    let old = self.ptr;
-                    self.ptr = self.ptr.offset(1);
-
-                    Some(ptr::read(old))
-                }
+                Some(ptr::read(old))
             }
         }
     }
@@ -2288,18 +2323,16 @@ impl<T> DoubleEndedIterator for IntoIter<T> {
         unsafe {
             if self.end == self.ptr {
                 None
+            } else if mem::size_of::<T>() == 0 {
+                // See above for why 'ptr.offset' isn't used
+                self.end = arith_offset(self.end as *const i8, -1) as *mut T;
+
+                // Make up a value of this ZST.
+                Some(mem::zeroed())
             } else {
-                if mem::size_of::<T>() == 0 {
-                    // See above for why 'ptr.offset' isn't used
-                    self.end = arith_offset(self.end as *const i8, -1) as *mut T;
+                self.end = self.end.offset(-1);
 
-                    // Make up a value of this ZST.
-                    Some(mem::zeroed())
-                } else {
-                    self.end = self.end.offset(-1);
-
-                    Some(ptr::read(self.end))
-                }
+                Some(ptr::read(self.end))
             }
         }
     }

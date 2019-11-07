@@ -57,6 +57,7 @@
 
 #![cfg_attr(feature = "dropck_eyepatch", feature(dropck_eyepatch))]
 #![cfg_attr(feature = "coerce_unsized", feature(coerce_unsized))]
+#![cfg_attr(feature = "core_intrinsics", feature(core_intrinsics))]
 #![cfg_attr(feature = "dispatch_from_dyn", feature(dispatch_from_dyn))]
 #![cfg_attr(
     any(feature = "coerce_unsized", feature = "dispatch_from_dyn"),
@@ -113,7 +114,6 @@ pub mod clone;
 pub mod collections;
 pub mod raw_vec;
 
-#[cfg(feature = "std")]
 pub mod vec;
 
 extern crate alloc as liballoc;
@@ -129,7 +129,7 @@ macro_rules! vec {
         $crate::vec::from_elem($elem, $n)
     );
     ($($x:expr),*) => ({
-        let mut v = Vec::new();
+        let mut v = $crate::vec::Vec::new();
         $( v.push($x); )*
         v
     });
