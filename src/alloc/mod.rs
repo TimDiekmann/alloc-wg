@@ -163,17 +163,7 @@ pub trait ReallocRef: AllocRef {
             return Ok(ptr);
         }
 
-        // otherwise, fall back on alloc + copy + dealloc.
-        let result = self.alloc(new_layout);
-        if let Ok(new_ptr) = result {
-            ptr::copy_nonoverlapping(
-                ptr.as_ptr(),
-                new_ptr.as_ptr(),
-                cmp::min(old_size.get(), new_size.get()),
-            );
-            self.dealloc(ptr, old_layout);
-        }
-        result
+        alloc_copy_dealloc(self, ptr, old_layout, new_layout)
     }
 }
 
@@ -249,12 +239,17 @@ impl ReallocRef for Global {
         old_layout: NonZeroLayout,
         new_layout: NonZeroLayout,
     ) -> Result<NonNull<u8>, Self::Error> {
-        NonNull::new(realloc(
-            ptr.as_ptr(),
-            old_layout.into(),
-            new_layout.size().get(),
-        ))
-        .ok_or(AllocErr)
+        // FIXME: Remove `else` branch. This is needed, as std provides old method.
+        if old_layout.align() == new_layout.align() {
+            NonNull::new(realloc(
+                ptr.as_ptr(),
+                old_layout.into(),
+                new_layout.size().get(),
+            ))
+            .ok_or(AllocErr)
+        } else {
+            alloc_copy_dealloc(self, ptr, old_layout, new_layout)
+        }
     }
 }
 
@@ -286,18 +281,43 @@ impl AllocRef for System {
 
 #[cfg(feature = "std")]
 impl ReallocRef for System {
+    // FIXME: Remove `else` branch. This is needed, as std provides old method.
     unsafe fn realloc(
         &mut self,
         ptr: NonNull<u8>,
         old_layout: NonZeroLayout,
         new_layout: NonZeroLayout,
     ) -> Result<NonNull<u8>, Self::Error> {
-        NonNull::new(GlobalAlloc::realloc(
-            self,
-            ptr.as_ptr(),
-            old_layout.into(),
-            new_layout.size().get(),
-        ))
-        .ok_or(AllocErr)
+        if old_layout.align() == new_layout.align() {
+            NonNull::new(GlobalAlloc::realloc(
+                self,
+                ptr.as_ptr(),
+                old_layout.into(),
+                new_layout.size().get(),
+            ))
+            .ok_or(AllocErr)
+        } else {
+            alloc_copy_dealloc(self, ptr, old_layout, new_layout)
+        }
     }
+}
+
+#[inline]
+unsafe fn alloc_copy_dealloc<A: ReallocRef>(
+    alloc: &mut A,
+    ptr: NonNull<u8>,
+    old_layout: NonZeroLayout,
+    new_layout: NonZeroLayout,
+) -> Result<NonNull<u8>, A::Error> {
+    let result = alloc.alloc(new_layout);
+
+    if let Ok(new_ptr) = result {
+        ptr::copy_nonoverlapping(
+            ptr.as_ptr(),
+            new_ptr.as_ptr(),
+            cmp::min(old_layout.size().get(), new_layout.size().get()),
+        );
+        alloc.dealloc(ptr, old_layout);
+    }
+    result
 }
