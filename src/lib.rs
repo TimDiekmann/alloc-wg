@@ -65,11 +65,11 @@
 )]
 #![cfg_attr(feature = "exact_size_is_empty", feature(exact_size_is_empty))]
 #![cfg_attr(feature = "receiver_trait", feature(receiver_trait))]
-//#![cfg_attr(
-//    feature = "boxed_slice_try_from",
-//    feature(const_generics, const_generic_impls_guard),
-//    allow(incomplete_features)
-//)]
+#![cfg_attr(
+    feature = "const_generics",
+    feature(const_generics, const_generic_impls_guard),
+    allow(incomplete_features)
+)]
 #![cfg_attr(
     feature = "fn_traits",
     feature(unboxed_closures, unsized_locals, fn_traits)

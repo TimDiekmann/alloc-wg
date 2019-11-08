@@ -2064,14 +2064,18 @@ __impl_slice_eq1! { [B] Vec<T, B>, &mut [U], B: BuildAllocRef }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, &[B], A: Clone }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, &mut [B], A: Clone }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, Vec<B>, A: Clone }
-// __impl_slice_eq1! { [const N: usize] Vec<A>, [B; N], [B; N]: LengthAtMost32 }
-// __impl_slice_eq1! { [const N: usize] Vec<A>, &[B; N], [B; N]: LengthAtMost32 }
+#[cfg(feature = "const_generics")]
+__impl_slice_eq1! { [B, const N: usize] Vec<T, B>, [U; N], [U; N]: core::array::LengthAtMost32, B: BuildAllocRef }
+#[cfg(feature = "const_generics")]
+__impl_slice_eq1! { [B, const N: usize] Vec<T, B>, &[U; N], [U; N]: core::array::LengthAtMost32, B: BuildAllocRef }
 
 macro_rules! array_impls {
     ($($N: expr)+) => {
         $(
             // NOTE: Using macros to avoid const generics.
+            #[cfg(not(feature = "const_generics"))]
             __impl_slice_eq1! { [B] Vec<T, B>, [U; $N], B: BuildAllocRef }
+            #[cfg(not(feature = "const_generics"))]
             __impl_slice_eq1! { [B] Vec<T, B>, &[U; $N], B: BuildAllocRef }
         )+
     }
