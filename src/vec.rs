@@ -446,10 +446,7 @@ impl<T> Vec<T> {
 impl<T, B: BuildAllocRef> Vec<T, B> {
     /// Like `new` but parameterized over the choice of allocator for the returned `Vec`.
     #[inline]
-    pub fn new_in(a: B::Ref) -> Self
-    where
-        B::Ref: AllocRef<Error = crate::Never>,
-    {
+    pub fn new_in(a: B::Ref) -> Self {
         Self {
             buf: RawVec::new_in(a),
             len: 0,
