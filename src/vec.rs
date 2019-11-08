@@ -368,13 +368,35 @@ impl<T> Vec<T> {
     /// // ...but this may make the vector reallocate
     /// vec.push(11);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// * if the requested capacity exceeds `usize::MAX` bytes.
+    /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
+    ///
+    /// # Aborts
+    ///
+    /// * on OOM
     #[inline]
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            buf: RawVec::with_capacity(capacity),
-            len: 0,
-        }
+        Self::with_capacity_in(capacity, AbortAlloc(Global))
+    }
+
+    /// Like `with_capacity`, but guarantees the buffer is zeroed.
+    ///
+    /// # Panics
+    ///
+    /// * if the requested capacity exceeds `usize::MAX` bytes.
+    /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
+    ///
+    /// # Aborts
+    ///
+    /// * on OOM
+    #[inline]
+    #[must_use]
+    pub fn with_capacity_zeroed(capacity: usize) -> Self {
+        Self::with_capacity_zeroed_in(capacity, AbortAlloc(Global))
     }
 
     /// Creates a `Vec<T>` directly from the raw components of another vector.
@@ -455,6 +477,11 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
 
     /// Like `with_capacity` but parameterized over the choice of allocator for the returned
     /// `Vec`.
+    ///
+    /// # Panics
+    ///
+    /// * if the requested capacity exceeds `usize::MAX` bytes.
+    /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     #[inline]
     pub fn with_capacity_in(capacity: usize, a: B::Ref) -> Self
     where
@@ -467,7 +494,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     }
 
     /// Like `with_capacity` but parameterized over the choice of allocator for the returned
-    /// `RawVec`.
+    /// `Vec`.
     ///
     /// # Errors
     ///
@@ -481,6 +508,46 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     {
         Ok(Self {
             buf: RawVec::try_with_capacity_in(capacity, a)?,
+            len: 0,
+        })
+    }
+
+    #[inline]
+    /// Like `with_capacity_zeroed` but parameterized over the choice of allocator for the returned
+    /// `Vec`.
+    ///
+    /// # Panics
+    ///
+    /// * if the requested capacity exceeds `usize::MAX` bytes.
+    /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
+    pub fn with_capacity_zeroed_in(capacity: usize, a: B::Ref) -> Self
+    where
+        B::Ref: AllocRef<Error = crate::Never>,
+    {
+        Self {
+            buf: RawVec::with_capacity_zeroed_in(capacity, a),
+            len: 0,
+        }
+    }
+
+    #[inline]
+    /// Like `with_capacity_zeroed` but parameterized over the choice of allocator for the returned
+    /// `Vec`.
+    ///
+    /// # Errors
+    ///
+    /// * `CapacityOverflow` if the requested capacity exceeds `usize::MAX` bytes.
+    /// * `CapacityOverflow` on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
+    /// * `AllocError` on OOM
+    pub fn try_with_capacity_zeroed_in(
+        capacity: usize,
+        a: B::Ref,
+    ) -> Result<Self, CollectionAllocErr<B>>
+    where
+        B::Ref: AllocRef,
+    {
+        Ok(Self {
+            buf: RawVec::try_with_capacity_zeroed_in(capacity, a)?,
             len: 0,
         })
     }

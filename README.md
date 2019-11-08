@@ -52,6 +52,10 @@ Changes regarding the current `Alloc` trait
 
   Issue: [rust-lang/wg-allocators#5](https://github.com/rust-lang/wg-allocators/issues/5)
 
+- Add support for `_zeroed` buffer in `Vec`.
+
+  Issue: [rust-lang/wg-allocators#32](https://github.com/rust-lang/wg-allocators/issues/32)
+
 Currently associated containers
 -------------------------------
   
