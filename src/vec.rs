@@ -2096,18 +2096,18 @@ array_impls! {
 //__impl_slice_eq1! { [const N: usize] Cow<'a, [A]>, &mut [B; N], [B; N]: LengthAtMost32 }
 
 /// Implements comparison of vectors, lexicographically.
-impl<T: PartialOrd> PartialOrd for Vec<T> {
+impl<T: PartialOrd, B1: BuildAllocRef, B2: BuildAllocRef> PartialOrd<Vec<T, B2>> for Vec<T, B1> {
     #[inline]
     #[must_use]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Vec<T, B2>) -> Option<Ordering> {
         PartialOrd::partial_cmp(&**self, &**other)
     }
 }
 
-impl<T: Eq> Eq for Vec<T> {}
+impl<T: Eq, B: BuildAllocRef> Eq for Vec<T, B> {}
 
 /// Implements ordering of vectors, lexicographically.
-impl<T: Ord> Ord for Vec<T> {
+impl<T: Ord, B: BuildAllocRef> Ord for Vec<T, B> {
     #[inline]
     #[must_use]
     fn cmp(&self, other: &Self) -> Ordering {
@@ -2115,42 +2115,45 @@ impl<T: Ord> Ord for Vec<T> {
     }
 }
 
-impl<T> Default for Vec<T> {
+impl<T, B: BuildAllocRef> Default for Vec<T, B>
+where
+    B::Ref: Default,
+{
     /// Creates an empty `Vec<T>`.
     #[must_use]
     fn default() -> Self {
-        Self::new()
+        Self::new_in(B::Ref::default())
     }
 }
 
-impl<T: fmt::Debug> fmt::Debug for Vec<T> {
+impl<T: fmt::Debug, B: BuildAllocRef> fmt::Debug for Vec<T, B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&**self, f)
     }
 }
 
-impl<T> AsRef<Vec<T>> for Vec<T> {
+impl<T, B: BuildAllocRef> AsRef<Vec<T, B>> for Vec<T, B> {
     #[must_use]
     fn as_ref(&self) -> &Self {
         self
     }
 }
 
-impl<T> AsMut<Vec<T>> for Vec<T> {
+impl<T, B: BuildAllocRef> AsMut<Vec<T, B>> for Vec<T, B> {
     #[must_use]
     fn as_mut(&mut self) -> &mut Self {
         self
     }
 }
 
-impl<T> AsRef<[T]> for Vec<T> {
+impl<T, B: BuildAllocRef> AsRef<[T]> for Vec<T, B> {
     #[must_use]
     fn as_ref(&self) -> &[T] {
         self
     }
 }
 
-impl<T> AsMut<[T]> for Vec<T> {
+impl<T, B: BuildAllocRef> AsMut<[T]> for Vec<T, B> {
     #[must_use]
     fn as_mut(&mut self) -> &mut [T] {
         self
