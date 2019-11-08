@@ -466,8 +466,14 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
         }
     }
 
-    /// Like `with_capacity_in` but parameterized over the choice of allocator for the returned
-    /// `Vec`.
+    /// Like `with_capacity` but parameterized over the choice of allocator for the returned
+    /// `RawVec`.
+    ///
+    /// # Errors
+    ///
+    /// * `CapacityOverflow` if the requested capacity exceeds `usize::MAX` bytes.
+    /// * `CapacityOverflow` on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
+    /// * `AllocError` on OOM
     #[inline]
     pub fn try_with_capacity_in(capacity: usize, a: B::Ref) -> Result<Self, CollectionAllocErr<B>>
     where
