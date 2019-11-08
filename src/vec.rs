@@ -466,6 +466,19 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
         }
     }
 
+    /// Like `with_capacity_in` but parameterized over the choice of allocator for the returned
+    /// `Vec`.
+    #[inline]
+    pub fn try_with_capacity_in(capacity: usize, a: B::Ref) -> Result<Self, CollectionAllocErr<B>>
+    where
+        B::Ref: AllocRef,
+    {
+        Ok(Self {
+            buf: RawVec::try_with_capacity_in(capacity, a)?,
+            len: 0,
+        })
+    }
+
     /// Decomposes a `Vec<T>` into its raw components.
     ///
     /// Returns the raw pointer to the underlying data, the length of
