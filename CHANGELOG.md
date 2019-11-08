@@ -1,3 +1,7 @@
+# v0.7
+
+- Add `Vec`
+
 # v0.6
 
 - Provide default implementation for `realloc`

@@ -61,6 +61,7 @@ Currently associated containers
   - Limited `T: Copy` for `Fn`-traits as it's not possible for downstream crates.
    
 - [`RawVec`]
+- [`Vec`]
 
 [`Alloc`]: https://doc.rust-lang.org/1.38.0/alloc/alloc/trait.Alloc.html
 [`AllocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.AllocRef.html
@@ -68,6 +69,7 @@ Currently associated containers
 [`AllocRef::alloc_zeroed`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.AllocRef.html#method.alloc_zeroed
 [`Box`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/boxed/struct.Box.html
 [`RawVec`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/raw_vec/struct.RawVec.html
+[`Vec`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/vec/struct.Vec.html
 [`DeallocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.DeallocRef.html
 [`ReallocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.ReallocRef.html
 [`BuildAllocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.BuildAllocRef.html
