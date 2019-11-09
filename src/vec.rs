@@ -70,7 +70,9 @@ use core::{
     ops::{
         self,
         Bound::{Excluded, Included, Unbounded},
-        Index, IndexMut, RangeBounds,
+        Index,
+        IndexMut,
+        RangeBounds,
     },
     ptr::{self, NonNull},
     slice::{self, SliceIndex},
@@ -552,7 +554,6 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
 
     /// Like `from_raw_parts` but parameterized over the choice of allocator for the returned
     /// `Vec`.
-    ///
     pub unsafe fn from_raw_parts_in(ptr: *mut T, length: usize, capacity: usize, b: B) -> Self {
         Self {
             buf: RawVec::from_raw_parts_in(ptr, capacity, b),
