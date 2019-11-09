@@ -1766,10 +1766,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     }
 }
 
-impl<T: Clone, B: BuildAllocRef> Vec<T, B>
-where
-    B::Ref: ReallocRef<Error = crate::Never>,
-{
+impl<T: Clone, B: BuildAllocRef> Vec<T, B> {
     /// Resizes the `Vec` in-place so that `len` is equal to `new_len`.
     ///
     /// If `new_len` is greater than `len`, the `Vec` is extended by the
@@ -1796,7 +1793,10 @@ where
     /// [`Clone`]: ../../std/clone/trait.Clone.html
     /// [`Default`]: ../../std/default/trait.Default.html
     /// [`resize_with`]: #method.resize_with
-    pub fn resize(&mut self, new_len: usize, value: T) {
+    pub fn resize(&mut self, new_len: usize, value: T)
+    where
+        B::Ref: ReallocRef<Error = crate::Never>,
+    {
         let len = self.len();
 
         if new_len > len {
@@ -1804,6 +1804,21 @@ where
         } else {
             self.truncate(new_len);
         }
+    }
+
+    /// Same as `resize` but returns errors instead of panicking
+    pub fn try_resize(&mut self, new_len: usize, value: T) -> Result<(), CollectionAllocErr<B>>
+    where
+        B::Ref: ReallocRef,
+    {
+        let len = self.len();
+
+        if new_len > len {
+            self.try_extend_with(new_len - len, ExtendElement(value))?
+        } else {
+            self.truncate(new_len);
+        }
+        Ok(())
     }
 
     /// Clones and appends all elements in a slice to the `Vec`.
@@ -1826,8 +1841,19 @@ where
     /// ```
     ///
     /// [`extend`]: #method.extend
-    pub fn extend_from_slice(&mut self, other: &[T]) {
+    pub fn extend_from_slice(&mut self, other: &[T])
+    where
+        B::Ref: ReallocRef<Error = crate::Never>,
+    {
         self.extend(other.iter().cloned())
+    }
+
+    /// Same as `extend_from_slice` but returns errors instead of panicking
+    pub fn try_extend_from_slice(&mut self, other: &[T]) -> Result<(), CollectionAllocErr<B>>
+    where
+        B::Ref: ReallocRef,
+    {
+        self.try_extend(other.iter().cloned())
     }
 }
 
@@ -2165,6 +2191,24 @@ where
         for t in iter {
             self.push(t);
         }
+    }
+}
+
+impl<T, B: BuildAllocRef> Vec<T, B>
+where
+    B::Ref: ReallocRef,
+{
+    #[inline]
+    fn try_extend<I: IntoIterator<Item = T>>(
+        &mut self,
+        iter: I,
+    ) -> Result<(), CollectionAllocErr<B>> {
+        let iter = iter.into_iter();
+        self.try_reserve(iter.size_hint().0)?;
+        for t in iter {
+            self.try_push(t)?;
+        }
+        Ok(())
     }
 }
 
