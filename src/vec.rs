@@ -70,9 +70,7 @@ use core::{
     ops::{
         self,
         Bound::{Excluded, Included, Unbounded},
-        Index,
-        IndexMut,
-        RangeBounds,
+        Index, IndexMut, RangeBounds,
     },
     ptr::{self, NonNull},
     slice::{self, SliceIndex},
@@ -550,6 +548,16 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
             buf: RawVec::try_with_capacity_zeroed_in(capacity, a)?,
             len: 0,
         })
+    }
+
+    /// Like `from_raw_parts` but parameterized over the choice of allocator for the returned
+    /// `Vec`.
+    ///
+    pub unsafe fn from_raw_parts_in(ptr: *mut T, length: usize, capacity: usize, b: B) -> Self {
+        Self {
+            buf: RawVec::from_raw_parts_in(ptr, capacity, b),
+            len: length,
+        }
     }
 
     /// Decomposes a `Vec<T>` into its raw components.
@@ -1636,7 +1644,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     }
 }
 
-impl<T: Clone> Vec<T> {
+impl<T: Clone, B: BuildAllocRef> Vec<T, B>
+where
+    B::Ref: ReallocRef<Error = crate::Never>,
+{
     /// Resizes the `Vec` in-place so that `len` is equal to `new_len`.
     ///
     /// If `new_len` is greater than `len`, the `Vec` is extended by the
@@ -1855,6 +1866,16 @@ pub fn from_elem<T: Clone>(elem: T, n: usize) -> Vec<T> {
     v
 }
 
+#[doc(hidden)]
+pub fn from_elem_in<T: Clone, B: BuildAllocRef>(elem: T, n: usize, b: B::Ref) -> Vec<T, B>
+where
+    B::Ref: ReallocRef<Error = crate::Never>,
+{
+    let mut v = Vec::with_capacity_in(n, b);
+    v.extend_with(n, ExtendElement(elem));
+    v
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Common trait implementations for Vec
 ////////////////////////////////////////////////////////////////////////////////
@@ -1919,7 +1940,7 @@ impl<T> FromIterator<T> for Vec<T> {
     }
 }
 
-impl<T> IntoIterator for Vec<T> {
+impl<T, B: BuildAllocRef> IntoIterator for Vec<T, B> {
     type Item = T;
     type IntoIter = IntoIter<T>;
 
@@ -1961,7 +1982,7 @@ impl<T> IntoIterator for Vec<T> {
     }
 }
 
-impl<'a, T> IntoIterator for &'a Vec<T> {
+impl<'a, T, B: BuildAllocRef> IntoIterator for &'a Vec<T, B> {
     type Item = &'a T;
     type IntoIter = slice::Iter<'a, T>;
 
@@ -1971,7 +1992,7 @@ impl<'a, T> IntoIterator for &'a Vec<T> {
     }
 }
 
-impl<'a, T> IntoIterator for &'a mut Vec<T> {
+impl<'a, T, B: BuildAllocRef> IntoIterator for &'a mut Vec<T, B> {
     type Item = &'a mut T;
     type IntoIter = slice::IterMut<'a, T>;
 
@@ -2119,7 +2140,10 @@ where
 /// append the entire slice at once.
 ///
 /// [`copy_from_slice`]: ../../std/primitive.slice.html#method.copy_from_slice
-impl<'a, T: 'a + Copy> Extend<&'a T> for Vec<T> {
+impl<'a, T: 'a + Copy, B: BuildAllocRef> Extend<&'a T> for Vec<T, B>
+where
+    B::Ref: ReallocRef<Error = crate::Never>,
+{
     fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
         self.extend(iter.into_iter().cloned())
     }
