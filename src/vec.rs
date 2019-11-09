@@ -1469,7 +1469,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     #[inline]
     unsafe fn try_append_elements(&mut self, other: *const [T]) -> Result<(), CollectionAllocErr<B>>
     where
-        B::Ref: ReallocRef
+        B::Ref: ReallocRef,
     {
         let count = (*other).len();
         self.try_reserve(count)?;
@@ -1636,7 +1636,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     #[inline]
     pub fn try_split_off(&mut self, at: usize) -> Result<Self, CollectionAllocErr<B>>
     where
-        B::Ref: AllocRef
+        B::Ref: AllocRef,
     {
         assert!(at <= self.len(), "`at` out of bounds");
 
@@ -1881,7 +1881,11 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     }
 
     /// Same as `extend_with` but returns errors instead of panicking.
-    fn try_extend_with<E: ExtendWith<T>>(&mut self, n: usize, mut value: E) -> Result<(), CollectionAllocErr<B>>
+    fn try_extend_with<E: ExtendWith<T>>(
+        &mut self,
+        n: usize,
+        mut value: E,
+    ) -> Result<(), CollectionAllocErr<B>>
     where
         B::Ref: ReallocRef,
     {
@@ -2012,7 +2016,11 @@ where
 }
 
 #[doc(hidden)]
-pub fn try_from_elem_in<T: Clone, B: BuildAllocRef>(elem: T, n: usize, b: B::Ref) -> Result<Vec<T, B>, CollectionAllocErr<B>>
+pub fn try_from_elem_in<T: Clone, B: BuildAllocRef>(
+    elem: T,
+    n: usize,
+    b: B::Ref,
+) -> Result<Vec<T, B>, CollectionAllocErr<B>>
 where
     B::Ref: ReallocRef,
 {
