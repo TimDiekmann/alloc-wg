@@ -1643,6 +1643,17 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     {
         Box::leak(vec.into_boxed_slice())
     }
+
+    #[inline]
+    #[must_use]
+    pub fn from_iter_in<I: IntoIterator<Item = T>>(iter: I, b: B::Ref) -> Self
+    where
+        B::Ref: ReallocRef<Error = crate::Never>,
+    {
+        let mut v = Self::new_in(b);
+        v.extend(iter.into_iter());
+        v
+    }
 }
 
 impl<T: Clone, B: BuildAllocRef> Vec<T, B>
