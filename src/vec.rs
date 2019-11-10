@@ -80,6 +80,7 @@ use core::{
 
 use crate::{
     alloc::{AbortAlloc, AllocRef, BuildAllocRef, Global, ReallocRef},
+    collect::TryExtend,
     collections::CollectionAllocErr,
 };
 
@@ -2194,15 +2195,14 @@ where
     }
 }
 
-impl<T, B: BuildAllocRef> Vec<T, B>
+impl<T, B: BuildAllocRef> TryExtend<T> for Vec<T, B>
 where
     B::Ref: ReallocRef,
 {
+    type Err = CollectionAllocErr<B>;
+
     #[inline]
-    fn try_extend<I: IntoIterator<Item = T>>(
-        &mut self,
-        iter: I,
-    ) -> Result<(), CollectionAllocErr<B>> {
+    fn try_extend<I: IntoIterator<Item = T>>(&mut self, iter: I) -> Result<(), Self::Err> {
         let iter = iter.into_iter();
         self.try_reserve(iter.size_hint().0)?;
         for t in iter {
@@ -2343,6 +2343,17 @@ where
 {
     fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
         self.extend(iter.into_iter().cloned())
+    }
+}
+
+impl<'a, T: 'a + Copy, B: BuildAllocRef> TryExtend<&'a T> for Vec<T, B>
+where
+    B::Ref: ReallocRef,
+{
+    type Err = CollectionAllocErr<B>;
+
+    fn try_extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) -> Result<(), Self::Err> {
+        self.try_extend(iter.into_iter().cloned())
     }
 }
 

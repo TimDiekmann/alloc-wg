@@ -114,6 +114,7 @@ pub mod clone;
 pub mod collections;
 pub mod raw_vec;
 
+pub mod collect;
 pub mod vec;
 
 extern crate alloc as liballoc;
