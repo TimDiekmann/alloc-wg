@@ -2536,18 +2536,16 @@ impl<B: BuildAllocRef> From<String<B>> for Vec<u8, B> {
 
 impl<B: BuildAllocRef> fmt::Write for String<B>
 where
-    B::Ref: ReallocRef<Error = crate::Never>,
+    B::Ref: ReallocRef,
 {
     #[inline]
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.push_str(s);
-        Ok(())
+        self.try_push_str(s).map_err(|_| fmt::Error)
     }
 
     #[inline]
     fn write_char(&mut self, c: char) -> fmt::Result {
-        self.push(c);
-        Ok(())
+        self.try_push(c).map_err(|_| fmt::Error)
     }
 }
 
