@@ -20,6 +20,7 @@ jobs:
         run: |
           cargo doc --no-deps
           echo '<meta http-equiv="refresh" content="0; url=alloc_wg">' > target/doc/index.html
+          touch target/doc/.nojekyll
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@master
