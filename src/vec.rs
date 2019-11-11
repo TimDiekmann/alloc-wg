@@ -79,12 +79,12 @@ use core::{
 };
 
 use crate::{
-    alloc::{AbortAlloc, AllocRef, BuildAllocRef, Global, ReallocRef},
+    alloc::{AbortAlloc, AllocRef, Global, ReallocRef},
     collect::TryExtend,
     collections::CollectionAllocErr,
 };
 
-use crate::{boxed::Box, raw_vec::RawVec};
+use crate::{alloc::DeallocRef, boxed::Box, raw_vec::RawVec};
 
 /// A contiguous growable array type, written `Vec<T>` but pronounced 'vector'.
 ///
@@ -311,8 +311,8 @@ use crate::{boxed::Box, raw_vec::RawVec};
 /// [`insert`]: Self::insert()
 /// [`reserve`]: Self::reserve
 /// [owned slice]: crate::boxed::Box
-pub struct Vec<T, B: BuildAllocRef = AbortAlloc<Global>> {
-    buf: RawVec<T, B>,
+pub struct Vec<T, A: DeallocRef = AbortAlloc<Global>> {
+    buf: RawVec<T, A>,
     len: usize,
 }
 
@@ -466,10 +466,10 @@ impl<T> Vec<T> {
     }
 }
 
-impl<T, B: BuildAllocRef> Vec<T, B> {
+impl<T, A: DeallocRef> Vec<T, A> {
     /// Like `new` but parameterized over the choice of allocator for the returned `Vec`.
     #[inline]
-    pub fn new_in(a: B::Ref) -> Self {
+    pub fn new_in(a: A) -> Self {
         Self {
             buf: RawVec::new_in(a),
             len: 0,
@@ -484,9 +484,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// * if the requested capacity exceeds `usize::MAX` bytes.
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     #[inline]
-    pub fn with_capacity_in(capacity: usize, a: B::Ref) -> Self
+    pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
-        B::Ref: AllocRef<Error = crate::Never>,
+        A: AllocRef<Error = crate::Never>,
     {
         Self {
             buf: RawVec::with_capacity_in(capacity, a),
@@ -503,9 +503,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// * `CapacityOverflow` on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     /// * `AllocError` on OOM
     #[inline]
-    pub fn try_with_capacity_in(capacity: usize, a: B::Ref) -> Result<Self, CollectionAllocErr<B>>
+    pub fn try_with_capacity_in(capacity: usize, a: A) -> Result<Self, CollectionAllocErr<A>>
     where
-        B::Ref: AllocRef,
+        A: AllocRef,
     {
         Ok(Self {
             buf: RawVec::try_with_capacity_in(capacity, a)?,
@@ -521,9 +521,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     ///
     /// * if the requested capacity exceeds `usize::MAX` bytes.
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
-    pub fn with_capacity_zeroed_in(capacity: usize, a: B::Ref) -> Self
+    pub fn with_capacity_zeroed_in(capacity: usize, a: A) -> Self
     where
-        B::Ref: AllocRef<Error = crate::Never>,
+        A: AllocRef<Error = crate::Never>,
     {
         Self {
             buf: RawVec::with_capacity_zeroed_in(capacity, a),
@@ -540,12 +540,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// * `CapacityOverflow` if the requested capacity exceeds `usize::MAX` bytes.
     /// * `CapacityOverflow` on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     /// * `AllocError` on OOM
-    pub fn try_with_capacity_zeroed_in(
-        capacity: usize,
-        a: B::Ref,
-    ) -> Result<Self, CollectionAllocErr<B>>
+    pub fn try_with_capacity_zeroed_in(capacity: usize, a: A) -> Result<Self, CollectionAllocErr<A>>
     where
-        B::Ref: AllocRef,
+        A: AllocRef,
     {
         Ok(Self {
             buf: RawVec::try_with_capacity_zeroed_in(capacity, a)?,
@@ -555,7 +552,12 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
 
     /// Like `from_raw_parts` but parameterized over the choice of allocator for the returned
     /// `Vec`.
-    pub unsafe fn from_raw_parts_in(ptr: *mut T, length: usize, capacity: usize, b: B) -> Self {
+    pub unsafe fn from_raw_parts_in(
+        ptr: *mut T,
+        length: usize,
+        capacity: usize,
+        b: A::BuildAlloc,
+    ) -> Self {
         Self {
             buf: RawVec::from_raw_parts_in(ptr, capacity, b),
             len: length,
@@ -638,7 +640,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// Panics if the reallocation fails.
     pub fn reserve(&mut self, additional: usize)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         self.buf.reserve(self.len, additional);
     }
@@ -670,7 +672,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// Panics if the reallocation fails.
     pub fn reserve_exact(&mut self, additional: usize)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         self.buf.reserve_exact(self.len, additional);
     }
@@ -710,9 +712,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// }
     /// # process_data(&[1, 2, 3]).expect("why is the test harness OOMing on 12 bytes?");
     /// ```
-    pub fn try_reserve(&mut self, additional: usize) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_reserve(&mut self, additional: usize) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         self.buf.try_reserve(self.len, additional)
     }
@@ -755,9 +757,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// }
     /// # process_data(&[1, 2, 3]).expect("why is the test harness OOMing on 12 bytes?");
     /// ```
-    pub fn try_reserve_exact(&mut self, additional: usize) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_reserve_exact(&mut self, additional: usize) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         self.buf.try_reserve_exact(self.len, additional)
     }
@@ -783,7 +785,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// Panics if the reallocation fails.
     pub fn shrink_to_fit(&mut self)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         if self.capacity() != self.len {
             self.buf.shrink_to_fit(self.len);
@@ -791,9 +793,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     }
 
     /// Same as `shrink_to_fit` but returns errors instead of panicking.
-    pub fn try_shrink_to_fit(&mut self) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_shrink_to_fit(&mut self) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         if self.capacity() != self.len {
             self.buf.try_shrink_to_fit(self.len)?;
@@ -828,15 +830,15 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// * Panics if the reallocation fails.
     pub fn shrink_to(&mut self, min_capacity: usize)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         self.buf.shrink_to_fit(cmp::max(self.len, min_capacity));
     }
 
     /// Same as `shrink_to` but returns errors instead of panicking.
-    pub fn try_shrink_to(&mut self, min_capacity: usize) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_shrink_to(&mut self, min_capacity: usize) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         self.buf.try_shrink_to_fit(cmp::max(self.len, min_capacity))
     }
@@ -871,9 +873,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// # Panics
     ///
     /// Panics if the reallocation fails.
-    pub fn into_boxed_slice(self) -> Box<[T], B>
+    pub fn into_boxed_slice(self) -> Box<[T], A>
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         match self.try_into_boxed_slice() {
             Ok(vec) => vec,
@@ -883,9 +885,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     }
 
     /// Same as `into_boxed_slice` but returns errors instead of panicking.
-    pub fn try_into_boxed_slice(mut self) -> Result<Box<[T], B>, CollectionAllocErr<B>>
+    pub fn try_into_boxed_slice(mut self) -> Result<Box<[T], A>, CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         unsafe {
             self.try_shrink_to_fit()?;
@@ -1216,7 +1218,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// ```
     pub fn insert(&mut self, index: usize, element: T)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         match self.try_insert(index, element) {
             Ok(vec) => vec,
@@ -1226,9 +1228,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     }
 
     /// Same as `insert` but returns errors instead of panicking
-    pub fn try_insert(&mut self, index: usize, element: T) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_insert(&mut self, index: usize, element: T) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         let len = self.len();
         assert!(index <= len);
@@ -1319,7 +1321,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     pub fn retain<F>(&mut self, mut f: F)
     where
         F: FnMut(&T) -> bool,
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         self.drain_filter(|x| !f(x));
     }
@@ -1399,7 +1401,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     #[inline]
     pub fn push(&mut self, value: T)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         match self.try_push(value) {
             Ok(vec) => vec,
@@ -1410,9 +1412,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
 
     /// Same as `push` but returns errors instead of panicking
     #[inline]
-    pub fn try_push(&mut self, value: T) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_push(&mut self, value: T) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         // This will panic or abort if we would allocate > isize::MAX bytes
         // or if the length increment would overflow for zero-sized types.
@@ -1473,7 +1475,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     #[inline]
     pub fn append(&mut self, other: &mut Self)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         match self.try_append(other) {
             Ok(vec) => vec,
@@ -1484,9 +1486,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
 
     /// Same as `append` but returns errors instead of panicking.
     #[inline]
-    pub fn try_append(&mut self, other: &mut Self) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_append(&mut self, other: &mut Self) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         unsafe {
             self.try_append_elements(other.as_slice())?;
@@ -1497,9 +1499,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
 
     /// Appends elements to `Self` from other buffer.
     #[inline]
-    unsafe fn try_append_elements(&mut self, other: *const [T]) -> Result<(), CollectionAllocErr<B>>
+    unsafe fn try_append_elements(&mut self, other: *const [T]) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         let count = (*other).len();
         self.try_reserve(count)?;
@@ -1536,7 +1538,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// v.drain(..);
     /// assert_eq!(v, &[]);
     /// ```
-    pub fn drain<R>(&mut self, range: R) -> Drain<'_, T, B>
+    pub fn drain<R>(&mut self, range: R) -> Drain<'_, T, A>
     where
         R: RangeBounds<usize>,
     {
@@ -1657,7 +1659,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     #[inline]
     pub fn split_off(&mut self, at: usize) -> Self
     where
-        B::Ref: AllocRef<Error = crate::Never>,
+        A: AllocRef<Error = crate::Never>,
     {
         match self.try_split_off(at) {
             Ok(vec) => vec,
@@ -1668,9 +1670,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
 
     /// Same as `split_off` but returns errors instead of panicking.
     #[inline]
-    pub fn try_split_off(&mut self, at: usize) -> Result<Self, CollectionAllocErr<B>>
+    pub fn try_split_off(&mut self, at: usize) -> Result<Self, CollectionAllocErr<A>>
     where
-        B::Ref: AllocRef,
+        A: AllocRef,
     {
         assert!(at <= self.len(), "`at` out of bounds");
 
@@ -1727,7 +1729,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     pub fn resize_with<F>(&mut self, new_len: usize, f: F)
     where
         F: FnMut() -> T,
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         match self.try_resize_with(new_len, f) {
             Ok(vec) => vec,
@@ -1737,10 +1739,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     }
 
     /// Same as `resize_with` but returns errors instead of panicking.
-    pub fn try_resize_with<F>(&mut self, new_len: usize, f: F) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_resize_with<F>(&mut self, new_len: usize, f: F) -> Result<(), CollectionAllocErr<A>>
     where
         F: FnMut() -> T,
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         let len = self.len();
         if new_len > len {
@@ -1781,26 +1783,26 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     pub fn leak<'a>(vec: Self) -> &'a mut [T]
     where
         T: 'a, // Technically not needed, but kept to be explicit.
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         Box::leak(vec.into_boxed_slice())
     }
 
     /// Same as `leak` but returns errors instead of panicking.
     #[inline]
-    pub fn try_leak<'a>(vec: Self) -> Result<&'a mut [T], CollectionAllocErr<B>>
+    pub fn try_leak<'a>(vec: Self) -> Result<&'a mut [T], CollectionAllocErr<A>>
     where
         T: 'a, // Technically not needed, but kept to be explicit.
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         Ok(Box::leak(vec.try_into_boxed_slice()?))
     }
 
     #[inline]
     #[must_use]
-    pub fn from_iter_in<I: IntoIterator<Item = T>>(iter: I, b: B::Ref) -> Self
+    pub fn from_iter_in<I: IntoIterator<Item = T>>(iter: I, b: A) -> Self
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         let mut v = Self::new_in(b);
         v.extend(iter.into_iter());
@@ -1808,7 +1810,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     }
 }
 
-impl<T: Clone, B: BuildAllocRef> Vec<T, B> {
+impl<T: Clone, A: DeallocRef> Vec<T, A> {
     /// Resizes the `Vec` in-place so that `len` is equal to `new_len`.
     ///
     /// If `new_len` is greater than `len`, the `Vec` is extended by the
@@ -1841,7 +1843,7 @@ impl<T: Clone, B: BuildAllocRef> Vec<T, B> {
     /// Panics if the reallocation fails.
     pub fn resize(&mut self, new_len: usize, value: T)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         let len = self.len();
 
@@ -1853,9 +1855,9 @@ impl<T: Clone, B: BuildAllocRef> Vec<T, B> {
     }
 
     /// Same as `resize` but returns errors instead of panicking
-    pub fn try_resize(&mut self, new_len: usize, value: T) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_resize(&mut self, new_len: usize, value: T) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         let len = self.len();
 
@@ -1893,15 +1895,15 @@ impl<T: Clone, B: BuildAllocRef> Vec<T, B> {
     /// Panics if the reallocation fails.
     pub fn extend_from_slice(&mut self, other: &[T])
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         self.extend(other.iter().cloned())
     }
 
     /// Same as `extend_from_slice` but returns errors instead of panicking
-    pub fn try_extend_from_slice(&mut self, other: &[T]) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_extend_from_slice(&mut self, other: &[T]) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         self.try_extend(other.iter().cloned())
     }
@@ -1943,11 +1945,11 @@ impl<T, F: FnMut() -> T> ExtendWith<T> for ExtendFunc<F> {
     }
 }
 
-impl<T, B: BuildAllocRef> Vec<T, B> {
+impl<T, A: DeallocRef> Vec<T, A> {
     /// Extend the vector by `n` values, using the given generator.
     fn extend_with<E: ExtendWith<T>>(&mut self, n: usize, value: E)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         match self.try_extend_with(n, value) {
             Ok(vec) => vec,
@@ -1961,9 +1963,9 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
         &mut self,
         n: usize,
         mut value: E,
-    ) -> Result<(), CollectionAllocErr<B>>
+    ) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         self.try_reserve(n)?;
 
@@ -2031,7 +2033,7 @@ impl Drop for SetLenOnDrop<'_> {
     }
 }
 
-impl<T: PartialEq, B: BuildAllocRef> Vec<T, B> {
+impl<T: PartialEq, A: DeallocRef> Vec<T, A> {
     /// Removes consecutive repeated elements in the vector according to the
     /// [`PartialEq`] trait implementation.
     ///
@@ -2082,9 +2084,9 @@ pub fn from_elem<T: Clone>(elem: T, n: usize) -> Vec<T> {
 }
 
 #[doc(hidden)]
-pub fn from_elem_in<T: Clone, B: BuildAllocRef>(elem: T, n: usize, b: B::Ref) -> Vec<T, B>
+pub fn from_elem_in<T: Clone, A: DeallocRef>(elem: T, n: usize, b: A) -> Vec<T, A>
 where
-    B::Ref: ReallocRef<Error = crate::Never>,
+    A: ReallocRef<Error = crate::Never>,
 {
     let mut v = Vec::with_capacity_in(n, b);
     v.extend_with(n, ExtendElement(elem));
@@ -2092,13 +2094,13 @@ where
 }
 
 #[doc(hidden)]
-pub fn try_from_elem_in<T: Clone, B: BuildAllocRef>(
+pub fn try_from_elem_in<T: Clone, A: DeallocRef>(
     elem: T,
     n: usize,
-    b: B::Ref,
-) -> Result<Vec<T, B>, CollectionAllocErr<B>>
+    b: A,
+) -> Result<Vec<T, A>, CollectionAllocErr<A>>
 where
-    B::Ref: ReallocRef,
+    A: ReallocRef,
 {
     let mut v = Vec::try_with_capacity_in(n, b)?;
     v.try_extend_with(n, ExtendElement(elem))?;
@@ -2118,14 +2120,14 @@ impl<T: Clone> Clone for Vec<T> {
     }
 }
 
-impl<T: Hash, B: BuildAllocRef> Hash for Vec<T, B> {
+impl<T: Hash, A: DeallocRef> Hash for Vec<T, A> {
     #[inline]
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
         Hash::hash(&**self, state)
     }
 }
 
-impl<T, B: BuildAllocRef, I: SliceIndex<[T]>> Index<I> for Vec<T, B> {
+impl<T, A: DeallocRef, I: SliceIndex<[T]>> Index<I> for Vec<T, A> {
     type Output = I::Output;
 
     #[inline]
@@ -2135,7 +2137,7 @@ impl<T, B: BuildAllocRef, I: SliceIndex<[T]>> Index<I> for Vec<T, B> {
     }
 }
 
-impl<T, B: BuildAllocRef, I: SliceIndex<[T]>> IndexMut<I> for Vec<T, B> {
+impl<T, A: DeallocRef, I: SliceIndex<[T]>> IndexMut<I> for Vec<T, A> {
     #[inline]
     #[must_use]
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
@@ -2143,7 +2145,7 @@ impl<T, B: BuildAllocRef, I: SliceIndex<[T]>> IndexMut<I> for Vec<T, B> {
     }
 }
 
-impl<T, B: BuildAllocRef> ops::Deref for Vec<T, B> {
+impl<T, A: DeallocRef> ops::Deref for Vec<T, A> {
     type Target = [T];
 
     #[must_use]
@@ -2152,7 +2154,7 @@ impl<T, B: BuildAllocRef> ops::Deref for Vec<T, B> {
     }
 }
 
-impl<T, B: BuildAllocRef> ops::DerefMut for Vec<T, B> {
+impl<T, A: DeallocRef> ops::DerefMut for Vec<T, A> {
     #[must_use]
     fn deref_mut(&mut self) -> &mut [T] {
         unsafe { slice::from_raw_parts_mut(self.as_mut_ptr(), self.len) }
@@ -2169,7 +2171,7 @@ impl<T> FromIterator<T> for Vec<T> {
     }
 }
 
-impl<T, B: BuildAllocRef> IntoIterator for Vec<T, B> {
+impl<T, A: DeallocRef> IntoIterator for Vec<T, A> {
     type Item = T;
     type IntoIter = IntoIter<T>;
 
@@ -2211,7 +2213,7 @@ impl<T, B: BuildAllocRef> IntoIterator for Vec<T, B> {
     }
 }
 
-impl<'a, T, B: BuildAllocRef> IntoIterator for &'a Vec<T, B> {
+impl<'a, T, A: DeallocRef> IntoIterator for &'a Vec<T, A> {
     type Item = &'a T;
     type IntoIter = slice::Iter<'a, T>;
 
@@ -2221,7 +2223,7 @@ impl<'a, T, B: BuildAllocRef> IntoIterator for &'a Vec<T, B> {
     }
 }
 
-impl<'a, T, B: BuildAllocRef> IntoIterator for &'a mut Vec<T, B> {
+impl<'a, T, A: DeallocRef> IntoIterator for &'a mut Vec<T, A> {
     type Item = &'a mut T;
     type IntoIter = slice::IterMut<'a, T>;
 
@@ -2230,9 +2232,9 @@ impl<'a, T, B: BuildAllocRef> IntoIterator for &'a mut Vec<T, B> {
     }
 }
 
-impl<T, B: BuildAllocRef> Extend<T> for Vec<T, B>
+impl<T, A: DeallocRef> Extend<T> for Vec<T, A>
 where
-    B::Ref: ReallocRef<Error = crate::Never>,
+    A: ReallocRef<Error = crate::Never>,
 {
     #[inline]
     fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
@@ -2244,11 +2246,11 @@ where
     }
 }
 
-impl<T, B: BuildAllocRef> TryExtend<T> for Vec<T, B>
+impl<T, A: DeallocRef> TryExtend<T> for Vec<T, A>
 where
-    B::Ref: ReallocRef,
+    A: ReallocRef,
 {
-    type Err = CollectionAllocErr<B>;
+    type Err = CollectionAllocErr<A>;
 
     #[inline]
     fn try_extend<I: IntoIterator<Item = T>>(&mut self, iter: I) -> Result<(), Self::Err> {
@@ -2261,11 +2263,7 @@ where
     }
 }
 
-impl<T, B> Vec<T, B>
-where
-    B: BuildAllocRef,
-    B::Ref: ReallocRef<Error = crate::Never>,
-{
+impl<T, A: DeallocRef> Vec<T, A> {
     /// Creates a splicing iterator that replaces the specified range in the vector
     /// with the given `replace_with` iterator and yields the removed items.
     /// `replace_with` does not need to be the same length as `range`.
@@ -2301,8 +2299,9 @@ where
     /// assert_eq!(u, &[1, 2]);
     /// ```
     #[inline]
-    pub fn splice<R, I>(&mut self, range: R, replace_with: I) -> Splice<'_, I::IntoIter, B>
+    pub fn splice<R, I>(&mut self, range: R, replace_with: I) -> Splice<'_, I::IntoIter, A>
     where
+        A: ReallocRef<Error = crate::Never>,
         R: RangeBounds<usize>,
         I: IntoIterator<Item = T>,
     {
@@ -2358,8 +2357,9 @@ where
     /// assert_eq!(evens, vec![2, 4, 6, 8, 14]);
     /// assert_eq!(odds, vec![1, 3, 5, 9, 11, 13, 15]);
     /// ```
-    pub fn drain_filter<F>(&mut self, filter: F) -> DrainFilter<'_, T, F, B>
+    pub fn drain_filter<F>(&mut self, filter: F) -> DrainFilter<'_, T, F, A>
     where
+        A: ReallocRef<Error = crate::Never>,
         F: FnMut(&mut T) -> bool,
     {
         let old_len = self.len();
@@ -2386,20 +2386,20 @@ where
 /// append the entire slice at once.
 ///
 /// [`copy_from_slice`]: ../../std/primitive.slice.html#method.copy_from_slice
-impl<'a, T: 'a + Copy, B: BuildAllocRef> Extend<&'a T> for Vec<T, B>
+impl<'a, T: 'a + Copy, A: DeallocRef> Extend<&'a T> for Vec<T, A>
 where
-    B::Ref: ReallocRef<Error = crate::Never>,
+    A: ReallocRef<Error = crate::Never>,
 {
     fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
         self.extend(iter.into_iter().cloned())
     }
 }
 
-impl<'a, T: 'a + Copy, B: BuildAllocRef> TryExtend<&'a T> for Vec<T, B>
+impl<'a, T: 'a + Copy, A: DeallocRef> TryExtend<&'a T> for Vec<T, A>
 where
-    B::Ref: ReallocRef,
+    A: ReallocRef,
 {
-    type Err = CollectionAllocErr<B>;
+    type Err = CollectionAllocErr<A>;
 
     fn try_extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) -> Result<(), Self::Err> {
         self.try_extend(iter.into_iter().cloned())
@@ -2422,25 +2422,25 @@ macro_rules! __impl_slice_eq1 {
     }
 }
 
-__impl_slice_eq1! { [B1, B2] Vec<T, B1>, Vec<U, B2>, B1: BuildAllocRef, B2: BuildAllocRef }
-__impl_slice_eq1! { [B] Vec<T, B>, &[U], B: BuildAllocRef }
-__impl_slice_eq1! { [B] Vec<T, B>, &mut [U], B: BuildAllocRef }
+__impl_slice_eq1! { [A, B] Vec<T, A>, Vec<U, B>, A: DeallocRef, B: DeallocRef }
+__impl_slice_eq1! { [A] Vec<T, A>, &[U], A: DeallocRef }
+__impl_slice_eq1! { [A] Vec<T, A>, &mut [U], A: DeallocRef }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, &[B], A: Clone }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, &mut [B], A: Clone }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, Vec<B>, A: Clone }
 #[cfg(feature = "const_generics")]
-__impl_slice_eq1! { [B, const N: usize] Vec<T, B>, [U; N], [U; N]: core::array::LengthAtMost32, B: BuildAllocRef }
+__impl_slice_eq1! { [A, const N: usize] Vec<T, A>, [U; N], [U; N]: core::array::LengthAtMost32, A: DeallocRef }
 #[cfg(feature = "const_generics")]
-__impl_slice_eq1! { [B, const N: usize] Vec<T, B>, &[U; N], [U; N]: core::array::LengthAtMost32, B: BuildAllocRef }
+__impl_slice_eq1! { [A, const N: usize] Vec<T, A>, &[U; N], [U; N]: core::array::LengthAtMost32, A: DeallocRef }
 
 macro_rules! array_impls {
     ($($N: expr)+) => {
         $(
             // NOTE: Using macros to avoid const generics.
             #[cfg(not(feature = "const_generics"))]
-            __impl_slice_eq1! { [B] Vec<T, B>, [U; $N], B: BuildAllocRef }
+            __impl_slice_eq1! { [A] Vec<T, A>, [U; $N], A: DeallocRef }
             #[cfg(not(feature = "const_generics"))]
-            __impl_slice_eq1! { [B] Vec<T, B>, &[U; $N], B: BuildAllocRef }
+            __impl_slice_eq1! { [A] Vec<T, A>, &[U; $N], A: DeallocRef }
         )+
     }
 }
@@ -2460,18 +2460,18 @@ array_impls! {
 //__impl_slice_eq1! { [const N: usize] Cow<'a, [A]>, &mut [B; N], [B; N]: LengthAtMost32 }
 
 /// Implements comparison of vectors, lexicographically.
-impl<T: PartialOrd, B1: BuildAllocRef, B2: BuildAllocRef> PartialOrd<Vec<T, B2>> for Vec<T, B1> {
+impl<T: PartialOrd, A: DeallocRef, B: DeallocRef> PartialOrd<Vec<T, B>> for Vec<T, A> {
     #[inline]
     #[must_use]
-    fn partial_cmp(&self, other: &Vec<T, B2>) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Vec<T, B>) -> Option<Ordering> {
         PartialOrd::partial_cmp(&**self, &**other)
     }
 }
 
-impl<T: Eq, B: BuildAllocRef> Eq for Vec<T, B> {}
+impl<T: Eq, A: DeallocRef> Eq for Vec<T, A> {}
 
 /// Implements ordering of vectors, lexicographically.
-impl<T: Ord, B: BuildAllocRef> Ord for Vec<T, B> {
+impl<T: Ord, A: DeallocRef> Ord for Vec<T, A> {
     #[inline]
     #[must_use]
     fn cmp(&self, other: &Self) -> Ordering {
@@ -2479,45 +2479,45 @@ impl<T: Ord, B: BuildAllocRef> Ord for Vec<T, B> {
     }
 }
 
-impl<T, B: BuildAllocRef> Default for Vec<T, B>
+impl<T, A: DeallocRef> Default for Vec<T, A>
 where
-    B::Ref: Default,
+    A: Default,
 {
     /// Creates an empty `Vec<T>`.
     #[must_use]
     fn default() -> Self {
-        Self::new_in(B::Ref::default())
+        Self::new_in(A::default())
     }
 }
 
-impl<T: fmt::Debug, B: BuildAllocRef> fmt::Debug for Vec<T, B> {
+impl<T: fmt::Debug, A: DeallocRef> fmt::Debug for Vec<T, A> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&**self, f)
     }
 }
 
-impl<T, B: BuildAllocRef> AsRef<Vec<T, B>> for Vec<T, B> {
+impl<T, A: DeallocRef> AsRef<Vec<T, A>> for Vec<T, A> {
     #[must_use]
     fn as_ref(&self) -> &Self {
         self
     }
 }
 
-impl<T, B: BuildAllocRef> AsMut<Vec<T, B>> for Vec<T, B> {
+impl<T, A: DeallocRef> AsMut<Vec<T, A>> for Vec<T, A> {
     #[must_use]
     fn as_mut(&mut self) -> &mut Self {
         self
     }
 }
 
-impl<T, B: BuildAllocRef> AsRef<[T]> for Vec<T, B> {
+impl<T, A: DeallocRef> AsRef<[T]> for Vec<T, A> {
     #[must_use]
     fn as_ref(&self) -> &[T] {
         self
     }
 }
 
-impl<T, B: BuildAllocRef> AsMut<[T]> for Vec<T, B> {
+impl<T, A: DeallocRef> AsMut<[T]> for Vec<T, A> {
     #[must_use]
     fn as_mut(&mut self) -> &mut [T] {
         self
@@ -2766,23 +2766,23 @@ impl<T> Drop for IntoIter<T> {
 ///
 /// [`drain`]: struct.Vec.html#method.drain
 /// [`Vec`]: struct.Vec.html
-pub struct Drain<'a, T, B: BuildAllocRef> {
+pub struct Drain<'a, T, A: DeallocRef> {
     /// Index of tail to preserve
     tail_start: usize,
     /// Length of tail
     tail_len: usize,
     /// Current remaining range to remove
     iter: slice::Iter<'a, T>,
-    vec: NonNull<Vec<T, B>>,
+    vec: NonNull<Vec<T, A>>,
 }
 
-impl<T: fmt::Debug, B: BuildAllocRef> fmt::Debug for Drain<'_, T, B> {
+impl<T: fmt::Debug, A: DeallocRef> fmt::Debug for Drain<'_, T, A> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Drain").field(&self.iter.as_slice()).finish()
     }
 }
 
-impl<T, B: BuildAllocRef> Drain<'_, T, B> {
+impl<T, A: DeallocRef> Drain<'_, T, A> {
     /// Returns the remaining items of this iterator as a slice.
     ///
     /// # Examples
@@ -2801,10 +2801,10 @@ impl<T, B: BuildAllocRef> Drain<'_, T, B> {
     }
 }
 
-unsafe impl<T: Sync, B: BuildAllocRef> Sync for Drain<'_, T, B> {}
-unsafe impl<T: Send, B: BuildAllocRef> Send for Drain<'_, T, B> {}
+unsafe impl<T: Sync, A: DeallocRef> Sync for Drain<'_, T, A> {}
+unsafe impl<T: Send, A: DeallocRef> Send for Drain<'_, T, A> {}
 
-impl<T, B: BuildAllocRef> Iterator for Drain<'_, T, B> {
+impl<T, A: DeallocRef> Iterator for Drain<'_, T, A> {
     type Item = T;
 
     #[inline]
@@ -2818,14 +2818,14 @@ impl<T, B: BuildAllocRef> Iterator for Drain<'_, T, B> {
     }
 }
 
-impl<T, B: BuildAllocRef> DoubleEndedIterator for Drain<'_, T, B> {
+impl<T, A: DeallocRef> DoubleEndedIterator for Drain<'_, T, A> {
     #[inline]
     fn next_back(&mut self) -> Option<T> {
         self.iter.next_back().map(|elt| unsafe { ptr::read(elt) })
     }
 }
 
-impl<T, B: BuildAllocRef> Drop for Drain<'_, T, B> {
+impl<T, A: DeallocRef> Drop for Drain<'_, T, A> {
     fn drop(&mut self) {
         // exhaust self first
         self.for_each(drop);
@@ -2847,9 +2847,9 @@ impl<T, B: BuildAllocRef> Drop for Drain<'_, T, B> {
     }
 }
 
-impl<T, B: BuildAllocRef> ExactSizeIterator for Drain<'_, T, B> {}
+impl<T, A: DeallocRef> ExactSizeIterator for Drain<'_, T, A> {}
 
-impl<T, B: BuildAllocRef> FusedIterator for Drain<'_, T, B> {}
+impl<T, A: DeallocRef> FusedIterator for Drain<'_, T, A> {}
 
 /// A splicing iterator for `Vec`.
 ///
@@ -2859,17 +2859,17 @@ impl<T, B: BuildAllocRef> FusedIterator for Drain<'_, T, B> {}
 /// [`splice()`]: struct.Vec.html#method.splice
 /// [`Vec`]: struct.Vec.html
 #[derive(Debug)]
-pub struct Splice<'a, I: Iterator + 'a, B: BuildAllocRef>
+pub struct Splice<'a, I: Iterator + 'a, A: DeallocRef>
 where
-    B::Ref: ReallocRef<Error = crate::Never>,
+    A: ReallocRef<Error = crate::Never>,
 {
-    drain: Drain<'a, I::Item, B>,
+    drain: Drain<'a, I::Item, A>,
     replace_with: I,
 }
 
-impl<I: Iterator, B: BuildAllocRef> Iterator for Splice<'_, I, B>
+impl<I: Iterator, A: DeallocRef> Iterator for Splice<'_, I, A>
 where
-    B::Ref: ReallocRef<Error = crate::Never>,
+    A: ReallocRef<Error = crate::Never>,
 {
     type Item = I::Item;
 
@@ -2882,23 +2882,23 @@ where
     }
 }
 
-impl<I: Iterator, B: BuildAllocRef> DoubleEndedIterator for Splice<'_, I, B>
+impl<I: Iterator, A: DeallocRef> DoubleEndedIterator for Splice<'_, I, A>
 where
-    B::Ref: ReallocRef<Error = crate::Never>,
+    A: ReallocRef<Error = crate::Never>,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.drain.next_back()
     }
 }
 
-impl<I: Iterator, B: BuildAllocRef> ExactSizeIterator for Splice<'_, I, B> where
-    B::Ref: ReallocRef<Error = crate::Never>
+impl<I: Iterator, A: DeallocRef> ExactSizeIterator for Splice<'_, I, A> where
+    A: ReallocRef<Error = crate::Never>
 {
 }
 
-impl<I: Iterator, B: BuildAllocRef> Drop for Splice<'_, I, B>
+impl<I: Iterator, A: DeallocRef> Drop for Splice<'_, I, A>
 where
-    B::Ref: ReallocRef<Error = crate::Never>,
+    A: ReallocRef<Error = crate::Never>,
 {
     fn drop(&mut self) {
         self.drain.by_ref().for_each(drop);
@@ -2942,9 +2942,9 @@ where
 }
 
 /// Private helper methods for `Splice::drop`
-impl<T, B: BuildAllocRef> Drain<'_, T, B>
+impl<T, A: DeallocRef> Drain<'_, T, A>
 where
-    B::Ref: ReallocRef<Error = crate::Never>,
+    A: ReallocRef<Error = crate::Never>,
 {
     /// The range from `self.vec.len` to `self.tail_start` contains elements
     /// that have been moved out.
@@ -2984,11 +2984,11 @@ where
 
 /// An iterator produced by calling `drain_filter` on Vec.
 // #[derive(Debug)]
-pub struct DrainFilter<'a, T, F, B: BuildAllocRef>
+pub struct DrainFilter<'a, T, F, A: DeallocRef>
 where
     F: FnMut(&mut T) -> bool,
 {
-    vec: &'a mut Vec<T, B>,
+    vec: &'a mut Vec<T, A>,
     /// The index of the item that will be inspected by the next call to `next`.
     idx: usize,
     /// The number of items that have been drained (removed) thus far.
@@ -3005,7 +3005,7 @@ where
     panic_flag: bool,
 }
 
-impl<T, F, B: BuildAllocRef> Iterator for DrainFilter<'_, T, F, B>
+impl<T, F, A: DeallocRef> Iterator for DrainFilter<'_, T, F, A>
 where
     F: FnMut(&mut T) -> bool,
 {
@@ -3042,19 +3042,19 @@ where
     }
 }
 
-impl<T, F, B: BuildAllocRef> Drop for DrainFilter<'_, T, F, B>
+impl<T, F, A: DeallocRef> Drop for DrainFilter<'_, T, F, A>
 where
     F: FnMut(&mut T) -> bool,
 {
     fn drop(&mut self) {
-        struct BackshiftOnDrop<'a, 'b, T, F, B: BuildAllocRef>
+        struct BackshiftOnDrop<'a, 'b, T, F, A: DeallocRef>
         where
             F: FnMut(&mut T) -> bool,
         {
-            drain: &'b mut DrainFilter<'a, T, F, B>,
+            drain: &'b mut DrainFilter<'a, T, F, A>,
         }
 
-        impl<T, F, B: BuildAllocRef> Drop for BackshiftOnDrop<'_, '_, T, F, B>
+        impl<T, F, A: DeallocRef> Drop for BackshiftOnDrop<'_, '_, T, F, A>
         where
             F: FnMut(&mut T) -> bool,
         {

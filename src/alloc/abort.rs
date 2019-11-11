@@ -5,7 +5,7 @@ use core::ptr::NonNull;
 use liballoc::alloc::handle_alloc_error;
 
 /// An allocator, which wraps another allocator and aborts on OOM.
-#[derive(Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct AbortAlloc<A>(pub A);
 
 impl<A: BuildAllocRef> BuildAllocRef for AbortAlloc<A> {
