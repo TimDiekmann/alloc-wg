@@ -418,16 +418,6 @@ impl String {
         }
     }
 
-    // HACK(japaric): with cfg(test) the inherent `[T]::to_vec` method, which is
-    // required for this method definition, is not available. Since we don't
-    // require this method for testing purposes, I'll just stub it
-    // NB see the slice::hack module in slice.rs for more information
-    #[inline]
-    #[cfg(test)]
-    pub fn from_str(_: &str) -> String {
-        panic!("not available with cfg(test)");
-    }
-
     /// Decode a UTF-16 encoded vector `v` into a `String`, returning [`Err`]
     /// if `v` contains any invalid data.
     ///
@@ -1735,12 +1725,10 @@ impl<B: BuildAllocRef> String<B> {
     /// # Examples
     ///
     /// ```
-    /// # fn main() {
     /// let mut hello = String::from("Hello, World!");
     /// let world = hello.split_off(7);
     /// assert_eq!(hello, "Hello, ");
     /// assert_eq!(world, "World!");
-    /// # }
     /// ```
     #[inline]
     pub fn split_off(&mut self, at: usize) -> Self
@@ -2128,10 +2116,6 @@ impl<B: BuildAllocRef> PartialEq for String<B> {
     fn eq(&self, other: &Self) -> bool {
         PartialEq::eq(&self[..], &other[..])
     }
-    #[inline]
-    fn ne(&self, other: &Self) -> bool {
-        PartialEq::ne(&self[..], &other[..])
-    }
 }
 
 macro_rules! impl_eq {
@@ -2142,10 +2126,6 @@ macro_rules! impl_eq {
             fn eq(&self, other: &$rhs) -> bool {
                 PartialEq::eq(&self[..], &other[..])
             }
-            #[inline]
-            fn ne(&self, other: &$rhs) -> bool {
-                PartialEq::ne(&self[..], &other[..])
-            }
         }
 
         #[allow(unused_lifetimes)]
@@ -2153,10 +2133,6 @@ macro_rules! impl_eq {
             #[inline]
             fn eq(&self, other: &$lhs) -> bool {
                 PartialEq::eq(&self[..], &other[..])
-            }
-            #[inline]
-            fn ne(&self, other: &$lhs) -> bool {
-                PartialEq::ne(&self[..], &other[..])
             }
         }
     };
