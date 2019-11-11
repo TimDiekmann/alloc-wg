@@ -80,6 +80,7 @@ use core::{
 
 use crate::{
     alloc::{AbortAlloc, AllocRef, BuildAllocRef, Global, ReallocRef},
+    collect::TryExtend,
     collections::CollectionAllocErr,
 };
 
@@ -552,6 +553,15 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
         })
     }
 
+    /// Like `from_raw_parts` but parameterized over the choice of allocator for the returned
+    /// `Vec`.
+    pub unsafe fn from_raw_parts_in(ptr: *mut T, length: usize, capacity: usize, b: B) -> Self {
+        Self {
+            buf: RawVec::from_raw_parts_in(ptr, capacity, b),
+            len: length,
+        }
+    }
+
     /// Decomposes a `Vec<T>` into its raw components.
     ///
     /// Returns the raw pointer to the underlying data, the length of
@@ -622,6 +632,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// vec.reserve(10);
     /// assert!(vec.capacity() >= 11);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     pub fn reserve(&mut self, additional: usize)
     where
         B::Ref: ReallocRef<Error = crate::Never>,
@@ -650,6 +664,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// vec.reserve_exact(10);
     /// assert!(vec.capacity() >= 11);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     pub fn reserve_exact(&mut self, additional: usize)
     where
         B::Ref: ReallocRef<Error = crate::Never>,
@@ -759,6 +777,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// vec.shrink_to_fit();
     /// assert!(vec.capacity() >= 3);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     pub fn shrink_to_fit(&mut self)
     where
         B::Ref: ReallocRef<Error = crate::Never>,
@@ -766,6 +788,17 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
         if self.capacity() != self.len {
             self.buf.shrink_to_fit(self.len);
         }
+    }
+
+    /// Same as `shrink_to_fit` but returns errors instead of panicking.
+    pub fn try_shrink_to_fit(&mut self) -> Result<(), CollectionAllocErr<B>>
+    where
+        B::Ref: ReallocRef,
+    {
+        if self.capacity() != self.len {
+            self.buf.try_shrink_to_fit(self.len)?;
+        }
+        Ok(())
     }
 
     /// Shrinks the capacity of the vector with a lower bound.
@@ -788,11 +821,24 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// vec.shrink_to(0);
     /// assert!(vec.capacity() >= 3);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// * Panics if the given amount is *larger* than the current capacity.
+    /// * Panics if the reallocation fails.
     pub fn shrink_to(&mut self, min_capacity: usize)
     where
         B::Ref: ReallocRef<Error = crate::Never>,
     {
         self.buf.shrink_to_fit(cmp::max(self.len, min_capacity));
+    }
+
+    /// Same as `shrink_to` but returns errors instead of panicking.
+    pub fn try_shrink_to(&mut self, min_capacity: usize) -> Result<(), CollectionAllocErr<B>>
+    where
+        B::Ref: ReallocRef,
+    {
+        self.buf.try_shrink_to_fit(cmp::max(self.len, min_capacity))
     }
 
     /// Converts the vector into [`Box<[T]>`][owned slice].
@@ -821,18 +867,34 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// let slice = vec.into_boxed_slice();
     /// assert_eq!(slice.into_vec().capacity(), 3);
     /// ```
-    pub fn into_boxed_slice(mut self) -> Box<[T], B>
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
+    pub fn into_boxed_slice(self) -> Box<[T], B>
     where
         B::Ref: ReallocRef<Error = crate::Never>,
     {
+        match self.try_into_boxed_slice() {
+            Ok(vec) => vec,
+            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
+            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+        }
+    }
+
+    /// Same as `into_boxed_slice` but returns errors instead of panicking.
+    pub fn try_into_boxed_slice(mut self) -> Result<Box<[T], B>, CollectionAllocErr<B>>
+    where
+        B::Ref: ReallocRef,
+    {
         unsafe {
-            self.shrink_to_fit();
+            self.try_shrink_to_fit()?;
             let ptr = self.buf.ptr();
             let slice = slice::from_raw_parts_mut(ptr, self.buf.capacity());
             let builder = ptr::read(self.buf.build_alloc());
             let output = Box::from_raw_in(slice, builder);
             mem::forget(self);
-            output
+            Ok(output)
         }
     }
 
@@ -1156,12 +1218,24 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     where
         B::Ref: ReallocRef<Error = crate::Never>,
     {
+        match self.try_insert(index, element) {
+            Ok(vec) => vec,
+            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
+            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+        }
+    }
+
+    /// Same as `insert` but returns errors instead of panicking
+    pub fn try_insert(&mut self, index: usize, element: T) -> Result<(), CollectionAllocErr<B>>
+    where
+        B::Ref: ReallocRef,
+    {
         let len = self.len();
         assert!(index <= len);
 
         // space for the new element
         if len == self.buf.capacity() {
-            self.reserve(1);
+            self.try_reserve(1)?;
         }
 
         unsafe {
@@ -1178,6 +1252,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
             }
             self.set_len(len + 1);
         }
+        Ok(())
     }
 
     /// Removes and returns the element at position `index` within the vector,
@@ -1317,21 +1392,39 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// vec.push(3);
     /// assert_eq!(vec, [1, 2, 3]);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     #[inline]
     pub fn push(&mut self, value: T)
     where
         B::Ref: ReallocRef<Error = crate::Never>,
     {
+        match self.try_push(value) {
+            Ok(vec) => vec,
+            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
+            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+        }
+    }
+
+    /// Same as `push` but returns errors instead of panicking
+    #[inline]
+    pub fn try_push(&mut self, value: T) -> Result<(), CollectionAllocErr<B>>
+    where
+        B::Ref: ReallocRef,
+    {
         // This will panic or abort if we would allocate > isize::MAX bytes
         // or if the length increment would overflow for zero-sized types.
         if self.len == self.buf.capacity() {
-            self.reserve(1);
+            self.try_reserve(1)?;
         }
         unsafe {
             let end = self.as_mut_ptr().add(self.len);
             ptr::write(end, value);
             self.len += 1;
         }
+        Ok(())
     }
 
     /// Removes the last element from a vector and returns it, or [`None`][] if it
@@ -1373,28 +1466,47 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// assert_eq!(vec, [1, 2, 3, 4, 5, 6]);
     /// assert_eq!(vec2, []);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     #[inline]
     pub fn append(&mut self, other: &mut Self)
     where
         B::Ref: ReallocRef<Error = crate::Never>,
     {
+        match self.try_append(other) {
+            Ok(vec) => vec,
+            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
+            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+        }
+    }
+
+    /// Same as `append` but returns errors instead of panicking.
+    #[inline]
+    pub fn try_append(&mut self, other: &mut Self) -> Result<(), CollectionAllocErr<B>>
+    where
+        B::Ref: ReallocRef,
+    {
         unsafe {
-            self.append_elements(other.as_slice());
+            self.try_append_elements(other.as_slice())?;
             other.set_len(0);
         }
+        Ok(())
     }
 
     /// Appends elements to `Self` from other buffer.
     #[inline]
-    unsafe fn append_elements(&mut self, other: *const [T])
+    unsafe fn try_append_elements(&mut self, other: *const [T]) -> Result<(), CollectionAllocErr<B>>
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        B::Ref: ReallocRef,
     {
         let count = (*other).len();
-        self.reserve(count);
+        self.try_reserve(count)?;
         let len = self.len();
         ptr::copy_nonoverlapping(other as *const T, self.as_mut_ptr().add(len), count);
         self.len += count;
+        Ok(())
     }
 
     /// Creates a draining iterator that removes the specified range in the vector
@@ -1538,15 +1650,32 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// assert_eq!(vec, [1]);
     /// assert_eq!(vec2, [2, 3]);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the allocation of split part fails.
     #[inline]
     pub fn split_off(&mut self, at: usize) -> Self
     where
         B::Ref: AllocRef<Error = crate::Never>,
     {
+        match self.try_split_off(at) {
+            Ok(vec) => vec,
+            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
+            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+        }
+    }
+
+    /// Same as `split_off` but returns errors instead of panicking.
+    #[inline]
+    pub fn try_split_off(&mut self, at: usize) -> Result<Self, CollectionAllocErr<B>>
+    where
+        B::Ref: AllocRef,
+    {
         assert!(at <= self.len(), "`at` out of bounds");
 
         let other_len = self.len - at;
-        let mut other = Self::with_capacity_in(other_len, self.buf.alloc_ref().0);
+        let mut other = Self::try_with_capacity_in(other_len, self.buf.alloc_ref().0)?;
 
         // Unsafely `set_len` and copy items to `other`.
         unsafe {
@@ -1555,7 +1684,7 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
 
             ptr::copy_nonoverlapping(self.as_ptr().add(at), other.as_mut_ptr(), other.len());
         }
-        other
+        Ok(other)
     }
 
     /// Resizes the `Vec` in-place so that `len` is equal to `new_len`.
@@ -1591,17 +1720,35 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     ///
     /// [`resize`]: #method.resize
     /// [`Clone`]: ../../std/clone/trait.Clone.html
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     pub fn resize_with<F>(&mut self, new_len: usize, f: F)
     where
         F: FnMut() -> T,
         B::Ref: ReallocRef<Error = crate::Never>,
     {
+        match self.try_resize_with(new_len, f) {
+            Ok(vec) => vec,
+            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
+            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+        }
+    }
+
+    /// Same as `resize_with` but returns errors instead of panicking.
+    pub fn try_resize_with<F>(&mut self, new_len: usize, f: F) -> Result<(), CollectionAllocErr<B>>
+    where
+        F: FnMut() -> T,
+        B::Ref: ReallocRef,
+    {
         let len = self.len();
         if new_len > len {
-            self.extend_with(new_len - len, ExtendFunc(f));
+            self.try_extend_with(new_len - len, ExtendFunc(f))?;
         } else {
             self.truncate(new_len);
         }
+        Ok(())
     }
 
     /// Consumes and leaks the `Vec`, returning a mutable reference to the contents,
@@ -1626,6 +1773,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// static_ref[0] += 1;
     /// assert_eq!(static_ref, &[2, 2, 3]);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     #[inline]
     pub fn leak<'a>(vec: Self) -> &'a mut [T]
     where
@@ -1634,9 +1785,30 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     {
         Box::leak(vec.into_boxed_slice())
     }
+
+    /// Same as `leak` but returns errors instead of panicking.
+    #[inline]
+    pub fn try_leak<'a>(vec: Self) -> Result<&'a mut [T], CollectionAllocErr<B>>
+    where
+        T: 'a, // Technically not needed, but kept to be explicit.
+        B::Ref: ReallocRef,
+    {
+        Ok(Box::leak(vec.try_into_boxed_slice()?))
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn from_iter_in<I: IntoIterator<Item = T>>(iter: I, b: B::Ref) -> Self
+    where
+        B::Ref: ReallocRef<Error = crate::Never>,
+    {
+        let mut v = Self::new_in(b);
+        v.extend(iter.into_iter());
+        v
+    }
 }
 
-impl<T: Clone> Vec<T> {
+impl<T: Clone, B: BuildAllocRef> Vec<T, B> {
     /// Resizes the `Vec` in-place so that `len` is equal to `new_len`.
     ///
     /// If `new_len` is greater than `len`, the `Vec` is extended by the
@@ -1663,7 +1835,14 @@ impl<T: Clone> Vec<T> {
     /// [`Clone`]: ../../std/clone/trait.Clone.html
     /// [`Default`]: ../../std/default/trait.Default.html
     /// [`resize_with`]: #method.resize_with
-    pub fn resize(&mut self, new_len: usize, value: T) {
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
+    pub fn resize(&mut self, new_len: usize, value: T)
+    where
+        B::Ref: ReallocRef<Error = crate::Never>,
+    {
         let len = self.len();
 
         if new_len > len {
@@ -1671,6 +1850,21 @@ impl<T: Clone> Vec<T> {
         } else {
             self.truncate(new_len);
         }
+    }
+
+    /// Same as `resize` but returns errors instead of panicking
+    pub fn try_resize(&mut self, new_len: usize, value: T) -> Result<(), CollectionAllocErr<B>>
+    where
+        B::Ref: ReallocRef,
+    {
+        let len = self.len();
+
+        if new_len > len {
+            self.try_extend_with(new_len - len, ExtendElement(value))?
+        } else {
+            self.truncate(new_len);
+        }
+        Ok(())
     }
 
     /// Clones and appends all elements in a slice to the `Vec`.
@@ -1693,8 +1887,23 @@ impl<T: Clone> Vec<T> {
     /// ```
     ///
     /// [`extend`]: #method.extend
-    pub fn extend_from_slice(&mut self, other: &[T]) {
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
+    pub fn extend_from_slice(&mut self, other: &[T])
+    where
+        B::Ref: ReallocRef<Error = crate::Never>,
+    {
         self.extend(other.iter().cloned())
+    }
+
+    /// Same as `extend_from_slice` but returns errors instead of panicking
+    pub fn try_extend_from_slice(&mut self, other: &[T]) -> Result<(), CollectionAllocErr<B>>
+    where
+        B::Ref: ReallocRef,
+    {
+        self.try_extend(other.iter().cloned())
     }
 }
 
@@ -1734,13 +1943,29 @@ impl<T, F: FnMut() -> T> ExtendWith<T> for ExtendFunc<F> {
     }
 }
 
-impl<T, B: BuildAllocRef> Vec<T, B>
-where
-    B::Ref: ReallocRef<Error = crate::Never>,
-{
+impl<T, B: BuildAllocRef> Vec<T, B> {
     /// Extend the vector by `n` values, using the given generator.
-    fn extend_with<E: ExtendWith<T>>(&mut self, n: usize, mut value: E) {
-        self.reserve(n);
+    fn extend_with<E: ExtendWith<T>>(&mut self, n: usize, value: E)
+    where
+        B::Ref: ReallocRef<Error = crate::Never>,
+    {
+        match self.try_extend_with(n, value) {
+            Ok(vec) => vec,
+            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
+            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+        }
+    }
+
+    /// Same as `extend_with` but returns errors instead of panicking.
+    fn try_extend_with<E: ExtendWith<T>>(
+        &mut self,
+        n: usize,
+        mut value: E,
+    ) -> Result<(), CollectionAllocErr<B>>
+    where
+        B::Ref: ReallocRef,
+    {
+        self.try_reserve(n)?;
 
         unsafe {
             let mut ptr = self.as_mut_ptr().add(self.len());
@@ -1765,6 +1990,7 @@ where
 
             // len set by scope guard
         }
+        Ok(())
     }
 }
 
@@ -1855,6 +2081,30 @@ pub fn from_elem<T: Clone>(elem: T, n: usize) -> Vec<T> {
     v
 }
 
+#[doc(hidden)]
+pub fn from_elem_in<T: Clone, B: BuildAllocRef>(elem: T, n: usize, b: B::Ref) -> Vec<T, B>
+where
+    B::Ref: ReallocRef<Error = crate::Never>,
+{
+    let mut v = Vec::with_capacity_in(n, b);
+    v.extend_with(n, ExtendElement(elem));
+    v
+}
+
+#[doc(hidden)]
+pub fn try_from_elem_in<T: Clone, B: BuildAllocRef>(
+    elem: T,
+    n: usize,
+    b: B::Ref,
+) -> Result<Vec<T, B>, CollectionAllocErr<B>>
+where
+    B::Ref: ReallocRef,
+{
+    let mut v = Vec::try_with_capacity_in(n, b)?;
+    v.try_extend_with(n, ExtendElement(elem))?;
+    Ok(v)
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Common trait implementations for Vec
 ////////////////////////////////////////////////////////////////////////////////
@@ -1919,7 +2169,7 @@ impl<T> FromIterator<T> for Vec<T> {
     }
 }
 
-impl<T> IntoIterator for Vec<T> {
+impl<T, B: BuildAllocRef> IntoIterator for Vec<T, B> {
     type Item = T;
     type IntoIter = IntoIter<T>;
 
@@ -1961,7 +2211,7 @@ impl<T> IntoIterator for Vec<T> {
     }
 }
 
-impl<'a, T> IntoIterator for &'a Vec<T> {
+impl<'a, T, B: BuildAllocRef> IntoIterator for &'a Vec<T, B> {
     type Item = &'a T;
     type IntoIter = slice::Iter<'a, T>;
 
@@ -1971,7 +2221,7 @@ impl<'a, T> IntoIterator for &'a Vec<T> {
     }
 }
 
-impl<'a, T> IntoIterator for &'a mut Vec<T> {
+impl<'a, T, B: BuildAllocRef> IntoIterator for &'a mut Vec<T, B> {
     type Item = &'a mut T;
     type IntoIter = slice::IterMut<'a, T>;
 
@@ -1991,6 +2241,23 @@ where
         for t in iter {
             self.push(t);
         }
+    }
+}
+
+impl<T, B: BuildAllocRef> TryExtend<T> for Vec<T, B>
+where
+    B::Ref: ReallocRef,
+{
+    type Err = CollectionAllocErr<B>;
+
+    #[inline]
+    fn try_extend<I: IntoIterator<Item = T>>(&mut self, iter: I) -> Result<(), Self::Err> {
+        let iter = iter.into_iter();
+        self.try_reserve(iter.size_hint().0)?;
+        for t in iter {
+            self.try_push(t)?;
+        }
+        Ok(())
     }
 }
 
@@ -2119,9 +2386,23 @@ where
 /// append the entire slice at once.
 ///
 /// [`copy_from_slice`]: ../../std/primitive.slice.html#method.copy_from_slice
-impl<'a, T: 'a + Copy> Extend<&'a T> for Vec<T> {
+impl<'a, T: 'a + Copy, B: BuildAllocRef> Extend<&'a T> for Vec<T, B>
+where
+    B::Ref: ReallocRef<Error = crate::Never>,
+{
     fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
         self.extend(iter.into_iter().cloned())
+    }
+}
+
+impl<'a, T: 'a + Copy, B: BuildAllocRef> TryExtend<&'a T> for Vec<T, B>
+where
+    B::Ref: ReallocRef,
+{
+    type Err = CollectionAllocErr<B>;
+
+    fn try_extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) -> Result<(), Self::Err> {
+        self.try_extend(iter.into_iter().cloned())
     }
 }
 
@@ -2914,4 +3195,11 @@ where
     // unsigned but then the output is treated as signed, so neither works.
     let d = isize::wrapping_sub(p as _, origin as _);
     d / (pointee_size as isize)
+}
+
+// One central function responsible for reporting capacity overflows. This'll
+// ensure that the code generation related to these panics is minimal as there's
+// only one location which panics rather than a bunch throughout the module.
+fn capacity_overflow() -> ! {
+    panic!("capacity overflow");
 }
