@@ -632,6 +632,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// vec.reserve(10);
     /// assert!(vec.capacity() >= 11);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     pub fn reserve(&mut self, additional: usize)
     where
         B::Ref: ReallocRef<Error = crate::Never>,
@@ -660,6 +664,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// vec.reserve_exact(10);
     /// assert!(vec.capacity() >= 11);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     pub fn reserve_exact(&mut self, additional: usize)
     where
         B::Ref: ReallocRef<Error = crate::Never>,
@@ -769,6 +777,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// vec.shrink_to_fit();
     /// assert!(vec.capacity() >= 3);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     pub fn shrink_to_fit(&mut self)
     where
         B::Ref: ReallocRef<Error = crate::Never>,
@@ -809,6 +821,11 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// vec.shrink_to(0);
     /// assert!(vec.capacity() >= 3);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// * Panics if the given amount is *larger* than the current capacity.
+    /// * Panics if the reallocation fails.
     pub fn shrink_to(&mut self, min_capacity: usize)
     where
         B::Ref: ReallocRef<Error = crate::Never>,
@@ -850,6 +867,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// let slice = vec.into_boxed_slice();
     /// assert_eq!(slice.into_vec().capacity(), 3);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     pub fn into_boxed_slice(self) -> Box<[T], B>
     where
         B::Ref: ReallocRef<Error = crate::Never>,
@@ -1371,6 +1392,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// vec.push(3);
     /// assert_eq!(vec, [1, 2, 3]);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     #[inline]
     pub fn push(&mut self, value: T)
     where
@@ -1441,6 +1466,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// assert_eq!(vec, [1, 2, 3, 4, 5, 6]);
     /// assert_eq!(vec2, []);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     #[inline]
     pub fn append(&mut self, other: &mut Self)
     where
@@ -1621,6 +1650,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// assert_eq!(vec, [1]);
     /// assert_eq!(vec2, [2, 3]);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the allocation of split part fails.
     #[inline]
     pub fn split_off(&mut self, at: usize) -> Self
     where
@@ -1687,6 +1720,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     ///
     /// [`resize`]: #method.resize
     /// [`Clone`]: ../../std/clone/trait.Clone.html
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     pub fn resize_with<F>(&mut self, new_len: usize, f: F)
     where
         F: FnMut() -> T,
@@ -1736,6 +1773,10 @@ impl<T, B: BuildAllocRef> Vec<T, B> {
     /// static_ref[0] += 1;
     /// assert_eq!(static_ref, &[2, 2, 3]);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     #[inline]
     pub fn leak<'a>(vec: Self) -> &'a mut [T]
     where
@@ -1794,6 +1835,10 @@ impl<T: Clone, B: BuildAllocRef> Vec<T, B> {
     /// [`Clone`]: ../../std/clone/trait.Clone.html
     /// [`Default`]: ../../std/default/trait.Default.html
     /// [`resize_with`]: #method.resize_with
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     pub fn resize(&mut self, new_len: usize, value: T)
     where
         B::Ref: ReallocRef<Error = crate::Never>,
@@ -1842,6 +1887,10 @@ impl<T: Clone, B: BuildAllocRef> Vec<T, B> {
     /// ```
     ///
     /// [`extend`]: #method.extend
+    ///
+    /// # Panics
+    ///
+    /// Panics if the reallocation fails.
     pub fn extend_from_slice(&mut self, other: &[T])
     where
         B::Ref: ReallocRef<Error = crate::Never>,
