@@ -10,9 +10,9 @@
 //!
 //! There are multiple ways to create a new [`String`] from a string literal:
 //!
-//! ```
-//! let s = "Hello".to_string();
-//!
+//! ```unused_variables
+//! # use alloc_wg::string::String;
+//! let s = String::from("Hello");
 //! let s = String::from("world");
 //! let s: String = "also this".into();
 //! ```
@@ -22,8 +22,9 @@
 //!
 //! [`String`]: struct.String.html
 //!
-//! ```
-//! let s = "Hello".to_string();
+//! ```unused_variables
+//! # use alloc_wg::string::String;
+//! let s = String::from("Hello");
 //!
 //! let message = s + " world!";
 //! ```
@@ -32,6 +33,8 @@
 //! it. You can do the reverse too.
 //!
 //! ```
+//! # use alloc_wg::string::String;
+//! # use alloc_wg::vec;
 //! let sparkle_heart = vec![240, 159, 146, 150];
 //!
 //! // We know these bytes are valid, so we'll use `unwrap()`.
@@ -86,7 +89,8 @@ use std::borrow::Cow;
 ///
 /// You can create a `String` from a literal string with [`String::from`]:
 ///
-/// ```
+/// ```unused_variables
+/// # use alloc_wg::string::String;
 /// let hello = String::from("Hello, world!");
 /// ```
 ///
@@ -94,6 +98,7 @@ use std::borrow::Cow;
 /// append a [`&str`] with the [`push_str`] method:
 ///
 /// ```
+/// # use alloc_wg::string::String;
 /// let mut hello = String::from("Hello, ");
 ///
 /// hello.push('w');
@@ -109,6 +114,8 @@ use std::borrow::Cow;
 /// the [`from_utf8`] method:
 ///
 /// ```
+/// # use alloc_wg::string::String;
+/// # use alloc_wg::vec;
 /// // some bytes, in a vector
 /// let sparkle_heart = vec![240, 159, 146, 150];
 ///
@@ -150,7 +157,9 @@ use std::borrow::Cow;
 /// methods. In addition, this means that you can pass a `String` to a
 /// function which takes a [`&str`] by using an ampersand (`&`):
 ///
-/// ```
+/// ```unused_variables
+/// # use alloc_wg::string::String;
+///
 /// fn takes_str(s: &str) {}
 ///
 /// let s = String::from("Hello");
@@ -171,6 +180,8 @@ use std::borrow::Cow;
 /// means to do. For that reason, the following example will not compile.
 ///
 /// ```compile_fail,E0277
+/// # use alloc_wg::string::String;
+///
 /// trait TraitExample {}
 ///
 /// impl<'a> TraitExample for &'a str {}
@@ -205,6 +216,7 @@ use std::borrow::Cow;
 /// methods:
 ///
 /// ```
+/// # use alloc_wg::string::String;
 /// use std::mem;
 ///
 /// let story = String::from("Once upon a time...");
@@ -234,6 +246,7 @@ use std::borrow::Cow;
 /// If a `String` has enough capacity, adding elements to it will not
 /// re-allocate. For example, consider this program:
 /// ```
+/// # use alloc_wg::string::String;
 /// let mut s = String::new();
 ///
 /// println!("{}", s.capacity());
@@ -258,6 +271,7 @@ use std::borrow::Cow;
 /// string, it increases its capacity appropriately. If we instead use the
 /// [`with_capacity`] method to allocate the correct capacity initially:
 /// ```
+/// # use alloc_wg::string::String;
 /// let mut s = String::with_capacity(25);
 ///
 /// println!("{}", s.capacity());
@@ -317,6 +331,8 @@ pub struct String<A: DeallocRef = AbortAlloc<Global>> {
 /// Basic usage:
 ///
 /// ```
+/// # use alloc_wg::string::String;
+/// # use alloc_wg::vec;
 /// // some invalid bytes, in a vector
 /// let bytes = vec![0, 159];
 ///
@@ -343,6 +359,7 @@ pub struct FromUtf8Error<A: DeallocRef = AbortAlloc<Global>> {
 /// Basic usage:
 ///
 /// ```
+/// # use alloc_wg::string::String;
 /// // 𝄞mu<invalid>ic
 /// let v = &[0xD834, 0xDD1E, 0x006d, 0x0075, 0xD800, 0x0069, 0x0063];
 ///
@@ -367,7 +384,8 @@ impl String {
     ///
     /// Basic usage:
     ///
-    /// ```
+    /// ```unused_variables
+    /// # use alloc_wg::string::String;
     /// let s = String::new();
     /// ```
     #[inline]
@@ -396,6 +414,7 @@ impl String {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::with_capacity(10);
     ///
     /// // The String contains no chars, even though it has capacity for more
@@ -427,6 +446,7 @@ impl String {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// // 𝄞music
     /// let v = &[0xD834, 0xDD1E, 0x006d, 0x0075, 0x0073, 0x0069, 0x0063];
     /// assert_eq!(String::from("𝄞music"), String::from_utf16(v).unwrap());
@@ -455,6 +475,7 @@ impl String {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// // 𝄞mus<invalid>ic<invalid>
     /// let v = &[
     ///     0xD834, 0xDD1E, 0x006d, 0x0075, 0x0073, 0xDD1E, 0x0069, 0x0063, 0xD834,
@@ -498,6 +519,7 @@ impl String {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// use std::mem;
     ///
     /// unsafe {
@@ -611,6 +633,8 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
+    /// # use alloc_wg::vec;
     /// // some bytes, in a vector
     /// let sparkle_heart = vec![240, 159, 146, 150];
     ///
@@ -623,6 +647,8 @@ impl<A: DeallocRef> String<A> {
     /// Incorrect bytes:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
+    /// # use alloc_wg::vec;
     /// // some invalid bytes, in a vector
     /// let sparkle_heart = vec![0, 159, 146, 150];
     ///
@@ -739,7 +765,7 @@ impl<A: DeallocRef> String<A> {
     /// # Examples
     ///
     /// ```
-    /// #![feature(vec_into_raw_parts)]
+    /// # use alloc_wg::string::String;
     /// let s = String::from("hello");
     ///
     /// let (ptr, len, cap) = s.into_raw_parts();
@@ -783,6 +809,8 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
+    /// # use alloc_wg::vec;
     /// // some bytes, in a vector
     /// let sparkle_heart = vec![240, 159, 146, 150];
     ///
@@ -804,6 +832,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let s = String::from("hello");
     /// let bytes = s.into_bytes();
     ///
@@ -821,6 +850,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let s = String::from("foo");
     ///
     /// assert_eq!("foo", s.as_str());
@@ -837,6 +867,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("foobar");
     /// let s_mut_str = s.as_mut_str();
     ///
@@ -856,6 +887,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("foo");
     ///
     /// s.push_str("bar");
@@ -889,6 +921,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let s = String::with_capacity(10);
     ///
     /// assert!(s.capacity() >= 10);
@@ -919,6 +952,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::new();
     ///
     /// s.reserve(10);
@@ -929,6 +963,7 @@ impl<A: DeallocRef> String<A> {
     /// This may not actually increase the capacity:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::with_capacity(10);
     /// s.push('a');
     /// s.push('b');
@@ -968,6 +1003,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::new();
     ///
     /// s.reserve_exact(10);
@@ -978,6 +1014,7 @@ impl<A: DeallocRef> String<A> {
     /// This may not actually increase the capacity:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::with_capacity(10);
     /// s.push('a');
     /// s.push('b');
@@ -1014,7 +1051,11 @@ impl<A: DeallocRef> String<A> {
     /// # Examples
     ///
     /// ```
-    /// use alloc_wg::collections::CollectionAllocErr;
+    /// use alloc_wg::{
+    ///     alloc::{AbortAlloc, Global},
+    ///     collections::CollectionAllocErr,
+    ///     string::String,
+    /// };
     ///
     /// fn process_data(data: &str) -> Result<String, CollectionAllocErr<AbortAlloc<Global>>> {
     ///     let mut output = String::new();
@@ -1053,7 +1094,11 @@ impl<A: DeallocRef> String<A> {
     /// # Examples
     ///
     /// ```
-    /// use alloc_wg::collections::CollectionAllocErr;
+    /// use alloc_wg::{
+    ///     alloc::{AbortAlloc, Global},
+    ///     collections::CollectionAllocErr,
+    ///     string::String,
+    /// };
     ///
     /// fn process_data(data: &str) -> Result<String, CollectionAllocErr<AbortAlloc<Global>>> {
     ///     let mut output = String::new();
@@ -1082,6 +1127,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("foo");
     ///
     /// s.reserve(100);
@@ -1121,7 +1167,7 @@ impl<A: DeallocRef> String<A> {
     /// # Examples
     ///
     /// ```
-    /// #![feature(shrink_to)]
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("foo");
     ///
     /// s.reserve(100);
@@ -1162,6 +1208,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("abc");
     ///
     /// s.push('1');
@@ -1210,6 +1257,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let s = String::from("hello");
     ///
     /// assert_eq!(&[104, 101, 108, 108, 111], s.as_bytes());
@@ -1238,6 +1286,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("hello");
     ///
     /// s.truncate(2);
@@ -1263,6 +1312,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("foo");
     ///
     /// assert_eq!(s.pop(), Some('o'));
@@ -1298,6 +1348,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("foo");
     ///
     /// assert_eq!(s.remove(0), 'f');
@@ -1343,6 +1394,7 @@ impl<A: DeallocRef> String<A> {
     /// The exact order may be useful for tracking external state, like an index.
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("abcde");
     /// let keep = [false, true, true, false, true];
     /// let mut i = 0;
@@ -1402,6 +1454,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::with_capacity(3);
     ///
     /// s.insert(0, 'f');
@@ -1477,6 +1530,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("bar");
     ///
     /// s.insert_str(0, "foo");
@@ -1523,6 +1577,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("hello");
     ///
     /// unsafe {
@@ -1547,6 +1602,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let a = String::from("foo");
     /// assert_eq!(a.len(), 3);
     ///
@@ -1566,6 +1622,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut v = String::new();
     /// assert!(v.is_empty());
     ///
@@ -1593,6 +1650,7 @@ impl<A: DeallocRef> String<A> {
     /// # Examples
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut hello = String::from("Hello, World!");
     /// let world = hello.split_off(7);
     /// assert_eq!(hello, "Hello, ");
@@ -1634,6 +1692,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("foo");
     ///
     /// s.clear();
@@ -1665,6 +1724,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("α is alpha, β is beta");
     /// let beta_offset = s.find('β').unwrap_or(s.len());
     ///
@@ -1730,6 +1790,7 @@ impl<A: DeallocRef> String<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let mut s = String::from("α is alpha, β is beta");
     /// let beta_offset = s.find('β').unwrap_or(s.len());
     ///
@@ -1772,7 +1833,8 @@ impl<A: DeallocRef> String<A> {
     ///
     /// Basic usage:
     ///
-    /// ```
+    /// ```unused_variables
+    /// # use alloc_wg::string::String;
     /// let s = String::from("hello");
     ///
     /// let b = s.into_boxed_str();
@@ -1808,6 +1870,8 @@ impl<A: DeallocRef> FromUtf8Error<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
+    /// # use alloc_wg::vec;
     /// // some invalid bytes, in a vector
     /// let bytes = vec![0, 159];
     ///
@@ -1830,6 +1894,8 @@ impl<A: DeallocRef> FromUtf8Error<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
+    /// # use alloc_wg::vec;
     /// // some invalid bytes, in a vector
     /// let bytes = vec![0, 159];
     ///
@@ -1858,6 +1924,8 @@ impl<A: DeallocRef> FromUtf8Error<A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
+    /// # use alloc_wg::vec;
     /// // some invalid bytes, in a vector
     /// let bytes = vec![0, 159];
     ///
@@ -2089,6 +2157,7 @@ mod borrow {
     use std::borrow::Cow;
 
     impl_eq! { Cow<'_, str>, String<A> }
+    impl_eq! { String<A>, std::string::String }
 }
 
 impl Default for String {
@@ -2134,7 +2203,8 @@ impl<A: DeallocRef> hash::Hash for String<A> {
 ///
 /// Concatenating two `String`s takes the first by value and borrows the second:
 ///
-/// ```
+/// ```unused_variables
+/// # use alloc_wg::string::String;
 /// let a = String::from("hello");
 /// let b = String::from(" world");
 /// let c = a + &b;
@@ -2143,7 +2213,8 @@ impl<A: DeallocRef> hash::Hash for String<A> {
 ///
 /// If you want to keep using the first `String`, you can clone it and append to the clone instead:
 ///
-/// ```
+/// ```unused_variables
+/// # use alloc_wg::string::String;
 /// let a = String::from("hello");
 /// let b = String::from(" world");
 /// let c = a.clone() + &b;
@@ -2152,10 +2223,11 @@ impl<A: DeallocRef> hash::Hash for String<A> {
 ///
 /// Concatenating `&str` slices can be done by converting the first to a `String`:
 ///
-/// ```
+/// ```unused_variables
+/// # use alloc_wg::string::ToString;
 /// let a = "hello";
 /// let b = " world";
-/// let c = a.to_string() + b;
+/// let c = String::from(a) + b;
 /// ```
 impl<A> Add<&str> for String<A>
 where
@@ -2323,6 +2395,7 @@ pub trait ToString {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let i = 5;
     /// let five = String::from("5");
     ///
@@ -2391,8 +2464,9 @@ impl From<Box<str>> for String {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
     /// let s1: String = String::from("hello world");
-    /// let s2: Box<str> = s1.into_boxed_str();
+    /// let s2 = s1.into_boxed_str();
     /// let s3: String = String::from(s2);
     ///
     /// assert_eq!("hello world", s3)
@@ -2413,6 +2487,8 @@ where
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
+    /// # use alloc_wg::boxed::Box;
     /// let s1: String = String::from("hello world");
     /// let s2: Box<str> = Box::from(s1);
     /// let s3: String = String::from(s2);
@@ -2445,6 +2521,8 @@ impl<A: DeallocRef> From<String<A>> for Vec<u8, A> {
     /// Basic usage:
     ///
     /// ```
+    /// # use alloc_wg::string::String;
+    /// # use alloc_wg::vec::Vec;
     /// let s1 = String::from("hello world");
     /// let v1 = Vec::from(s1);
     ///
