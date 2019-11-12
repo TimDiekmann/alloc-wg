@@ -111,10 +111,11 @@
 pub mod alloc;
 pub mod boxed;
 pub mod clone;
+pub mod collect;
 pub mod collections;
 pub mod raw_vec;
-
-pub mod collect;
+mod str;
+pub mod string;
 pub mod vec;
 
 extern crate alloc as liballoc;
@@ -126,6 +127,20 @@ pub type Never = core::convert::Infallible;
 
 #[macro_export]
 macro_rules! vec {
+    (in $alloc:expr; $elem:expr; $n:expr) => {{
+        $crate::vec::try_from_elem_in($elem, $n, $alloc)
+    }};
+    (in $alloc:expr) => {
+        $crate::vec::Vec::new_in($alloc)
+    };
+    (in $alloc:expr; $($x:expr),*) => {{
+        (|| -> Result<$crate::vec::Vec<_,_>, $crate::collections::CollectionAllocErr<_>> {
+            let mut v = $crate::vec::Vec::new_in($alloc);
+            $( v.try_push($x)?; )*
+            Ok(v)
+        })()
+    }};
+    (in $alloc:expr; $(, $x:expr,)*) => ($crate::vec![in $alloc; $($x),*]);
     ($elem:expr; $n:expr) => (
         $crate::vec::from_elem($elem, $n)
     );
@@ -134,5 +149,21 @@ macro_rules! vec {
         $( v.push($x); )*
         v
     });
-    ($($x:expr,)*) => ($crate::vec![$($x),*])
+    ($($x:expr,)*) => ($crate::vec![$($x),*]);
+}
+
+#[macro_export]
+macro_rules! format {
+    ( in $alloc:expr, $fmt:expr, $($args:expr),* ) => {{
+        use std::fmt::Write;
+        let mut s = $crate::string::String::new_in($alloc);
+        let _ = write!(&mut s, $fmt, $($args),*);
+        s
+    }};
+    ( $fmt:expr, $($args:expr),* ) => {{
+        use std::fmt::Write;
+        let mut s = $crate::string::String::new();
+        let _ = write!(&mut s, $fmt, $($args),*);
+        s
+    }}
 }

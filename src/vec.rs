@@ -552,6 +552,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
 
     /// Like `from_raw_parts` but parameterized over the choice of allocator for the returned
     /// `Vec`.
+    /// # Safety
+    /// see `from_raw_parts`
     pub unsafe fn from_raw_parts_in(
         ptr: *mut T,
         length: usize,
