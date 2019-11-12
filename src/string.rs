@@ -63,7 +63,7 @@ use core::{
 };
 
 use crate::{
-    alloc::{AbortAlloc, AllocRef, BuildAllocRef, Global, ReallocRef},
+    alloc::{AbortAlloc, AllocRef, DeallocRef, Global, ReallocRef},
     boxed::Box,
     collections::CollectionAllocErr,
     str::{from_boxed_utf8_unchecked, lossy},
@@ -285,8 +285,8 @@ use std::borrow::Cow;
 /// [`Deref`]: ../../std/ops/trait.Deref.html
 /// [`as_str()`]: struct.String.html#method.as_str
 #[derive(PartialOrd, Eq, Ord)]
-pub struct String<B: BuildAllocRef = AbortAlloc<Global>> {
-    vec: Vec<u8, B>,
+pub struct String<A: DeallocRef = AbortAlloc<Global>> {
+    vec: Vec<u8, A>,
 }
 
 /// A possible error value when converting a `String` from a UTF-8 byte vector.
@@ -325,8 +325,8 @@ pub struct String<B: BuildAllocRef = AbortAlloc<Global>> {
 /// assert_eq!(vec![0, 159], value.unwrap_err().into_bytes());
 /// ```
 #[derive(Debug)]
-pub struct FromUtf8Error<B: BuildAllocRef = AbortAlloc<Global>> {
-    bytes: Vec<u8, B>,
+pub struct FromUtf8Error<A: DeallocRef = AbortAlloc<Global>> {
+    bytes: Vec<u8, A>,
     error: Utf8Error,
 }
 
@@ -534,7 +534,7 @@ impl String {
     }
 }
 
-impl<B: BuildAllocRef> String<B> {
+impl<A: DeallocRef> String<A> {
     /// Creates a new empty `String`.
     ///
     /// Given that the `String` is empty, this will not allocate any initial
@@ -554,7 +554,7 @@ impl<B: BuildAllocRef> String<B> {
     /// let s = String::new();
     /// ```
     #[inline]
-    pub fn new_in(a: B::Ref) -> Self {
+    pub fn new_in(a: A) -> Self {
         String {
             vec: Vec::new_in(a),
         }
@@ -598,9 +598,9 @@ impl<B: BuildAllocRef> String<B> {
     /// s.push('a');
     /// ```
     #[inline]
-    pub fn with_capacity_in(capacity: usize, a: B::Ref) -> Self
+    pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
-        B::Ref: AllocRef<Error = crate::Never>,
+        A: AllocRef<Error = crate::Never>,
     {
         String {
             vec: Vec::with_capacity_in(capacity, a),
@@ -608,9 +608,9 @@ impl<B: BuildAllocRef> String<B> {
     }
 
     #[inline]
-    pub fn try_with_capacity_in(capacity: usize, a: B::Ref) -> Result<Self, CollectionAllocErr<B>>
+    pub fn try_with_capacity_in(capacity: usize, a: A) -> Result<Self, CollectionAllocErr<A>>
     where
-        B::Ref: AllocRef,
+        A: AllocRef,
     {
         Ok(String {
             vec: Vec::try_with_capacity_in(capacity, a)?,
@@ -618,9 +618,9 @@ impl<B: BuildAllocRef> String<B> {
     }
 
     #[inline]
-    pub fn from_str_in(s: &str, a: B::Ref) -> Self
+    pub fn from_str_in(s: &str, a: A) -> Self
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         let mut v = String::with_capacity_in(s.len(), a);
         v.push_str(s);
@@ -628,9 +628,9 @@ impl<B: BuildAllocRef> String<B> {
     }
 
     #[inline]
-    pub fn try_from_str_in(s: &str, a: B::Ref) -> Result<Self, CollectionAllocErr<B>>
+    pub fn try_from_str_in(s: &str, a: A) -> Result<Self, CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         let mut v = String::try_with_capacity_in(s.len(), a)?;
         v.try_push_str(s)?;
@@ -698,7 +698,7 @@ impl<B: BuildAllocRef> String<B> {
     /// [`FromUtf8Error`]: struct.FromUtf8Error.html
     /// [`Err`]: ../../std/result/enum.Result.html#variant.Err
     #[inline]
-    pub fn from_utf8(vec: Vec<u8, B>) -> Result<Self, FromUtf8Error<B>> {
+    pub fn from_utf8(vec: Vec<u8, A>) -> Result<Self, FromUtf8Error<A>> {
         match str::from_utf8(&vec) {
             Ok(..) => Ok(String { vec }),
             Err(e) => Err(FromUtf8Error {
@@ -758,9 +758,9 @@ impl<B: BuildAllocRef> String<B> {
     ///
     /// assert_eq!("Hello �World", output);
     /// ```
-    pub fn from_utf8_lossy_in(v: &[u8], a: B::Ref) -> Self
+    pub fn from_utf8_lossy_in(v: &[u8], a: A) -> Self
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         match Self::try_from_utf8_lossy_in(v, a) {
             Ok(vec) => vec,
@@ -769,9 +769,9 @@ impl<B: BuildAllocRef> String<B> {
         }
     }
 
-    pub fn try_from_utf8_lossy_in(v: &[u8], a: B::Ref) -> Result<Self, CollectionAllocErr<B>>
+    pub fn try_from_utf8_lossy_in(v: &[u8], a: A) -> Result<Self, CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         let mut iter = lossy::Utf8Lossy::from_bytes(v).chunks();
 
@@ -822,9 +822,9 @@ impl<B: BuildAllocRef> String<B> {
     /// let v = &[0xD834, 0xDD1E, 0x006d, 0x0075, 0xD800, 0x0069, 0x0063];
     /// assert!(String::from_utf16(v).is_err());
     /// ```
-    pub fn from_utf16_in(v: &[u16], a: B::Ref) -> Result<Self, FromUtf16Error>
+    pub fn from_utf16_in(v: &[u16], a: A) -> Result<Self, FromUtf16Error>
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         // This isn't done via collect::<Result<_, _>>() for performance reasons.
         // FIXME: the function can be simplified again when #48994 is closed.
@@ -913,9 +913,14 @@ impl<B: BuildAllocRef> String<B> {
     /// }
     /// ```
     #[inline]
-    pub unsafe fn from_raw_parts_in(buf: *mut u8, length: usize, capacity: usize, a: B) -> Self {
+    pub unsafe fn from_raw_parts_in(
+        buf: *mut u8,
+        length: usize,
+        capacity: usize,
+        b: A::BuildAlloc,
+    ) -> Self {
         String {
-            vec: Vec::from_raw_parts_in(buf, length, capacity, a),
+            vec: Vec::from_raw_parts_in(buf, length, capacity, b),
         }
     }
 
@@ -946,7 +951,7 @@ impl<B: BuildAllocRef> String<B> {
     /// assert_eq!("💖", sparkle_heart);
     /// ```
     #[inline]
-    pub unsafe fn from_utf8_unchecked(bytes: Vec<u8, B>) -> Self {
+    pub unsafe fn from_utf8_unchecked(bytes: Vec<u8, A>) -> Self {
         String { vec: bytes }
     }
 
@@ -965,7 +970,7 @@ impl<B: BuildAllocRef> String<B> {
     /// assert_eq!(&[104, 101, 108, 108, 111][..], &bytes[..]);
     /// ```
     #[inline]
-    pub fn into_bytes(self) -> Vec<u8, B> {
+    pub fn into_bytes(self) -> Vec<u8, A> {
         self.vec
     }
 
@@ -1020,15 +1025,15 @@ impl<B: BuildAllocRef> String<B> {
     #[inline]
     pub fn push_str(&mut self, string: &str)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         self.vec.extend_from_slice(string.as_bytes())
     }
 
     #[inline]
-    pub fn try_push_str(&mut self, string: &str) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_push_str(&mut self, string: &str) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         self.vec.try_extend_from_slice(string.as_bytes())
     }
@@ -1097,7 +1102,7 @@ impl<B: BuildAllocRef> String<B> {
     #[inline]
     pub fn reserve(&mut self, additional: usize)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         self.vec.reserve(additional)
     }
@@ -1146,7 +1151,7 @@ impl<B: BuildAllocRef> String<B> {
     #[inline]
     pub fn reserve_exact(&mut self, additional: usize)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         self.vec.reserve_exact(additional)
     }
@@ -1181,9 +1186,9 @@ impl<B: BuildAllocRef> String<B> {
     /// }
     /// # process_data("rust").expect("why is the test harness OOMing on 4 bytes?");
     /// ```
-    pub fn try_reserve(&mut self, additional: usize) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_reserve(&mut self, additional: usize) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         self.vec.try_reserve(additional)
     }
@@ -1221,9 +1226,9 @@ impl<B: BuildAllocRef> String<B> {
     /// }
     /// # process_data("rust").expect("why is the test harness OOMing on 4 bytes?");
     /// ```
-    pub fn try_reserve_exact(&mut self, additional: usize) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_reserve_exact(&mut self, additional: usize) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         self.vec.try_reserve_exact(additional)
     }
@@ -1246,15 +1251,15 @@ impl<B: BuildAllocRef> String<B> {
     #[inline]
     pub fn shrink_to_fit(&mut self)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         self.vec.shrink_to_fit()
     }
 
     #[inline]
-    pub fn try_shrink_to_fit(&mut self) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_shrink_to_fit(&mut self) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         self.vec.try_shrink_to_fit()
     }
@@ -1284,15 +1289,15 @@ impl<B: BuildAllocRef> String<B> {
     #[inline]
     pub fn shrink_to(&mut self, min_capacity: usize)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         self.vec.shrink_to(min_capacity)
     }
 
     #[inline]
-    pub fn try_shrink_to(&mut self, min_capacity: usize) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_shrink_to(&mut self, min_capacity: usize) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         self.vec.try_shrink_to(min_capacity)
     }
@@ -1317,7 +1322,7 @@ impl<B: BuildAllocRef> String<B> {
     #[inline]
     pub fn push(&mut self, ch: char)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         match self.try_push(ch) {
             Ok(vec) => vec,
@@ -1327,9 +1332,9 @@ impl<B: BuildAllocRef> String<B> {
     }
 
     #[inline]
-    pub fn try_push(&mut self, ch: char) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_push(&mut self, ch: char) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         match ch.len_utf8() {
             1 => self.vec.try_push(ch as u8),
@@ -1553,7 +1558,7 @@ impl<B: BuildAllocRef> String<B> {
     #[inline]
     pub fn insert(&mut self, idx: usize, ch: char)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         match self.try_insert(idx, ch) {
             Ok(vec) => vec,
@@ -1563,9 +1568,9 @@ impl<B: BuildAllocRef> String<B> {
     }
 
     #[inline]
-    pub fn try_insert(&mut self, idx: usize, ch: char) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_insert(&mut self, idx: usize, ch: char) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         assert!(self.is_char_boundary(idx));
         let mut bits = [0; 4];
@@ -1578,9 +1583,9 @@ impl<B: BuildAllocRef> String<B> {
         &mut self,
         idx: usize,
         bytes: &[u8],
-    ) -> Result<(), CollectionAllocErr<B>>
+    ) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         let len = self.len();
         let amt = bytes.len();
@@ -1622,7 +1627,7 @@ impl<B: BuildAllocRef> String<B> {
     #[inline]
     pub fn insert_str(&mut self, idx: usize, string: &str)
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         match self.try_insert_str(idx, string) {
             Ok(vec) => vec,
@@ -1632,9 +1637,9 @@ impl<B: BuildAllocRef> String<B> {
     }
 
     #[inline]
-    pub fn try_insert_str(&mut self, idx: usize, string: &str) -> Result<(), CollectionAllocErr<B>>
+    pub fn try_insert_str(&mut self, idx: usize, string: &str) -> Result<(), CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         assert!(self.is_char_boundary(idx));
 
@@ -1666,7 +1671,7 @@ impl<B: BuildAllocRef> String<B> {
     /// assert_eq!(s, "olleh");
     /// ```
     #[inline]
-    pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, B> {
+    pub unsafe fn as_mut_vec(&mut self) -> &mut Vec<u8, A> {
         &mut self.vec
     }
 
@@ -1733,7 +1738,7 @@ impl<B: BuildAllocRef> String<B> {
     #[inline]
     pub fn split_off(&mut self, at: usize) -> Self
     where
-        B::Ref: AllocRef<Error = crate::Never>,
+        A: AllocRef<Error = crate::Never>,
     {
         match self.try_split_off(at) {
             Ok(vec) => vec,
@@ -1743,9 +1748,9 @@ impl<B: BuildAllocRef> String<B> {
     }
 
     #[inline]
-    pub fn try_split_off(&mut self, at: usize) -> Result<Self, CollectionAllocErr<B>>
+    pub fn try_split_off(&mut self, at: usize) -> Result<Self, CollectionAllocErr<A>>
     where
-        B::Ref: AllocRef,
+        A: AllocRef,
     {
         assert!(self.is_char_boundary(at));
         let other = self.vec.try_split_off(at)?;
@@ -1805,7 +1810,7 @@ impl<B: BuildAllocRef> String<B> {
     /// s.drain(..);
     /// assert_eq!(s, "");
     /// ```
-    pub fn drain<R>(&mut self, range: R) -> Drain<'_, B>
+    pub fn drain<R>(&mut self, range: R) -> Drain<'_, A>
     where
         R: RangeBounds<usize>,
     {
@@ -1868,7 +1873,7 @@ impl<B: BuildAllocRef> String<B> {
     pub fn replace_range<R>(&mut self, range: R, replace_with: &str)
     where
         R: RangeBounds<usize>,
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         // Memory safety
         //
@@ -1906,25 +1911,25 @@ impl<B: BuildAllocRef> String<B> {
     /// let b = s.into_boxed_str();
     /// ```
     #[inline]
-    pub fn into_boxed_str(self) -> Box<str, B>
+    pub fn into_boxed_str(self) -> Box<str, A>
     where
-        B::Ref: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = crate::Never>,
     {
         let slice = self.vec.into_boxed_slice();
         unsafe { from_boxed_utf8_unchecked(slice) }
     }
 
     #[inline]
-    pub fn try_into_boxed_str(self) -> Result<Box<str, B>, CollectionAllocErr<B>>
+    pub fn try_into_boxed_str(self) -> Result<Box<str, A>, CollectionAllocErr<A>>
     where
-        B::Ref: ReallocRef,
+        A: ReallocRef,
     {
         let slice = self.vec.try_into_boxed_slice()?;
         unsafe { Ok(from_boxed_utf8_unchecked(slice)) }
     }
 }
 
-impl<B: BuildAllocRef> FromUtf8Error<B> {
+impl<A: DeallocRef> FromUtf8Error<A> {
     /// Returns a slice of [`u8`]s bytes that were attempted to convert to a `String`.
     ///
     /// # Examples
@@ -1961,7 +1966,7 @@ impl<B: BuildAllocRef> FromUtf8Error<B> {
     ///
     /// assert_eq!(vec![0, 159], value.unwrap_err().into_bytes());
     /// ```
-    pub fn into_bytes(self) -> Vec<u8, B> {
+    pub fn into_bytes(self) -> Vec<u8, A> {
         self.bytes
     }
 
@@ -1995,7 +2000,7 @@ impl<B: BuildAllocRef> FromUtf8Error<B> {
     }
 }
 
-impl<B: BuildAllocRef> fmt::Display for FromUtf8Error<B> {
+impl<A: DeallocRef> fmt::Display for FromUtf8Error<A> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&self.error, f)
     }
@@ -2111,7 +2116,7 @@ impl<'a> Extend<Cow<'a, str>> for String {
     }
 }
 
-impl<B: BuildAllocRef> PartialEq for String<B> {
+impl<A: DeallocRef> PartialEq for String<A> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         PartialEq::eq(&self[..], &other[..])
@@ -2121,7 +2126,7 @@ impl<B: BuildAllocRef> PartialEq for String<B> {
 macro_rules! impl_eq {
     ($lhs:ty, $rhs:ty) => {
         #[allow(unused_lifetimes)]
-        impl<B: BuildAllocRef> PartialEq<$rhs> for $lhs {
+        impl<A: DeallocRef> PartialEq<$rhs> for $lhs {
             #[inline]
             fn eq(&self, other: &$rhs) -> bool {
                 PartialEq::eq(&self[..], &other[..])
@@ -2129,7 +2134,7 @@ macro_rules! impl_eq {
         }
 
         #[allow(unused_lifetimes)]
-        impl<B: BuildAllocRef> PartialEq<$lhs> for $rhs {
+        impl<A: DeallocRef> PartialEq<$lhs> for $rhs {
             #[inline]
             fn eq(&self, other: &$lhs) -> bool {
                 PartialEq::eq(&self[..], &other[..])
@@ -2138,16 +2143,16 @@ macro_rules! impl_eq {
     };
 }
 
-impl_eq! { String<B>, str }
-impl_eq! { String<B>, &'_ str }
+impl_eq! { String<A>, str }
+impl_eq! { String<A>, &'_ str }
 
 #[cfg(feature = "std")]
 mod borrow {
     use super::String;
-    use crate::alloc::BuildAllocRef;
+    use crate::alloc::DeallocRef;
     use std::borrow::Cow;
 
-    impl_eq! { Cow<'_, str>, String<B> }
+    impl_eq! { Cow<'_, str>, String<A> }
 }
 
 impl Default for String {
@@ -2158,21 +2163,21 @@ impl Default for String {
     }
 }
 
-impl<B: BuildAllocRef> fmt::Display for String<B> {
+impl<A: DeallocRef> fmt::Display for String<A> {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&**self, f)
     }
 }
 
-impl<B: BuildAllocRef> fmt::Debug for String<B> {
+impl<A: DeallocRef> fmt::Debug for String<A> {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&**self, f)
     }
 }
 
-impl<B: BuildAllocRef> hash::Hash for String<B> {
+impl<A: DeallocRef> hash::Hash for String<A> {
     #[inline]
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
         (**self).hash(hasher)
@@ -2236,7 +2241,7 @@ impl AddAssign<&str> for String {
     }
 }
 
-impl<B: BuildAllocRef> Index<ops::Range<usize>> for String<B> {
+impl<A: DeallocRef> Index<ops::Range<usize>> for String<A> {
     type Output = str;
 
     #[inline]
@@ -2244,7 +2249,7 @@ impl<B: BuildAllocRef> Index<ops::Range<usize>> for String<B> {
         &self[..][index]
     }
 }
-impl<B: BuildAllocRef> Index<ops::RangeTo<usize>> for String<B> {
+impl<A: DeallocRef> Index<ops::RangeTo<usize>> for String<A> {
     type Output = str;
 
     #[inline]
@@ -2252,7 +2257,7 @@ impl<B: BuildAllocRef> Index<ops::RangeTo<usize>> for String<B> {
         &self[..][index]
     }
 }
-impl<B: BuildAllocRef> Index<ops::RangeFrom<usize>> for String<B> {
+impl<A: DeallocRef> Index<ops::RangeFrom<usize>> for String<A> {
     type Output = str;
 
     #[inline]
@@ -2260,7 +2265,7 @@ impl<B: BuildAllocRef> Index<ops::RangeFrom<usize>> for String<B> {
         &self[..][index]
     }
 }
-impl<B: BuildAllocRef> Index<ops::RangeFull> for String<B> {
+impl<A: DeallocRef> Index<ops::RangeFull> for String<A> {
     type Output = str;
 
     #[inline]
@@ -2268,7 +2273,7 @@ impl<B: BuildAllocRef> Index<ops::RangeFull> for String<B> {
         unsafe { str::from_utf8_unchecked(&self.vec) }
     }
 }
-impl<B: BuildAllocRef> Index<ops::RangeInclusive<usize>> for String<B> {
+impl<A: DeallocRef> Index<ops::RangeInclusive<usize>> for String<A> {
     type Output = str;
 
     #[inline]
@@ -2276,7 +2281,7 @@ impl<B: BuildAllocRef> Index<ops::RangeInclusive<usize>> for String<B> {
         Index::index(&**self, index)
     }
 }
-impl<B: BuildAllocRef> Index<ops::RangeToInclusive<usize>> for String<B> {
+impl<A: DeallocRef> Index<ops::RangeToInclusive<usize>> for String<A> {
     type Output = str;
 
     #[inline]
@@ -2285,44 +2290,44 @@ impl<B: BuildAllocRef> Index<ops::RangeToInclusive<usize>> for String<B> {
     }
 }
 
-impl<B: BuildAllocRef> IndexMut<ops::Range<usize>> for String<B> {
+impl<A: DeallocRef> IndexMut<ops::Range<usize>> for String<A> {
     #[inline]
     fn index_mut(&mut self, index: ops::Range<usize>) -> &mut str {
         &mut self[..][index]
     }
 }
-impl<B: BuildAllocRef> IndexMut<ops::RangeTo<usize>> for String<B> {
+impl<A: DeallocRef> IndexMut<ops::RangeTo<usize>> for String<A> {
     #[inline]
     fn index_mut(&mut self, index: ops::RangeTo<usize>) -> &mut str {
         &mut self[..][index]
     }
 }
-impl<B: BuildAllocRef> IndexMut<ops::RangeFrom<usize>> for String<B> {
+impl<A: DeallocRef> IndexMut<ops::RangeFrom<usize>> for String<A> {
     #[inline]
     fn index_mut(&mut self, index: ops::RangeFrom<usize>) -> &mut str {
         &mut self[..][index]
     }
 }
-impl<B: BuildAllocRef> IndexMut<ops::RangeFull> for String<B> {
+impl<A: DeallocRef> IndexMut<ops::RangeFull> for String<A> {
     #[inline]
     fn index_mut(&mut self, _index: ops::RangeFull) -> &mut str {
         unsafe { str::from_utf8_unchecked_mut(&mut *self.vec) }
     }
 }
-impl<B: BuildAllocRef> IndexMut<ops::RangeInclusive<usize>> for String<B> {
+impl<A: DeallocRef> IndexMut<ops::RangeInclusive<usize>> for String<A> {
     #[inline]
     fn index_mut(&mut self, index: ops::RangeInclusive<usize>) -> &mut str {
         IndexMut::index_mut(&mut **self, index)
     }
 }
-impl<B: BuildAllocRef> IndexMut<ops::RangeToInclusive<usize>> for String<B> {
+impl<A: DeallocRef> IndexMut<ops::RangeToInclusive<usize>> for String<A> {
     #[inline]
     fn index_mut(&mut self, index: ops::RangeToInclusive<usize>) -> &mut str {
         IndexMut::index_mut(&mut **self, index)
     }
 }
 
-impl<B: BuildAllocRef> ops::Deref for String<B> {
+impl<A: DeallocRef> ops::Deref for String<A> {
     type Target = str;
 
     #[inline]
@@ -2331,7 +2336,7 @@ impl<B: BuildAllocRef> ops::Deref for String<B> {
     }
 }
 
-impl<B: BuildAllocRef> ops::DerefMut for String<B> {
+impl<A: DeallocRef> ops::DerefMut for String<A> {
     #[inline]
     fn deref_mut(&mut self) -> &mut str {
         unsafe { str::from_utf8_unchecked_mut(&mut *self.vec) }
@@ -2403,14 +2408,14 @@ impl<T: fmt::Display + ?Sized> ToString for T {
     }
 }
 
-impl<B: BuildAllocRef> AsRef<str> for String<B> {
+impl<A: DeallocRef> AsRef<str> for String<A> {
     #[inline]
     fn as_ref(&self) -> &str {
         self
     }
 }
 
-impl<B: BuildAllocRef> AsRef<[u8]> for String<B> {
+impl<A: DeallocRef> AsRef<[u8]> for String<A> {
     #[inline]
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
@@ -2455,9 +2460,9 @@ impl From<Box<str>> for String {
     }
 }
 
-impl<B: BuildAllocRef> From<String<B>> for Box<str, B>
+impl<A> From<String<A>> for Box<str, A>
 where
-    B::Ref: ReallocRef<Error = crate::Never>,
+    A: ReallocRef<Error = crate::Never>,
 {
     /// Converts the given `String` to a boxed `str` slice that is owned.
     ///
@@ -2472,7 +2477,7 @@ where
     ///
     /// assert_eq!("hello world", s3)
     /// ```
-    fn from(s: String<B>) -> Self {
+    fn from(s: String<A>) -> Self {
         s.into_boxed_str()
     }
 }
@@ -2490,7 +2495,7 @@ impl<'a> From<&'a String> for Cow<'a, str> {
     }
 }
 
-impl<B: BuildAllocRef> From<String<B>> for Vec<u8, B> {
+impl<A: DeallocRef> From<String<A>> for Vec<u8, A> {
     /// Converts the given `String` to a vector `Vec` that holds values of type `u8`.
     ///
     /// # Examples
@@ -2505,15 +2510,12 @@ impl<B: BuildAllocRef> From<String<B>> for Vec<u8, B> {
     ///     println!("{}", b);
     /// }
     /// ```
-    fn from(string: String<B>) -> Self {
+    fn from(string: String<A>) -> Self {
         string.into_bytes()
     }
 }
 
-impl<B: BuildAllocRef> fmt::Write for String<B>
-where
-    B::Ref: ReallocRef,
-{
+impl<A: ReallocRef> fmt::Write for String<A> {
     #[inline]
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.try_push_str(s).map_err(|_| fmt::Error)
@@ -2532,9 +2534,9 @@ where
 ///
 /// [`drain`]: struct.String.html#method.drain
 /// [`String`]: struct.String.html
-pub struct Drain<'a, B: BuildAllocRef> {
+pub struct Drain<'a, A: DeallocRef> {
     /// Will be used as &'a mut String in the destructor
-    string: *mut String<B>,
+    string: *mut String<A>,
     /// Start of part to remove
     start: usize,
     /// End of part to remove
@@ -2543,16 +2545,16 @@ pub struct Drain<'a, B: BuildAllocRef> {
     iter: Chars<'a>,
 }
 
-impl<B: BuildAllocRef> fmt::Debug for Drain<'_, B> {
+impl<A: DeallocRef> fmt::Debug for Drain<'_, A> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.pad("Drain { .. }")
     }
 }
 
-unsafe impl<B: BuildAllocRef> Sync for Drain<'_, B> {}
-unsafe impl<B: BuildAllocRef> Send for Drain<'_, B> {}
+unsafe impl<A: DeallocRef> Sync for Drain<'_, A> {}
+unsafe impl<A: DeallocRef> Send for Drain<'_, A> {}
 
-impl<B: BuildAllocRef> Drop for Drain<'_, B> {
+impl<A: DeallocRef> Drop for Drain<'_, A> {
     fn drop(&mut self) {
         unsafe {
             // Use Vec::drain. "Reaffirm" the bounds checks to avoid
@@ -2565,7 +2567,7 @@ impl<B: BuildAllocRef> Drop for Drain<'_, B> {
     }
 }
 
-impl<B: BuildAllocRef> Iterator for Drain<'_, B> {
+impl<A: DeallocRef> Iterator for Drain<'_, A> {
     type Item = char;
 
     #[inline]
@@ -2583,14 +2585,14 @@ impl<B: BuildAllocRef> Iterator for Drain<'_, B> {
     }
 }
 
-impl<B: BuildAllocRef> DoubleEndedIterator for Drain<'_, B> {
+impl<A: DeallocRef> DoubleEndedIterator for Drain<'_, A> {
     #[inline]
     fn next_back(&mut self) -> Option<char> {
         self.iter.next_back()
     }
 }
 
-impl<B: BuildAllocRef> FusedIterator for Drain<'_, B> {}
+impl<A: DeallocRef> FusedIterator for Drain<'_, A> {}
 
 // One central function responsible for reporting capacity overflows. This'll
 // ensure that the code generation related to these panics is minimal as there's

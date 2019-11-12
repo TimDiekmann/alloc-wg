@@ -1,4 +1,4 @@
-use crate::{alloc::BuildAllocRef, boxed::Box};
+use crate::{alloc::DeallocRef, boxed::Box};
 
 pub mod lossy;
 
@@ -30,7 +30,7 @@ pub fn utf8_char_width(b: u8) -> usize {
 }
 
 #[inline]
-pub unsafe fn from_boxed_utf8_unchecked<B: BuildAllocRef>(v: Box<[u8], B>) -> Box<str, B> {
+pub unsafe fn from_boxed_utf8_unchecked<A: DeallocRef>(v: Box<[u8], A>) -> Box<str, A> {
     let a = std::ptr::read(v.build_alloc());
     Box::from_raw_in(Box::into_raw(v) as *mut str, a)
 }
