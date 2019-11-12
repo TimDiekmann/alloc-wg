@@ -2399,10 +2399,11 @@ pub trait ToString {
     ///
     /// ```
     /// # use alloc_wg::string::String;
+    /// # use alloc_wg::string::ToString;
     /// let i = 5;
     /// let five = String::from("5");
     ///
-    /// assert_eq!(five, i.to_string());
+    /// assert_eq!(five, ToString::to_string(&i));
     /// ```
     fn to_string(&self) -> String;
 }
