@@ -13,11 +13,12 @@ pub struct Utf8Lossy {
 }
 
 impl Utf8Lossy {
-    pub fn from_bytes(bytes: &[u8]) -> &Utf8Lossy {
+    #[allow(clippy::transmute_ptr_to_ptr)]
+    pub fn from_bytes(bytes: &[u8]) -> &Self {
         unsafe { mem::transmute(bytes) }
     }
 
-    pub fn chunks(&self) -> Utf8LossyChunksIter<'_> {
+    pub const fn chunks(&self) -> Utf8LossyChunksIter<'_> {
         Utf8LossyChunksIter {
             source: &self.bytes,
         }
@@ -88,10 +89,10 @@ impl<'a> Iterator for Utf8LossyChunksIter<'a> {
                     }
                     3 => {
                         match (byte, safe_get(self.source, i)) {
-                            (0xE0, 0xA0..=0xBF) => (),
-                            (0xE1..=0xEC, 0x80..=0xBF) => (),
-                            (0xED, 0x80..=0x9F) => (),
-                            (0xEE..=0xEF, 0x80..=0xBF) => (),
+                            (0xE0, 0xA0..=0xBF)
+                            | (0xE1..=0xEC, 0x80..=0xBF)
+                            | (0xED, 0x80..=0x9F)
+                            | (0xEE..=0xEF, 0x80..=0xBF) => (),
                             _ => {
                                 error!();
                             }
@@ -104,9 +105,9 @@ impl<'a> Iterator for Utf8LossyChunksIter<'a> {
                     }
                     4 => {
                         match (byte, safe_get(self.source, i)) {
-                            (0xF0, 0x90..=0xBF) => (),
-                            (0xF1..=0xF3, 0x80..=0xBF) => (),
-                            (0xF4, 0x80..=0x8F) => (),
+                            (0xF0, 0x90..=0xBF)
+                            | (0xF1..=0xF3, 0x80..=0xBF)
+                            | (0xF4, 0x80..=0x8F) => (),
                             _ => {
                                 error!();
                             }

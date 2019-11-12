@@ -389,8 +389,9 @@ impl String {
     /// let s = String::new();
     /// ```
     #[inline]
-    pub const fn new() -> String {
-        String { vec: Vec::new() }
+    #[must_use]
+    pub const fn new() -> Self {
+        Self { vec: Vec::new() }
     }
 
     /// Creates a new empty `String` with a particular capacity.
@@ -432,7 +433,8 @@ impl String {
     /// s.push('a');
     /// ```
     #[inline]
-    pub fn with_capacity(capacity: usize) -> String {
+    #[must_use]
+    pub fn with_capacity(capacity: usize) -> Self {
         Self::with_capacity_in(capacity, AbortAlloc(Global))
     }
 
@@ -455,7 +457,7 @@ impl String {
     /// let v = &[0xD834, 0xDD1E, 0x006d, 0x0075, 0xD800, 0x0069, 0x0063];
     /// assert!(String::from_utf16(v).is_err());
     /// ```
-    pub fn from_utf16(v: &[u16]) -> Result<String, FromUtf16Error> {
+    pub fn from_utf16(v: &[u16]) -> Result<Self, FromUtf16Error> {
         Self::from_utf16_in(v, AbortAlloc(Global))
     }
 
@@ -487,7 +489,8 @@ impl String {
     /// );
     /// ```
     #[inline]
-    pub fn from_utf16_lossy(v: &[u16]) -> String {
+    #[must_use]
+    pub fn from_utf16_lossy(v: &[u16]) -> Self {
         decode_utf16(v.iter().cloned())
             .map(|r| r.unwrap_or(REPLACEMENT_CHARACTER))
             .collect()
@@ -538,7 +541,7 @@ impl String {
     /// }
     /// ```
     #[inline]
-    pub unsafe fn from_raw_parts(buf: *mut u8, length: usize, capacity: usize) -> String {
+    pub unsafe fn from_raw_parts(buf: *mut u8, length: usize, capacity: usize) -> Self {
         Self::from_raw_parts_in(buf, length, capacity, AbortAlloc(Global))
     }
 }
@@ -547,7 +550,7 @@ impl<A: DeallocRef> String<A> {
     /// Like `new` but parameterized over the choice of allocator for the returned `Vec`.
     #[inline]
     pub fn new_in(a: A) -> Self {
-        String {
+        Self {
             vec: Vec::new_in(a),
         }
     }
@@ -561,7 +564,7 @@ impl<A: DeallocRef> String<A> {
     where
         A: AllocRef<Error = crate::Never>,
     {
-        String {
+        Self {
             vec: Vec::with_capacity_in(capacity, a),
         }
     }
@@ -572,7 +575,7 @@ impl<A: DeallocRef> String<A> {
     where
         A: AllocRef,
     {
-        Ok(String {
+        Ok(Self {
             vec: Vec::try_with_capacity_in(capacity, a)?,
         })
     }
@@ -586,7 +589,7 @@ impl<A: DeallocRef> String<A> {
     where
         A: ReallocRef<Error = crate::Never>,
     {
-        let mut v = String::with_capacity_in(s.len(), a);
+        let mut v = Self::with_capacity_in(s.len(), a);
         v.push_str(s);
         v
     }
@@ -597,7 +600,7 @@ impl<A: DeallocRef> String<A> {
     where
         A: ReallocRef,
     {
-        let mut v = String::try_with_capacity_in(s.len(), a)?;
+        let mut v = Self::try_with_capacity_in(s.len(), a)?;
         v.try_push_str(s)?;
         Ok(v)
     }
@@ -669,7 +672,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn from_utf8(vec: Vec<u8, A>) -> Result<Self, FromUtf8Error<A>> {
         match str::from_utf8(&vec) {
-            Ok(..) => Ok(String { vec }),
+            Ok(..) => Ok(Self { vec }),
             Err(e) => Err(FromUtf8Error {
                 bytes: vec,
                 error: e,
@@ -706,14 +709,14 @@ impl<A: DeallocRef> String<A> {
             let lossy::Utf8LossyChunk { valid, broken } = chunk;
             if valid.len() == v.len() {
                 debug_assert!(broken.is_empty());
-                return String::try_from_str_in(valid, a);
+                return Self::try_from_str_in(valid, a);
             }
             (valid, broken)
         } else {
-            return Ok(String::new_in(a));
+            return Ok(Self::new_in(a));
         };
 
-        let mut res = String::try_with_capacity_in(v.len(), a)?;
+        let mut res = Self::try_with_capacity_in(v.len(), a)?;
         res.try_push_str(first_valid)?;
         if !first_broken.is_empty() {
             res.try_push_str(REPLACEMENT)?;
@@ -736,7 +739,7 @@ impl<A: DeallocRef> String<A> {
     {
         // This isn't done via collect::<Result<_, _>>() for performance reasons.
         // FIXME: the function can be simplified again when #48994 is closed.
-        let mut ret = String::with_capacity_in(v.len(), a);
+        let mut ret = Self::with_capacity_in(v.len(), a);
         for c in decode_utf16(v.iter().cloned()) {
             if let Ok(c) = c {
                 ret.push(c);
@@ -778,6 +781,8 @@ impl<A: DeallocRef> String<A> {
     }
 
     /// Like `from_raw_parts` but parameterized over the choice of allocator for the returned `Vec`.
+    /// # Safety
+    /// See `from_raw_parts`
     #[inline]
     pub unsafe fn from_raw_parts_in(
         buf: *mut u8,
@@ -785,7 +790,7 @@ impl<A: DeallocRef> String<A> {
         capacity: usize,
         b: A::BuildAlloc,
     ) -> Self {
-        String {
+        Self {
             vec: Vec::from_raw_parts_in(buf, length, capacity, b),
         }
     }
@@ -820,7 +825,7 @@ impl<A: DeallocRef> String<A> {
     /// ```
     #[inline]
     pub unsafe fn from_utf8_unchecked(bytes: Vec<u8, A>) -> Self {
-        String { vec: bytes }
+        Self { vec: bytes }
     }
 
     /// Converts a `String` into a byte vector.
@@ -1679,7 +1684,7 @@ impl<A: DeallocRef> String<A> {
     {
         assert!(self.is_char_boundary(at));
         let other = self.vec.try_split_off(at)?;
-        unsafe { Ok(String::from_utf8_unchecked(other)) }
+        unsafe { Ok(Self::from_utf8_unchecked(other)) }
     }
 
     /// Truncates this `String`, removing all contents.
@@ -1952,8 +1957,9 @@ impl fmt::Display for FromUtf16Error {
 }
 
 impl Clone for String {
+    #[must_use]
     fn clone(&self) -> Self {
-        String {
+        Self {
             vec: self.vec.clone(),
         }
     }
@@ -1964,38 +1970,38 @@ impl Clone for String {
 }
 
 impl FromIterator<char> for String {
-    fn from_iter<I: IntoIterator<Item = char>>(iter: I) -> String {
-        let mut buf = String::new();
+    fn from_iter<I: IntoIterator<Item = char>>(iter: I) -> Self {
+        let mut buf = Self::new();
         buf.extend(iter);
         buf
     }
 }
 
 impl<'a> FromIterator<&'a char> for String {
-    fn from_iter<I: IntoIterator<Item = &'a char>>(iter: I) -> String {
-        let mut buf = String::new();
+    fn from_iter<I: IntoIterator<Item = &'a char>>(iter: I) -> Self {
+        let mut buf = Self::new();
         buf.extend(iter);
         buf
     }
 }
 
 impl<'a> FromIterator<&'a str> for String {
-    fn from_iter<I: IntoIterator<Item = &'a str>>(iter: I) -> String {
-        let mut buf = String::new();
+    fn from_iter<I: IntoIterator<Item = &'a str>>(iter: I) -> Self {
+        let mut buf = Self::new();
         buf.extend(iter);
         buf
     }
 }
 
 impl FromIterator<String> for String {
-    fn from_iter<I: IntoIterator<Item = String>>(iter: I) -> String {
+    fn from_iter<I: IntoIterator<Item = String>>(iter: I) -> Self {
         let mut iterator = iter.into_iter();
 
         // Because we're iterating over `String`s, we can avoid at least
         // one allocation by getting the first string from the iterator
         // and appending to it all the subsequent strings.
         match iterator.next() {
-            None => String::new(),
+            None => Self::new(),
             Some(mut buf) => {
                 buf.extend(iterator);
                 buf
@@ -2006,16 +2012,16 @@ impl FromIterator<String> for String {
 
 #[cfg(feature = "std")]
 impl<'a> FromIterator<Cow<'a, str>> for String {
-    fn from_iter<I: IntoIterator<Item = Cow<'a, str>>>(iter: I) -> String {
+    fn from_iter<I: IntoIterator<Item = Cow<'a, str>>>(iter: I) -> Self {
         let mut iterator = iter.into_iter();
 
         // Because we're iterating over CoWs, we can (potentially) avoid at least
         // one allocation by getting the first item and appending to it all the
         // subsequent items.
         match iterator.next() {
-            None => String::new(),
+            None => Self::new(),
             Some(cow) => {
-                let mut buf = String::from(&cow[..]);
+                let mut buf = Self::from(&cow[..]);
                 buf.extend(iterator);
                 buf
             }
@@ -2141,6 +2147,7 @@ macro_rules! impl_eq {
         }
 
         #[allow(unused_lifetimes)]
+        #[allow(clippy::use_self)]
         impl<A: DeallocRef> PartialEq<$lhs> for $rhs {
             #[inline]
             fn eq(&self, other: &$lhs) -> bool {
@@ -2166,8 +2173,9 @@ mod borrow {
 impl Default for String {
     /// Creates an empty `String`.
     #[inline]
+    #[must_use]
     fn default() -> Self {
-        String::new()
+        Self::new()
     }
 }
 
@@ -2247,7 +2255,7 @@ where
 
 /// Implements the `+=` operator for appending to a `String`.
 ///
-/// This has the same behavior as the [`push_str`][String::push_str] method.
+/// This has the same behavior as the [`push_str`][`String::push_str`] method.
 impl<A> AddAssign<&str> for String<A>
 where
     A: ReallocRef<Error = crate::Never>,
@@ -2377,8 +2385,8 @@ pub type ParseError = core::convert::Infallible;
 impl FromStr for String {
     type Err = core::convert::Infallible;
     #[inline]
-    fn from_str(s: &str) -> Result<String, ParseError> {
-        Ok(String::from(s))
+    fn from_str(s: &str) -> Result<Self, ParseError> {
+        Ok(Self::from(s))
     }
 }
 
@@ -2443,8 +2451,9 @@ impl<A: DeallocRef> AsRef<[u8]> for String<A> {
 
 impl From<&str> for String {
     #[inline]
-    fn from(s: &str) -> String {
-        let mut v = String::new();
+    #[must_use]
+    fn from(s: &str) -> Self {
+        let mut v = Self::new();
         v.push_str(s);
         v
     }
@@ -2452,7 +2461,8 @@ impl From<&str> for String {
 
 impl From<&String> for String {
     #[inline]
-    fn from(s: &String) -> String {
+    #[must_use]
+    fn from(s: &Self) -> Self {
         s.clone()
     }
 }
@@ -2475,8 +2485,9 @@ impl From<Box<str>> for String {
     ///
     /// assert_eq!("hello world", s3)
     /// ```
-    fn from(s: Box<str>) -> String {
-        String::from(&s[..])
+    #[must_use]
+    fn from(s: Box<str>) -> Self {
+        Self::from(&s[..])
     }
 }
 
@@ -2506,8 +2517,9 @@ where
 
 #[cfg(feature = "std")]
 impl<'a> From<Cow<'a, str>> for String {
-    fn from(s: Cow<'a, str>) -> String {
-        String::from(&s[..])
+    #[must_use]
+    fn from(s: Cow<'a, str>) -> Self {
+        Self::from(&s[..])
     }
 }
 
@@ -2601,11 +2613,13 @@ impl<A: DeallocRef> Iterator for Drain<'_, A> {
         self.iter.next()
     }
 
+    #[must_use]
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
     }
 
     #[inline]
+    #[must_use]
     fn last(mut self) -> Option<char> {
         self.next_back()
     }
