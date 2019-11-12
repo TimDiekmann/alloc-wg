@@ -2084,7 +2084,7 @@ pub fn from_elem<T: Clone>(elem: T, n: usize) -> Vec<T> {
 }
 
 #[doc(hidden)]
-pub fn from_elem_in<T: Clone, A: DeallocRef>(elem: T, n: usize, b: A) -> Vec<T, A>
+pub fn from_elem_in<T: Clone, A>(elem: T, n: usize, b: A) -> Vec<T, A>
 where
     A: ReallocRef<Error = crate::Never>,
 {
@@ -2094,14 +2094,11 @@ where
 }
 
 #[doc(hidden)]
-pub fn try_from_elem_in<T: Clone, A: DeallocRef>(
+pub fn try_from_elem_in<T: Clone, A: ReallocRef>(
     elem: T,
     n: usize,
     b: A,
-) -> Result<Vec<T, A>, CollectionAllocErr<A>>
-where
-    A: ReallocRef,
-{
+) -> Result<Vec<T, A>, CollectionAllocErr<A>> {
     let mut v = Vec::try_with_capacity_in(n, b)?;
     v.try_extend_with(n, ExtendElement(elem))?;
     Ok(v)
@@ -2232,7 +2229,7 @@ impl<'a, T, A: DeallocRef> IntoIterator for &'a mut Vec<T, A> {
     }
 }
 
-impl<T, A: DeallocRef> Extend<T> for Vec<T, A>
+impl<T, A> Extend<T> for Vec<T, A>
 where
     A: ReallocRef<Error = crate::Never>,
 {
@@ -2246,10 +2243,7 @@ where
     }
 }
 
-impl<T, A: DeallocRef> TryExtend<T> for Vec<T, A>
-where
-    A: ReallocRef,
-{
+impl<T, A: ReallocRef> TryExtend<T> for Vec<T, A> {
     type Err = CollectionAllocErr<A>;
 
     #[inline]
@@ -2386,7 +2380,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
 /// append the entire slice at once.
 ///
 /// [`copy_from_slice`]: ../../std/primitive.slice.html#method.copy_from_slice
-impl<'a, T: 'a + Copy, A: DeallocRef> Extend<&'a T> for Vec<T, A>
+impl<'a, T: 'a + Copy, A> Extend<&'a T> for Vec<T, A>
 where
     A: ReallocRef<Error = crate::Never>,
 {
@@ -2395,7 +2389,7 @@ where
     }
 }
 
-impl<'a, T: 'a + Copy, A: DeallocRef> TryExtend<&'a T> for Vec<T, A>
+impl<'a, T: 'a + Copy, A> TryExtend<&'a T> for Vec<T, A>
 where
     A: ReallocRef,
 {
@@ -2859,7 +2853,7 @@ impl<T, A: DeallocRef> FusedIterator for Drain<'_, T, A> {}
 /// [`splice()`]: struct.Vec.html#method.splice
 /// [`Vec`]: struct.Vec.html
 #[derive(Debug)]
-pub struct Splice<'a, I: Iterator + 'a, A: DeallocRef>
+pub struct Splice<'a, I: Iterator + 'a, A>
 where
     A: ReallocRef<Error = crate::Never>,
 {
@@ -2867,7 +2861,7 @@ where
     replace_with: I,
 }
 
-impl<I: Iterator, A: DeallocRef> Iterator for Splice<'_, I, A>
+impl<I: Iterator, A> Iterator for Splice<'_, I, A>
 where
     A: ReallocRef<Error = crate::Never>,
 {
@@ -2882,7 +2876,7 @@ where
     }
 }
 
-impl<I: Iterator, A: DeallocRef> DoubleEndedIterator for Splice<'_, I, A>
+impl<I: Iterator, A> DoubleEndedIterator for Splice<'_, I, A>
 where
     A: ReallocRef<Error = crate::Never>,
 {
@@ -2891,12 +2885,10 @@ where
     }
 }
 
-impl<I: Iterator, A: DeallocRef> ExactSizeIterator for Splice<'_, I, A> where
-    A: ReallocRef<Error = crate::Never>
-{
-}
+impl<I: Iterator, A> ExactSizeIterator for Splice<'_, I, A> where A: ReallocRef<Error = crate::Never>
+{}
 
-impl<I: Iterator, A: DeallocRef> Drop for Splice<'_, I, A>
+impl<I: Iterator, A> Drop for Splice<'_, I, A>
 where
     A: ReallocRef<Error = crate::Never>,
 {

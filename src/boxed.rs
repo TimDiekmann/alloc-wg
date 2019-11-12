@@ -169,10 +169,7 @@ impl<T> Box<T> {
 }
 
 #[allow(clippy::use_self)]
-impl<T, A: DeallocRef> Box<T, A>
-where
-    A: AllocRef,
-{
+impl<T, A: AllocRef> Box<T, A> {
     /// Allocates memory with the given allocator and then places `x` into it.
     ///
     /// This doesn't actually allocate if `T` is zero-sized.
@@ -328,10 +325,7 @@ impl<T> Box<[T]> {
 }
 
 #[allow(clippy::use_self)]
-impl<T, A> Box<[T], A>
-where
-    A: AllocRef,
-{
+impl<T, A: AllocRef> Box<[T], A> {
     /// Construct a new boxed slice with uninitialized contents with the spoecified allocator.
     ///
     /// # Example
@@ -768,7 +762,7 @@ unsafe impl<#[may_dangle] T: ?Sized, A: DeallocRef> Drop for Box<T, A> {
     }
 }
 
-impl<T, A: DeallocRef> Default for Box<T, A>
+impl<T, A> Default for Box<T, A>
 where
     T: Default,
     A: Default + AllocRef<Error = crate::Never>,
@@ -781,7 +775,7 @@ where
 
 #[cfg(feature = "coerce_unsized")]
 #[allow(clippy::use_self)]
-impl<T, A: DeallocRef> Default for Box<[T], A>
+impl<T, A> Default for Box<[T], A>
 where
     A: Default + AllocRef<Error = crate::Never>,
 {
@@ -799,7 +793,7 @@ unsafe fn from_boxed_utf8_unchecked<A: DeallocRef>(v: Box<[u8], A>) -> Box<str, 
 
 #[cfg(feature = "coerce_unsized")]
 #[allow(clippy::use_self)]
-impl<A: DeallocRef> Default for Box<str, A>
+impl<A> Default for Box<str, A>
 where
     A: Default + AllocRef<Error = crate::Never>,
 {
@@ -816,7 +810,7 @@ impl<T: ?Sized, A: DeallocRef> Drop for Box<T, A> {
     }
 }
 
-impl<T: Clone, A: DeallocRef + Clone> Clone for Box<T, A>
+impl<T: Clone, A: Clone> Clone for Box<T, A>
 where
     A: AllocRef<Error = crate::Never>,
     A::BuildAlloc: Clone,
@@ -983,7 +977,7 @@ impl<T: ?Sized + Hasher, A: DeallocRef> Hasher for Box<T, A> {
     }
 }
 
-impl<T, A: DeallocRef> From<T> for Box<T, A>
+impl<T, A> From<T> for Box<T, A>
 where
     A: Default + AllocRef<Error = crate::Never>,
 {
@@ -1017,7 +1011,7 @@ impl<T: ?Sized, A: DeallocRef> From<Box<T, A>> for Pin<Box<T, A>> {
 }
 
 #[allow(clippy::use_self)]
-impl<T: Copy, A: DeallocRef> From<&[T]> for Box<[T], A>
+impl<T: Copy, A> From<&[T]> for Box<[T], A>
 where
     A: Default + AllocRef<Error = crate::Never>,
 {
@@ -1046,7 +1040,7 @@ where
 }
 
 #[allow(clippy::use_self)]
-impl<A: DeallocRef> From<&str> for Box<str, A>
+impl<A> From<&str> for Box<str, A>
 where
     A: Default + AllocRef<Error = crate::Never>,
 {
