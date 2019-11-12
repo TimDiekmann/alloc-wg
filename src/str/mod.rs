@@ -29,6 +29,7 @@ pub fn utf8_char_width(b: u8) -> usize {
     UTF8_CHAR_WIDTH[b as usize] as usize
 }
 
+#[allow(clippy::missing_safety_doc)]
 #[inline]
 pub unsafe fn from_boxed_utf8_unchecked<A: DeallocRef>(v: Box<[u8], A>) -> Box<str, A> {
     let a = core::ptr::read(v.build_alloc());

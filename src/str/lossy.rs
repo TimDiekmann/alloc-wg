@@ -45,13 +45,14 @@ impl<'a> Iterator for Utf8LossyChunksIter<'a> {
     type Item = Utf8LossyChunk<'a>;
 
     fn next(&mut self) -> Option<Utf8LossyChunk<'a>> {
-        if self.source.is_empty() {
-            return None;
-        }
-
         const TAG_CONT_U8: u8 = 128;
+
         fn safe_get(xs: &[u8], i: usize) -> u8 {
             *xs.get(i).unwrap_or(&0)
+        }
+
+        if self.source.is_empty() {
+            return None;
         }
 
         let mut i = 0;

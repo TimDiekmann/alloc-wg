@@ -698,6 +698,8 @@ impl<A: DeallocRef> String<A> {
     where
         A: ReallocRef,
     {
+        const REPLACEMENT: &str = "\u{FFFD}";
+
         let mut iter = lossy::Utf8Lossy::from_bytes(v).chunks();
 
         let (first_valid, first_broken) = if let Some(chunk) = iter.next() {
@@ -710,8 +712,6 @@ impl<A: DeallocRef> String<A> {
         } else {
             return Ok(String::new_in(a));
         };
-
-        const REPLACEMENT: &str = "\u{FFFD}";
 
         let mut res = String::try_with_capacity_in(v.len(), a)?;
         res.try_push_str(first_valid)?;
