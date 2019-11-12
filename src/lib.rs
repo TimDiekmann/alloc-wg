@@ -140,7 +140,7 @@ macro_rules! vec {
             Ok(v)
         })()
     }};
-    (in $bump:expr; $(, $x:expr,)*) => (bumpalo::vec![in $bump; $($x),*]);
+    (in $alloc:expr; $(, $x:expr,)*) => ($crate::vec![in $alloc; $($x),*]);
     ($elem:expr; $n:expr) => (
         $crate::vec::from_elem($elem, $n)
     );
