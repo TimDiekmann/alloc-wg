@@ -65,6 +65,7 @@ use core::{
 use crate::{
     alloc::{AbortAlloc, AllocRef, DeallocRef, Global, ReallocRef},
     boxed::Box,
+    collect::TryExtend,
     collections::CollectionAllocErr,
     str::{from_boxed_utf8_unchecked, lossy},
     vec::Vec,
@@ -413,9 +414,7 @@ impl String {
     /// ```
     #[inline]
     pub fn with_capacity(capacity: usize) -> String {
-        String {
-            vec: Vec::with_capacity(capacity),
-        }
+        Self::with_capacity_in(capacity, AbortAlloc(Global))
     }
 
     /// Decode a UTF-16 encoded vector `v` into a `String`, returning [`Err`]
@@ -437,17 +436,7 @@ impl String {
     /// assert!(String::from_utf16(v).is_err());
     /// ```
     pub fn from_utf16(v: &[u16]) -> Result<String, FromUtf16Error> {
-        // This isn't done via collect::<Result<_, _>>() for performance reasons.
-        // FIXME: the function can be simplified again when #48994 is closed.
-        let mut ret = String::with_capacity(v.len());
-        for c in decode_utf16(v.iter().cloned()) {
-            if let Ok(c) = c {
-                ret.push(c);
-            } else {
-                return Err(FromUtf16Error(()));
-            }
-        }
-        Ok(ret)
+        Self::from_utf16_in(v, AbortAlloc(Global))
     }
 
     /// Decode a UTF-16 encoded slice `v` into a `String`, replacing
@@ -528,31 +517,12 @@ impl String {
     /// ```
     #[inline]
     pub unsafe fn from_raw_parts(buf: *mut u8, length: usize, capacity: usize) -> String {
-        String {
-            vec: Vec::from_raw_parts(buf, length, capacity),
-        }
+        Self::from_raw_parts_in(buf, length, capacity, AbortAlloc(Global))
     }
 }
 
 impl<A: DeallocRef> String<A> {
-    /// Creates a new empty `String`.
-    ///
-    /// Given that the `String` is empty, this will not allocate any initial
-    /// buffer. While that means that this initial operation is very
-    /// inexpensive, it may cause excessive allocation later when you add
-    /// data. If you have an idea of how much data the `String` will hold,
-    /// consider the [`with_capacity`] method to prevent excessive
-    /// re-allocation.
-    ///
-    /// [`with_capacity`]: #method.with_capacity
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// let s = String::new();
-    /// ```
+    /// Like `new` but parameterized over the choice of allocator for the returned `Vec`.
     #[inline]
     pub fn new_in(a: A) -> Self {
         String {
@@ -560,43 +530,10 @@ impl<A: DeallocRef> String<A> {
         }
     }
 
-    /// Creates a new empty `String` with a particular capacity.
+    /// Like `with_capacity` but parameterized over the choice of allocator for the returned `Vec`.
     ///
-    /// `String`s have an internal buffer to hold their data. The capacity is
-    /// the length of that buffer, and can be queried with the [`capacity`]
-    /// method. This method creates an empty `String`, but one with an initial
-    /// buffer that can hold `capacity` bytes. This is useful when you may be
-    /// appending a bunch of data to the `String`, reducing the number of
-    /// reallocations it needs to do.
-    ///
-    /// [`capacity`]: #method.capacity
-    ///
-    /// If the given capacity is `0`, no allocation will occur, and this method
-    /// is identical to the [`new`] method.
-    ///
-    /// [`new`]: #method.new
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// let mut s = String::with_capacity(10);
-    ///
-    /// // The String contains no chars, even though it has capacity for more
-    /// assert_eq!(s.len(), 0);
-    ///
-    /// // These are all done without reallocating...
-    /// let cap = s.capacity();
-    /// for _ in 0..10 {
-    ///     s.push('a');
-    /// }
-    ///
-    /// assert_eq!(s.capacity(), cap);
-    ///
-    /// // ...but this may make the vector reallocate
-    /// s.push('a');
-    /// ```
+    /// # Panics
+    /// Panics if the allocation fails.
     #[inline]
     pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
@@ -607,6 +544,7 @@ impl<A: DeallocRef> String<A> {
         }
     }
 
+    /// Like `with_capacity_in` but returns errors instead of panicking.
     #[inline]
     pub fn try_with_capacity_in(capacity: usize, a: A) -> Result<Self, CollectionAllocErr<A>>
     where
@@ -617,6 +555,10 @@ impl<A: DeallocRef> String<A> {
         })
     }
 
+    /// Like `from_str` but parameterized over the choice of allocator for the returned `Vec`.
+    ///
+    /// # Panics
+    /// Panics if the allocation fails.
     #[inline]
     pub fn from_str_in(s: &str, a: A) -> Self
     where
@@ -627,6 +569,7 @@ impl<A: DeallocRef> String<A> {
         v
     }
 
+    /// Like `from_str_in` but returns errors instead of panicking.
     #[inline]
     pub fn try_from_str_in(s: &str, a: A) -> Result<Self, CollectionAllocErr<A>>
     where
@@ -708,67 +651,23 @@ impl<A: DeallocRef> String<A> {
         }
     }
 
-    /// Converts a slice of bytes to a string, including invalid characters.
+    /// Like `from_utf8_lossy` but parameterized over the choice of allocator for the returned `Vec`.
     ///
-    /// Strings are made of bytes ([`u8`]), and a slice of bytes
-    /// ([`&[u8]`][byteslice]) is made of bytes, so this function converts
-    /// between the two. Not all byte slices are valid strings, however: strings
-    /// are required to be valid UTF-8. During this conversion,
-    /// `from_utf8_lossy()` will replace any invalid UTF-8 sequences with
-    /// [`U+FFFD REPLACEMENT CHARACTER`][U+FFFD], which looks like this: �
+    /// # Panics
     ///
-    /// [`u8`]: ../../std/primitive.u8.html
-    /// [byteslice]: ../../std/primitive.slice.html
-    /// [U+FFFD]: ../char/constant.REPLACEMENT_CHARACTER.html
-    ///
-    /// If you are sure that the byte slice is valid UTF-8, and you don't want
-    /// to incur the overhead of the conversion, there is an unsafe version
-    /// of this function, [`from_utf8_unchecked`], which has the same behavior
-    /// but skips the checks.
-    ///
-    /// [`from_utf8_unchecked`]: struct.String.html#method.from_utf8_unchecked
-    ///
-    /// This function returns a [`Cow<'a, str>`]. If our byte slice is invalid
-    /// UTF-8, then we need to insert the replacement characters, which will
-    /// change the size of the string, and hence, require a `String`. But if
-    /// it's already valid UTF-8, we don't need a new allocation. This return
-    /// type allows us to handle both cases.
-    ///
-    /// [`Cow<'a, str>`]: ../../std/borrow/enum.Cow.html
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// // some bytes, in a vector
-    /// let sparkle_heart = vec![240, 159, 146, 150];
-    ///
-    /// let sparkle_heart = String::from_utf8_lossy(&sparkle_heart);
-    ///
-    /// assert_eq!("💖", sparkle_heart);
-    /// ```
-    ///
-    /// Incorrect bytes:
-    ///
-    /// ```
-    /// // some invalid bytes
-    /// let input = b"Hello \xF0\x90\x80World";
-    /// let output = String::from_utf8_lossy(input);
-    ///
-    /// assert_eq!("Hello �World", output);
-    /// ```
+    /// Panics if allocation fails.
     pub fn from_utf8_lossy_in(v: &[u8], a: A) -> Self
     where
         A: ReallocRef<Error = crate::Never>,
     {
         match Self::try_from_utf8_lossy_in(v, a) {
-            Ok(vec) => vec,
+            Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
             Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
         }
     }
 
+    /// Like `from_utf8_lossy_in` but returns errors instead of panicking.
     pub fn try_from_utf8_lossy_in(v: &[u8], a: A) -> Result<Self, CollectionAllocErr<A>>
     where
         A: ReallocRef,
@@ -804,24 +703,7 @@ impl<A: DeallocRef> String<A> {
         Ok(res)
     }
 
-    /// Decode a UTF-16 encoded vector `v` into a `String`, returning [`Err`]
-    /// if `v` contains any invalid data.
-    ///
-    /// [`Err`]: ../../std/result/enum.Result.html#variant.Err
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// // 𝄞music
-    /// let v = &[0xD834, 0xDD1E, 0x006d, 0x0075, 0x0073, 0x0069, 0x0063];
-    /// assert_eq!(String::from("𝄞music"), String::from_utf16(v).unwrap());
-    ///
-    /// // 𝄞mu<invalid>ic
-    /// let v = &[0xD834, 0xDD1E, 0x006d, 0x0075, 0xD800, 0x0069, 0x0063];
-    /// assert!(String::from_utf16(v).is_err());
-    /// ```
+    /// Like `from_utf16` but parameterized over the choice of allocator for the returned `Vec`.
     pub fn from_utf16_in(v: &[u16], a: A) -> Result<Self, FromUtf16Error>
     where
         A: ReallocRef<Error = crate::Never>,
@@ -869,49 +751,7 @@ impl<A: DeallocRef> String<A> {
         self.vec.into_raw_parts()
     }
 
-    /// Creates a new `String` from a length, capacity, and pointer.
-    ///
-    /// # Safety
-    ///
-    /// This is highly unsafe, due to the number of invariants that aren't
-    /// checked:
-    ///
-    /// * The memory at `ptr` needs to have been previously allocated by the
-    ///   same allocator the standard library uses.
-    /// * `length` needs to be less than or equal to `capacity`.
-    /// * `capacity` needs to be the correct value.
-    ///
-    /// Violating these may cause problems like corrupting the allocator's
-    /// internal data structures.
-    ///
-    /// The ownership of `ptr` is effectively transferred to the
-    /// `String` which may then deallocate, reallocate or change the
-    /// contents of memory pointed to by the pointer at will. Ensure
-    /// that nothing else uses the pointer after calling this
-    /// function.
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// use std::mem;
-    ///
-    /// unsafe {
-    ///     let s = String::from("hello");
-    // FIXME Update this when vec_into_raw_parts is stabilized
-    ///     // Prevent automatically dropping the String's data
-    ///     let mut s = mem::ManuallyDrop::new(s);
-    ///
-    ///     let ptr = s.as_mut_ptr();
-    ///     let len = s.len();
-    ///     let capacity = s.capacity();
-    ///
-    ///     let s = String::from_raw_parts(ptr, len, capacity);
-    ///
-    ///     assert_eq!(String::from("hello"), s);
-    /// }
-    /// ```
+    /// Like `from_raw_parts` but parameterized over the choice of allocator for the returned `Vec`.
     #[inline]
     pub unsafe fn from_raw_parts_in(
         buf: *mut u8,
@@ -1022,6 +862,9 @@ impl<A: DeallocRef> String<A> {
     ///
     /// assert_eq!("foobar", s);
     /// ```
+    ///
+    /// # Panics
+    /// Panics if the reallocation fails.
     #[inline]
     pub fn push_str(&mut self, string: &str)
     where
@@ -1030,6 +873,7 @@ impl<A: DeallocRef> String<A> {
         self.vec.extend_from_slice(string.as_bytes())
     }
 
+    /// Like `push_str` but returns errors instead of panicking.
     #[inline]
     pub fn try_push_str(&mut self, string: &str) -> Result<(), CollectionAllocErr<A>>
     where
@@ -1170,10 +1014,9 @@ impl<A: DeallocRef> String<A> {
     /// # Examples
     ///
     /// ```
-    /// #![feature(try_reserve)]
-    /// use std::collections::TryReserveError;
+    /// use alloc_wg::collections::CollectionAllocErr;
     ///
-    /// fn process_data(data: &str) -> Result<String, TryReserveError> {
+    /// fn process_data(data: &str) -> Result<String, CollectionAllocErr<AbortAlloc<Global>>> {
     ///     let mut output = String::new();
     ///
     ///     // Pre-reserve the memory, exiting if we can't
@@ -1210,10 +1053,9 @@ impl<A: DeallocRef> String<A> {
     /// # Examples
     ///
     /// ```
-    /// #![feature(try_reserve)]
-    /// use std::collections::TryReserveError;
+    /// use alloc_wg::collections::CollectionAllocErr;
     ///
-    /// fn process_data(data: &str) -> Result<String, TryReserveError> {
+    /// fn process_data(data: &str) -> Result<String, CollectionAllocErr<AbortAlloc<Global>>> {
     ///     let mut output = String::new();
     ///
     ///     // Pre-reserve the memory, exiting if we can't
@@ -1248,6 +1090,9 @@ impl<A: DeallocRef> String<A> {
     /// s.shrink_to_fit();
     /// assert_eq!(3, s.capacity());
     /// ```
+    ///
+    /// # Panics
+    /// Panics if the reallocation fails
     #[inline]
     pub fn shrink_to_fit(&mut self)
     where
@@ -1256,6 +1101,7 @@ impl<A: DeallocRef> String<A> {
         self.vec.shrink_to_fit()
     }
 
+    /// Like `shrink_to_fit` but returns errors instead of panicking.
     #[inline]
     pub fn try_shrink_to_fit(&mut self) -> Result<(), CollectionAllocErr<A>>
     where
@@ -1286,6 +1132,10 @@ impl<A: DeallocRef> String<A> {
     /// s.shrink_to(0);
     /// assert!(s.capacity() >= 3);
     /// ```
+    ///
+    /// # Panics
+    /// * Panics if the given amount is *larger* than the current capacity.
+    /// * Panics if the reallocation fails.
     #[inline]
     pub fn shrink_to(&mut self, min_capacity: usize)
     where
@@ -1294,6 +1144,7 @@ impl<A: DeallocRef> String<A> {
         self.vec.shrink_to(min_capacity)
     }
 
+    /// Like `shrink_to` but returns errors instead of panicking.
     #[inline]
     pub fn try_shrink_to(&mut self, min_capacity: usize) -> Result<(), CollectionAllocErr<A>>
     where
@@ -1319,18 +1170,22 @@ impl<A: DeallocRef> String<A> {
     ///
     /// assert_eq!("abc123", s);
     /// ```
+    ///
+    /// # Panics
+    /// Panics if the reallocation fails.
     #[inline]
     pub fn push(&mut self, ch: char)
     where
         A: ReallocRef<Error = crate::Never>,
     {
         match self.try_push(ch) {
-            Ok(vec) => vec,
+            Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
             Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
         }
     }
 
+    /// Like `push` but returns errors instead of panicking.
     #[inline]
     pub fn try_push(&mut self, ch: char) -> Result<(), CollectionAllocErr<A>>
     where
@@ -1555,18 +1410,22 @@ impl<A: DeallocRef> String<A> {
     ///
     /// assert_eq!("foo", s);
     /// ```
+    ///
+    /// # Panics
+    /// Panics if reallocation fails.
     #[inline]
     pub fn insert(&mut self, idx: usize, ch: char)
     where
         A: ReallocRef<Error = crate::Never>,
     {
         match self.try_insert(idx, ch) {
-            Ok(vec) => vec,
+            Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
             Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
         }
     }
 
+    /// Like `insert` but returns errors instead of panicking.
     #[inline]
     pub fn try_insert(&mut self, idx: usize, ch: char) -> Result<(), CollectionAllocErr<A>>
     where
@@ -1624,18 +1483,22 @@ impl<A: DeallocRef> String<A> {
     ///
     /// assert_eq!("foobar", s);
     /// ```
+    ///
+    /// # Panics
+    /// Panics if the reallocation fails.
     #[inline]
     pub fn insert_str(&mut self, idx: usize, string: &str)
     where
         A: ReallocRef<Error = crate::Never>,
     {
         match self.try_insert_str(idx, string) {
-            Ok(vec) => vec,
+            Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
             Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
         }
     }
 
+    /// Like `insert_str` but returns errors instead of panicking.
     #[inline]
     pub fn try_insert_str(&mut self, idx: usize, string: &str) -> Result<(), CollectionAllocErr<A>>
     where
@@ -1735,18 +1598,22 @@ impl<A: DeallocRef> String<A> {
     /// assert_eq!(hello, "Hello, ");
     /// assert_eq!(world, "World!");
     /// ```
+    ///
+    /// # Panics
+    /// Panics if the allocation fails.
     #[inline]
     pub fn split_off(&mut self, at: usize) -> Self
     where
         A: AllocRef<Error = crate::Never>,
     {
         match self.try_split_off(at) {
-            Ok(vec) => vec,
+            Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
             Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
         }
     }
 
+    /// Like `split_off` but returns errors instead of panicking.
     #[inline]
     pub fn try_split_off(&mut self, at: usize) -> Result<Self, CollectionAllocErr<A>>
     where
@@ -1910,6 +1777,9 @@ impl<A: DeallocRef> String<A> {
     ///
     /// let b = s.into_boxed_str();
     /// ```
+    ///
+    /// # Panics
+    /// Panics if the reallocation fails.
     #[inline]
     pub fn into_boxed_str(self) -> Box<str, A>
     where
@@ -1919,6 +1789,7 @@ impl<A: DeallocRef> String<A> {
         unsafe { from_boxed_utf8_unchecked(slice) }
     }
 
+    /// Like `into_boxed_str` but returns errors instead of panicking.
     #[inline]
     pub fn try_into_boxed_str(self) -> Result<Box<str, A>, CollectionAllocErr<A>>
     where
@@ -2083,7 +1954,10 @@ impl<'a> FromIterator<Cow<'a, str>> for String {
     }
 }
 
-impl Extend<char> for String {
+impl<A> Extend<char> for String<A>
+where
+    A: ReallocRef<Error = crate::Never>,
+{
     fn extend<I: IntoIterator<Item = char>>(&mut self, iter: I) {
         let iterator = iter.into_iter();
         let (lower_bound, _) = iterator.size_hint();
@@ -2092,33 +1966,95 @@ impl Extend<char> for String {
     }
 }
 
-impl<'a> Extend<&'a char> for String {
+impl<A: ReallocRef> TryExtend<char> for String<A> {
+    type Err = CollectionAllocErr<A>;
+
+    fn try_extend<I: IntoIterator<Item = char>>(&mut self, iter: I) -> Result<(), Self::Err> {
+        let mut iterator = iter.into_iter();
+        let (lower_bound, _) = iterator.size_hint();
+        self.try_reserve(lower_bound)?;
+        iterator.try_for_each(move |c| self.try_push(c))?;
+        Ok(())
+    }
+}
+
+impl<'a, A> Extend<&'a char> for String<A>
+where
+    A: ReallocRef<Error = crate::Never>,
+{
     fn extend<I: IntoIterator<Item = &'a char>>(&mut self, iter: I) {
         self.extend(iter.into_iter().cloned());
     }
 }
 
-impl<'a> Extend<&'a str> for String {
+impl<'a, A: ReallocRef> TryExtend<&'a char> for String<A> {
+    type Err = CollectionAllocErr<A>;
+
+    fn try_extend<I: IntoIterator<Item = &'a char>>(&mut self, iter: I) -> Result<(), Self::Err> {
+        self.try_extend(iter.into_iter().cloned())
+    }
+}
+
+impl<'a, A> Extend<&'a str> for String<A>
+where
+    A: ReallocRef<Error = crate::Never>,
+{
     fn extend<I: IntoIterator<Item = &'a str>>(&mut self, iter: I) {
         iter.into_iter().for_each(move |s| self.push_str(s));
     }
 }
 
-impl Extend<String> for String {
-    fn extend<I: IntoIterator<Item = String>>(&mut self, iter: I) {
+impl<'a, A: ReallocRef> TryExtend<&'a str> for String<A> {
+    type Err = CollectionAllocErr<A>;
+
+    fn try_extend<I: IntoIterator<Item = &'a str>>(&mut self, iter: I) -> Result<(), Self::Err> {
+        iter.into_iter().try_for_each(move |s| self.try_push_str(s))
+    }
+}
+
+impl<A, B> Extend<String<B>> for String<A>
+where
+    A: ReallocRef<Error = crate::Never>,
+    B: DeallocRef,
+{
+    fn extend<I: IntoIterator<Item = String<B>>>(&mut self, iter: I) {
         iter.into_iter().for_each(move |s| self.push_str(&s));
     }
 }
 
-impl<'a> Extend<Cow<'a, str>> for String {
+impl<A: ReallocRef, B: DeallocRef> TryExtend<String<B>> for String<A> {
+    type Err = CollectionAllocErr<A>;
+
+    fn try_extend<I: IntoIterator<Item = String<B>>>(&mut self, iter: I) -> Result<(), Self::Err> {
+        iter.into_iter()
+            .try_for_each(move |s| self.try_push_str(&s))
+    }
+}
+
+impl<'a, A> Extend<Cow<'a, str>> for String<A>
+where
+    A: ReallocRef<Error = crate::Never>,
+{
     fn extend<I: IntoIterator<Item = Cow<'a, str>>>(&mut self, iter: I) {
         iter.into_iter().for_each(move |s| self.push_str(&s));
     }
 }
 
-impl<A: DeallocRef> PartialEq for String<A> {
+impl<'a, A: ReallocRef> TryExtend<Cow<'a, str>> for String<A> {
+    type Err = CollectionAllocErr<A>;
+
+    fn try_extend<I: IntoIterator<Item = Cow<'a, str>>>(
+        &mut self,
+        iter: I,
+    ) -> Result<(), Self::Err> {
+        iter.into_iter()
+            .try_for_each(move |s| self.try_push_str(&s))
+    }
+}
+
+impl<A: DeallocRef, B: DeallocRef> PartialEq<String<B>> for String<A> {
     #[inline]
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, other: &String<B>) -> bool {
         PartialEq::eq(&self[..], &other[..])
     }
 }
@@ -2158,7 +2094,7 @@ mod borrow {
 impl Default for String {
     /// Creates an empty `String`.
     #[inline]
-    fn default() -> String {
+    fn default() -> Self {
         String::new()
     }
 }
@@ -2221,11 +2157,14 @@ impl<A: DeallocRef> hash::Hash for String<A> {
 /// let b = " world";
 /// let c = a.to_string() + b;
 /// ```
-impl Add<&str> for String {
-    type Output = String;
+impl<A> Add<&str> for String<A>
+where
+    A: ReallocRef<Error = crate::Never>,
+{
+    type Output = Self;
 
     #[inline]
-    fn add(mut self, other: &str) -> String {
+    fn add(mut self, other: &str) -> Self {
         self.push_str(other);
         self
     }
@@ -2234,7 +2173,10 @@ impl Add<&str> for String {
 /// Implements the `+=` operator for appending to a `String`.
 ///
 /// This has the same behavior as the [`push_str`][String::push_str] method.
-impl AddAssign<&str> for String {
+impl<A> AddAssign<&str> for String<A>
+where
+    A: ReallocRef<Error = crate::Never>,
+{
     #[inline]
     fn add_assign(&mut self, other: &str) {
         self.push_str(other);
@@ -2488,9 +2430,9 @@ impl<'a> From<Cow<'a, str>> for String {
     }
 }
 
-impl<'a> From<&'a String> for Cow<'a, str> {
+impl<'a, A: DeallocRef> From<&'a String<A>> for Cow<'a, str> {
     #[inline]
-    fn from(s: &'a String) -> Cow<'a, str> {
+    fn from(s: &'a String<A>) -> Cow<'a, str> {
         Cow::Borrowed(s.as_str())
     }
 }
