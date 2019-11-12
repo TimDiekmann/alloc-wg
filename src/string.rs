@@ -2004,6 +2004,7 @@ impl FromIterator<String> for String {
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a> FromIterator<Cow<'a, str>> for String {
     fn from_iter<I: IntoIterator<Item = Cow<'a, str>>>(iter: I) -> String {
         let mut iterator = iter.into_iter();
@@ -2099,6 +2100,7 @@ impl<A: ReallocRef, B: DeallocRef> TryExtend<String<B>> for String<A> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a, A> Extend<Cow<'a, str>> for String<A>
 where
     A: ReallocRef<Error = crate::Never>,
@@ -2108,6 +2110,7 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a, A: ReallocRef> TryExtend<Cow<'a, str>> for String<A> {
     type Err = CollectionAllocErr<A>;
 
@@ -2500,12 +2503,14 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a> From<Cow<'a, str>> for String {
     fn from(s: Cow<'a, str>) -> String {
         String::from(&s[..])
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a, A: DeallocRef> From<&'a String<A>> for Cow<'a, str> {
     #[inline]
     fn from(s: &'a String<A>) -> Cow<'a, str> {
