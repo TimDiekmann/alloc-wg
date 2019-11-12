@@ -1,7 +1,7 @@
 # v0.7
 
 - Add `Vec`
-- Change Parameter from `B: BuildAlloc` to `A: DeallocRef` to support type inference
+- **Breaking Change**: Change Parameter from `B: BuildAlloc` to `A: DeallocRef` to support type inference
 
 # v0.6
 
