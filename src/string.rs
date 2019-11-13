@@ -77,6 +77,8 @@ use crate::{
 #[cfg(feature = "std")]
 use std::borrow::Cow;
 
+pub use liballoc::string::{ParseError, ToString};
+
 /// A UTF-8 encoded, growable string.
 ///
 /// The `String` type is the most common string type that has ownership over the
@@ -2368,70 +2370,11 @@ impl<A: DeallocRef> ops::DerefMut for String<A> {
     }
 }
 
-/// An error when parsing a `String`.
-///
-/// This `enum` is slightly awkward: it will never actually exist. This error is
-/// part of the type signature of the implementation of [`FromStr`] on
-/// [`String`]. The return type of [`from_str`], requires that an error be
-/// defined, but, given that a [`String`] can always be made into a new
-/// [`String`] without error, this type will never actually be returned. As
-/// such, it is only here to satisfy said signature, and is useless otherwise.
-///
-/// [`FromStr`]: ../../std/str/trait.FromStr.html
-/// [`String`]: struct.String.html
-/// [`from_str`]: ../../std/str/trait.FromStr.html#tymethod.from_str
-pub type ParseError = core::convert::Infallible;
-
 impl FromStr for String {
     type Err = core::convert::Infallible;
     #[inline]
     fn from_str(s: &str) -> Result<Self, ParseError> {
         Ok(Self::from(s))
-    }
-}
-
-/// A trait for converting a value to a `String`.
-///
-/// This trait is automatically implemented for any type which implements the
-/// [`Display`] trait. As such, `ToString` shouldn't be implemented directly:
-/// [`Display`] should be implemented instead, and you get the `ToString`
-/// implementation for free.
-///
-/// [`Display`]: ../../std/fmt/trait.Display.html
-pub trait ToString {
-    /// Converts the given value to a `String`.
-    ///
-    /// # Examples
-    ///
-    /// Basic usage:
-    ///
-    /// ```
-    /// # use alloc_wg::string::String;
-    /// # use alloc_wg::string::ToString;
-    /// let i = 5;
-    /// let five = String::from("5");
-    ///
-    /// assert_eq!(five, ToString::to_string(&i));
-    /// ```
-    fn to_string(&self) -> String;
-}
-
-/// # Panics
-///
-/// In this implementation, the `to_string` method panics
-/// if the `Display` implementation returns an error.
-/// This indicates an incorrect `Display` implementation
-/// since `fmt::Write for String` never returns an error itself.
-
-impl<T: fmt::Display + ?Sized> ToString for T {
-    #[inline]
-    fn to_string(&self) -> String {
-        use fmt::Write;
-        let mut buf = String::new();
-        buf.write_fmt(format_args!("{}", self))
-            .expect("a Display implementation returned an error unexpectedly");
-        buf.shrink_to_fit();
-        buf
     }
 }
 
