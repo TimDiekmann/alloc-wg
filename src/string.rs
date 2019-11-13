@@ -547,7 +547,7 @@ impl String {
 }
 
 impl<A: DeallocRef> String<A> {
-    /// Like `new` but parameterized over the choice of allocator for the returned `Vec`.
+    /// Like `new` but parameterized over the choice of allocator for the returned `String`.
     #[inline]
     pub fn new_in(a: A) -> Self {
         Self {
@@ -555,7 +555,7 @@ impl<A: DeallocRef> String<A> {
         }
     }
 
-    /// Like `with_capacity` but parameterized over the choice of allocator for the returned `Vec`.
+    /// Like `with_capacity` but parameterized over the choice of allocator for the returned `String`.
     ///
     /// # Panics
     /// Panics if the allocation fails.
@@ -580,7 +580,7 @@ impl<A: DeallocRef> String<A> {
         })
     }
 
-    /// Like `from_str` but parameterized over the choice of allocator for the returned `Vec`.
+    /// Like `from_str` but parameterized over the choice of allocator for the returned `String`.
     ///
     /// # Panics
     /// Panics if the allocation fails.
@@ -680,7 +680,7 @@ impl<A: DeallocRef> String<A> {
         }
     }
 
-    /// Like `from_utf8_lossy` but parameterized over the choice of allocator for the returned `Vec`.
+    /// Like `from_utf8_lossy` but parameterized over the choice of allocator for the returned `String`.
     ///
     /// # Panics
     ///
@@ -732,7 +732,7 @@ impl<A: DeallocRef> String<A> {
         Ok(res)
     }
 
-    /// Like `from_utf16` but parameterized over the choice of allocator for the returned `Vec`.
+    /// Like `from_utf16` but parameterized over the choice of allocator for the returned `String`.
     pub fn from_utf16_in(v: &[u16], a: A) -> Result<Self, FromUtf16Error>
     where
         A: ReallocRef<Error = crate::Never>,
@@ -780,7 +780,7 @@ impl<A: DeallocRef> String<A> {
         self.vec.into_raw_parts()
     }
 
-    /// Like `from_raw_parts` but parameterized over the choice of allocator for the returned `Vec`.
+    /// Like `from_raw_parts` but parameterized over the choice of allocator for the returned `String`.
     /// # Safety
     /// See `from_raw_parts`
     #[inline]
