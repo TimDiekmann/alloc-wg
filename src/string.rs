@@ -222,7 +222,7 @@ pub use liballoc::string::{ParseError, ToString};
 /// use std::mem;
 ///
 /// let story = String::from("Once upon a time...");
-// FIXME Update this when vec_into_raw_parts is stabilized
+/// # // FIXME Update this when vec_into_raw_parts is stabilized
 /// // Prevent automatically dropping the String's data
 /// let mut story = mem::ManuallyDrop::new(story);
 ///
@@ -236,11 +236,11 @@ pub use liballoc::string::{ParseError, ToString};
 /// // We can re-build a String out of ptr, len, and capacity. This is all
 /// // unsafe because we are responsible for making sure the components are
 /// // valid:
-/// let s = unsafe { String::from_raw_parts(ptr, len, capacity) } ;
+/// let s = unsafe { String::from_raw_parts(ptr, len, capacity) };
 ///
 /// assert_eq!(String::from("Once upon a time..."), s);
 /// ```
-/// 
+///
 /// [`as_ptr`]: #method.as_ptr
 /// [`len`]: #method.len
 /// [`capacity`]: #method.capacity
@@ -258,7 +258,7 @@ pub use liballoc::string::{ParseError, ToString};
 ///     println!("{}", s.capacity());
 /// }
 /// ```
-/// 
+///
 /// This will output the following:
 /// ```text
 /// 0
@@ -268,7 +268,7 @@ pub use liballoc::string::{ParseError, ToString};
 /// 20
 /// 40
 /// ```
-/// 
+///
 /// At first, we have no memory allocated at all, but as we append to the
 /// string, it increases its capacity appropriately. If we instead use the
 /// [`with_capacity`] method to allocate the correct capacity initially:
@@ -283,7 +283,7 @@ pub use liballoc::string::{ParseError, ToString};
 ///     println!("{}", s.capacity());
 /// }
 /// ```
-/// 
+///
 /// [`with_capacity`]: #method.with_capacity
 ///
 /// We end up with a different output:
@@ -295,7 +295,7 @@ pub use liballoc::string::{ParseError, ToString};
 /// 25
 /// 25
 /// ```
-/// 
+///
 /// Here, there's no need to allocate more memory inside the loop.
 ///
 /// [`&str`]: ../../std/primitive.str.html
