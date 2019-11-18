@@ -9,8 +9,7 @@ pub trait TryExtend<A> {
     /// Basic usage:
     ///
     /// ```
-    /// # use alloc_wg::vec;
-    /// use alloc_wg::iter::TryExtend;
+    /// use alloc_wg::{iter::TryExtend, vec};
     ///
     /// // You can extend a Vec<char> with some chars:
     /// let mut message = vec!['a', 'b', 'c'];

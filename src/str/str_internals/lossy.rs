@@ -1,8 +1,7 @@
 // Exact copy of core::str::lossy.rs
 
+use crate::{str, str::str_internals::utf8_char_width};
 use core::{mem, str as core_str};
-
-use crate::str;
 
 /// Lossy UTF-8 string.
 pub struct Utf8Lossy {
@@ -62,7 +61,7 @@ impl<'a> Iterator for Utf8LossyChunksIter<'a> {
 
             if byte < 128 {
             } else {
-                let w = str::utf8_char_width(byte);
+                let w = utf8_char_width(byte);
 
                 macro_rules! error {
                     () => {{

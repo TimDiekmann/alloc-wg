@@ -96,14 +96,18 @@ impl<D: DeallocRef> BorrowMut<str> for String<D> {
 /// Basic usage:
 ///
 /// ```
-/// # use alloc_wg::boxed::Box;
-/// use alloc_wg::alloc::Global;
+/// # // NOTE: Without nightly it's not possible to coerce unsized in downstream crates
+/// # #[cfg(not(feature = "coerce_unsized"))]
+/// # extern crate alloc;
+/// # #[cfg(not(feature = "coerce_unsized"))]
+/// # use alloc as alloc_wg;
+/// # #[cfg(feature = "coerce_unsized")]
+/// use alloc_wg::boxed::Box;
 ///
-/// let smile_utf8 = Box::try_new_in([226, 152, 186], Global)?;
+/// let smile_utf8 = Box::new([226, 152, 186]);
 /// let smile = unsafe { alloc_wg::str::from_boxed_utf8_unchecked(smile_utf8) };
 ///
 /// assert_eq!("☺", &*smile);
-/// # Ok::<(), alloc_wg::alloc::AllocErr>(())
 /// ```
 #[allow(clippy::missing_safety_doc)]
 #[inline]

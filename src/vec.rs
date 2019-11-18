@@ -10,7 +10,8 @@
 //!
 //! ```
 //! # #![allow(unused_variables)]
-//! # use alloc_wg::vec::Vec;
+//! use alloc_wg::vec::Vec;
+//!
 //! let v: Vec<i32> = Vec::new();
 //! ```
 //!
@@ -18,7 +19,8 @@
 //!
 //! ```
 //! # #![allow(unused_variables)]
-//! # use alloc_wg::{vec, vec::Vec};
+//! use alloc_wg::{vec, vec::Vec};
+//!
 //! let v: Vec<i32> = Vec::new();
 //!
 //! let v = vec![1, 2, 3, 4, 5];
@@ -30,7 +32,8 @@
 //! as needed):
 //!
 //! ```
-//! # use alloc_wg::vec;
+//! use alloc_wg::vec;
+//!
 //! let mut v = vec![1, 2];
 //!
 //! v.push(3);
@@ -40,7 +43,8 @@
 //!
 //! ```
 //! # #![allow(unused_variables)]
-//! # use alloc_wg::vec;
+//! use alloc_wg::vec;
+//!
 //! let mut v = vec![1, 2];
 //!
 //! let two = v.pop();
@@ -50,7 +54,8 @@
 //!
 //! ```
 //! # #![allow(unused_variables)]
-//! # use alloc_wg::vec;
+//! use alloc_wg::vec;
+//!
 //! let mut v = vec![1, 2, 3];
 //! let three = v[2];
 //! v[1] = v[1] + 5;
@@ -95,7 +100,8 @@ use crate::{alloc::DeallocRef, boxed::Box, raw_vec::RawVec};
 /// # Examples
 ///
 /// ```
-/// # use alloc_wg::vec::Vec;
+/// use alloc_wg::vec::Vec;
+///
 /// let mut vec = Vec::new();
 /// vec.push(1);
 /// vec.push(2);
@@ -120,7 +126,8 @@ use crate::{alloc::DeallocRef, boxed::Box, raw_vec::RawVec};
 /// The [`vec!`] macro is provided to make initialization more convenient:
 ///
 /// ```
-/// # use alloc_wg::vec;
+/// use alloc_wg::vec;
+///
 /// let mut vec = vec![1, 2, 3];
 /// vec.push(4);
 /// assert_eq!(vec, [1, 2, 3, 4]);
@@ -131,7 +138,8 @@ use crate::{alloc::DeallocRef, boxed::Box, raw_vec::RawVec};
 /// in separate steps, especially when initializing a vector of zeros:
 ///
 /// ```
-/// # use alloc_wg::{vec, vec::Vec};
+/// use alloc_wg::{vec, vec::Vec};
+///
 /// let vec = vec![0; 5];
 /// assert_eq!(vec, [0, 0, 0, 0, 0]);
 ///
@@ -143,7 +151,8 @@ use crate::{alloc::DeallocRef, boxed::Box, raw_vec::RawVec};
 /// Use a `Vec<T>` as an efficient stack:
 ///
 /// ```
-/// # use alloc_wg::vec::Vec;
+/// use alloc_wg::vec::Vec;
+///
 /// let mut stack = Vec::new();
 ///
 /// stack.push(1);
@@ -162,7 +171,8 @@ use crate::{alloc::DeallocRef, boxed::Box, raw_vec::RawVec};
 /// [`Index`] trait. An example will be more explicit:
 ///
 /// ```
-/// # use alloc_wg::vec;
+/// use alloc_wg::vec;
+///
 /// let v = vec![0, 2, 4, 6];
 /// println!("{}", v[1]); // it will display '2'
 /// ```
@@ -171,7 +181,8 @@ use crate::{alloc::DeallocRef, boxed::Box, raw_vec::RawVec};
 /// your software will panic! You cannot do this:
 ///
 /// ```should_panic
-/// # use alloc_wg::vec;
+/// use alloc_wg::vec;
+///
 /// let v = vec![0, 2, 4, 6];
 /// println!("{}", v[6]); // it will panic!
 /// ```
@@ -186,7 +197,8 @@ use crate::{alloc::DeallocRef, boxed::Box, raw_vec::RawVec};
 ///
 /// ```
 /// # #![allow(unused_variables)]
-/// # use alloc_wg::vec;
+/// use alloc_wg::vec;
+///
 /// fn read_slice(slice: &[usize]) {
 ///     // ...
 /// }
@@ -334,7 +346,8 @@ impl<T> Vec<T> {
     ///
     /// ```
     /// # #![allow(unused_variables)]
-    /// # use alloc_wg::vec::Vec;
+    /// use alloc_wg::vec::Vec;
+    ///
     /// let vec: Vec<i32> = Vec::new();
     /// ```
     #[inline]
@@ -361,7 +374,8 @@ impl<T> Vec<T> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec::Vec;
+    /// use alloc_wg::vec::Vec;
+    ///
     /// let mut vec = Vec::with_capacity(10);
     ///
     /// // The vector contains no items, even though it has capacity for more
@@ -438,7 +452,7 @@ impl<T> Vec<T> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
     /// use std::ptr;
     /// use std::mem;
     ///
@@ -590,7 +604,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::{vec, vec::Vec};
+    /// use alloc_wg::{vec, vec::Vec};
+    ///
     /// let v: Vec<i32> = vec![-1, 0, 1];
     ///
     /// let (ptr, len, cap) = v.into_raw_parts();
@@ -615,7 +630,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec::Vec;
+    /// use alloc_wg::vec::Vec;
+    ///
     /// let vec: Vec<i32> = Vec::with_capacity(10);
     /// assert_eq!(vec.capacity(), 10);
     /// ```
@@ -637,7 +653,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec![1];
     /// vec.reserve(10);
     /// assert!(vec.capacity() >= 11);
@@ -669,7 +686,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec![1];
     /// vec.reserve_exact(10);
     /// assert!(vec.capacity() >= 11);
@@ -699,10 +717,10 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec::Vec;
     /// use alloc_wg::{
     ///     alloc::{AbortAlloc, Global},
     ///     collections::CollectionAllocErr,
+    ///     vec::Vec,
     /// };
     ///
     /// fn process_data(data: &[u32]) -> Result<Vec<u32>, CollectionAllocErr<AbortAlloc<Global>>> {
@@ -744,10 +762,10 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec::Vec;
     /// use alloc_wg::{
     ///     alloc::{AbortAlloc, Global},
     ///     collections::CollectionAllocErr,
+    ///     vec::Vec,
     /// };
     ///
     /// fn process_data(data: &[u32]) -> Result<Vec<u32>, CollectionAllocErr<AbortAlloc<Global>>> {
@@ -780,7 +798,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec::Vec;
+    /// use alloc_wg::vec::Vec;
+    ///
     /// let mut vec = Vec::with_capacity(10);
     /// vec.extend([1, 2, 3].iter().cloned());
     /// assert_eq!(vec.capacity(), 10);
@@ -822,7 +841,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec::Vec;
+    /// use alloc_wg::vec::Vec;
+    ///
     /// let mut vec = Vec::with_capacity(10);
     /// vec.extend([1, 2, 3].iter().cloned());
     /// assert_eq!(vec.capacity(), 10);
@@ -861,7 +881,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     ///
     /// ```
     /// # #![allow(unused_variables)]
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let v = vec![1, 2, 3];
     ///
     /// let slice = v.into_boxed_slice();
@@ -926,7 +947,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// Truncating a five element vector to two elements:
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec![1, 2, 3, 4, 5];
     /// vec.truncate(2);
     /// assert_eq!(vec, [1, 2]);
@@ -936,7 +958,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// length:
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec![1, 2, 3];
     /// vec.truncate(8);
     /// assert_eq!(vec, [1, 2, 3]);
@@ -946,7 +969,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// method.
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec![1, 2, 3];
     /// vec.truncate(0);
     /// assert_eq!(vec, []);
@@ -984,7 +1008,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// use std::io::{self, Write};
     /// let buffer = vec![1, 2, 3, 5, 8];
     /// io::sink().write(buffer.as_slice()).unwrap();
@@ -1001,7 +1026,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// use std::io::{self, Read};
     /// let mut buffer = vec![0; 3];
     /// io::repeat(0b101).read_exact(buffer.as_mut_slice()).unwrap();
@@ -1025,7 +1051,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let x = vec![1, 2, 4];
     /// let x_ptr = x.as_ptr();
     ///
@@ -1060,7 +1087,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec::Vec;
+    /// use alloc_wg::vec::Vec;
+    ///
     /// // Allocate vector big enough for 4 elements.
     /// let size = 4;
     /// let mut x: Vec<i32> = Vec::with_capacity(size);
@@ -1114,7 +1142,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     ///
     /// ```no_run
     /// # #![allow(dead_code)]
-    /// # use alloc_wg::vec::Vec;
+    /// use alloc_wg::vec::Vec;
+    ///
     /// # // This is just a minimal skeleton for the doc example;
     /// # // don't use this as a starting point for a real library.
     /// # pub struct StreamWrapper { strm: *mut std::ffi::c_void }
@@ -1154,7 +1183,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// the inner vectors were not freed prior to the `set_len` call:
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec![vec![1, 0, 0], vec![0, 1, 0], vec![0, 0, 1]];
     /// // SAFETY:
     /// // 1. `old_len..0` is empty so no elements need to be initialized.
@@ -1186,7 +1216,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut v = vec!["foo", "bar", "baz", "qux"];
     ///
     /// assert_eq!(v.swap_remove(1), "bar");
@@ -1218,7 +1249,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec![1, 2, 3];
     /// vec.insert(1, 4);
     /// assert_eq!(vec, [1, 4, 2, 3]);
@@ -1276,7 +1308,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut v = vec![1, 2, 3];
     /// assert_eq!(v.remove(1), 2);
     /// assert_eq!(v, [1, 3]);
@@ -1311,7 +1344,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec![1, 2, 3, 4];
     /// vec.retain(|&x| x % 2 == 0);
     /// assert_eq!(vec, [2, 4]);
@@ -1320,7 +1354,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// The exact order may be useful for tracking external state, like an index.
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec![1, 2, 3, 4, 5];
     /// let keep = [false, true, true, false, true];
     /// let mut i = 0;
@@ -1343,7 +1378,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec![10, 20, 21, 30, 20];
     ///
     /// vec.dedup_by_key(|i| *i / 10);
@@ -1371,7 +1407,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec!["foo", "bar", "Bar", "baz", "bar"];
     ///
     /// vec.dedup_by(|a, b| a.eq_ignore_ascii_case(b));
@@ -1398,7 +1435,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec![1, 2];
     /// vec.push(3);
     /// assert_eq!(vec, [1, 2, 3]);
@@ -1444,7 +1482,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec![1, 2, 3];
     /// assert_eq!(vec.pop(), Some(3));
     /// assert_eq!(vec, [1, 2]);
@@ -1470,7 +1509,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut vec = vec![1, 2, 3];
     /// let mut vec2 = vec![4, 5, 6];
     /// vec.append(&mut vec2);
@@ -1537,7 +1577,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// # use alloc_wg::vec;
+    /// use alloc_wg::vec;
+    ///
     /// let mut v = vec![1, 2, 3];
     /// let u: Vec<_> = v.drain(1..).collect();
     /// assert_eq!(v, &[1]);
