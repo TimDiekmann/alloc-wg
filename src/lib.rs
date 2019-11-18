@@ -58,6 +58,8 @@
 #![cfg_attr(feature = "dropck_eyepatch", feature(dropck_eyepatch))]
 #![cfg_attr(feature = "coerce_unsized", feature(coerce_unsized))]
 #![cfg_attr(feature = "core_intrinsics", feature(core_intrinsics))]
+#![cfg_attr(feature = "never_type", feature(never_type))]
+#![cfg_attr(feature = "nightly", feature(str_internals))]
 #![cfg_attr(feature = "dispatch_from_dyn", feature(dispatch_from_dyn))]
 #![cfg_attr(
     any(feature = "coerce_unsized", feature = "dispatch_from_dyn"),
@@ -111,10 +113,10 @@
 pub mod alloc;
 pub mod boxed;
 pub mod clone;
-pub mod collect;
 pub mod collections;
+pub mod iter;
 pub mod raw_vec;
-mod str;
+pub mod str;
 pub mod string;
 pub mod vec;
 
@@ -122,34 +124,58 @@ extern crate alloc as liballoc;
 
 mod unchecked_unwrap;
 pub use self::unchecked_unwrap::*;
+pub use liballoc::{borrow, fmt, rc, slice, sync};
 
-pub type Never = core::convert::Infallible;
+#[cfg(feature = "never_type")]
+type Never = !;
+#[cfg(not(feature = "never_type"))]
+type Never = core::convert::Infallible;
 
 #[macro_export]
 macro_rules! vec {
-    (in $alloc:expr; $elem:expr; $n:expr) => {{
-        $crate::vec::try_from_elem_in($elem, $n, $alloc)
-    }};
-    (in $alloc:expr) => {
-        $crate::vec::Vec::new_in($alloc)
-    };
-    (in $alloc:expr; $($x:expr),*) => {{
-        (|| -> Result<$crate::vec::Vec<_,_>, $crate::collections::CollectionAllocErr<_>> {
-            let mut v = $crate::vec::Vec::new_in($alloc);
-            $( v.try_push($x)?; )*
-            Ok(v)
-        })()
-    }};
-    (in $alloc:expr; $(, $x:expr,)*) => ($crate::vec![in $alloc; $($x),*]);
-    ($elem:expr; $n:expr) => (
-        $crate::vec::from_elem($elem, $n)
-    );
     ($($x:expr),*) => ({
         let mut v = $crate::vec::Vec::new();
         $( v.push($x); )*
         v
     });
     ($($x:expr,)*) => ($crate::vec![$($x),*]);
+    ($elem:expr; $n:expr) => (
+        $crate::vec::from_elem($elem, $n)
+    );
+    (in $alloc:expr) => {
+        $crate::vec::Vec::new_in($alloc)
+    };
+    (in $alloc:expr; $($x:expr),*) => {{
+        let mut v = $crate::vec::Vec::new_in($alloc);
+        $( v.push($x); )*
+        v
+    }};
+    (in $alloc:expr; $($x:expr,)*) => ($crate::vec![in $alloc; $($x),*]);
+    (in $alloc:expr; $elem:expr; $n:expr) => {{
+        $crate::vec::from_elem_in($elem, $n, $alloc)
+    }};
+    (try $($x:expr),*) => {{
+        (|| -> Result<$crate::vec::Vec<_,_>, $crate::collections::CollectionAllocErr<_>> {
+            let mut v = $crate::vec::Vec::new();
+            $( v.try_push($x)?; )*
+            Ok(v)
+        })()
+    }};
+    (try $($x:expr,)*) => ($crate::vec![try $($x),*]);
+    (try $elem:expr; $n:expr) => {{
+        $crate::vec::try_from_elem_in($elem, $n, $crate::alloc::AbortAlloc<$crate::alloc::Global>)
+    }};
+    (try in $alloc:expr; $($x:expr),*) => {{
+        (|| -> Result<$crate::vec::Vec<_,_>, $crate::collections::CollectionAllocErr<_>> {
+            let mut v = $crate::vec::Vec::new_in($alloc);
+            $( v.try_push($x)?; )*
+            Ok(v)
+        })()
+    }};
+    (try in $alloc:expr; $($x:expr,)*) => ($crate::vec![try in $alloc; $($x),*]);
+    (try in $alloc:expr; $elem:expr; $n:expr) => {{
+        $crate::vec::try_from_elem_in($elem, $n, $alloc)
+    }};
 }
 
 #[macro_export]

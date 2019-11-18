@@ -70,7 +70,7 @@
 //!
 //! [dereferencing]: core::ops::Deref
 //! [`Box`]: crate::boxed::Box
-//! [`Box<T>`]: crate::boxed::Box
+//! [`Box<T, A>`]: crate::boxed::Box
 //! [`Box::<T>::from_raw(value)`]: crate::boxed::Box::from_raw
 //! [`Box::<T>::from_raw(value, alloc)`]: crate::boxed::Box::from_raw_in
 //! [`Box::<T>::into_raw`]: crate::boxed::Box::into_raw

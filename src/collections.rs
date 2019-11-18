@@ -1,4 +1,16 @@
+//! Collection types.
+
 use crate::alloc::{AllocRef, CapacityOverflow, LayoutErr, NonZeroLayout};
+pub use liballoc::collections::{binary_heap, btree_map, btree_set, linked_list, vec_deque};
+
+#[doc(no_inline)]
+pub use self::{
+    binary_heap::BinaryHeap,
+    btree_map::BTreeMap,
+    btree_set::BTreeSet,
+    linked_list::LinkedList,
+    vec_deque::VecDeque,
+};
 
 /// Augments `AllocErr` with a `CapacityOverflow` variant.
 #[derive(Clone, Debug, Eq, PartialEq)]

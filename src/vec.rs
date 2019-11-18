@@ -8,14 +8,16 @@
 //!
 //! You can explicitly create a [`Vec<T>`] with [`new`]:
 //!
-//! ```unused_variables
+//! ```
+//! # #![allow(unused_variables)]
 //! # use alloc_wg::vec::Vec;
 //! let v: Vec<i32> = Vec::new();
 //! ```
 //!
 //! ...or by using the [`vec!`] macro:
 //!
-//! ```unused_variables
+//! ```
+//! # #![allow(unused_variables)]
 //! # use alloc_wg::{vec, vec::Vec};
 //! let v: Vec<i32> = Vec::new();
 //!
@@ -36,7 +38,8 @@
 //!
 //! Popping values works in much the same way:
 //!
-//! ```unused_variables
+//! ```
+//! # #![allow(unused_variables)]
 //! # use alloc_wg::vec;
 //! let mut v = vec![1, 2];
 //!
@@ -45,7 +48,8 @@
 //!
 //! Vectors also support indexing (through the [`Index`] and [`IndexMut`] traits):
 //!
-//! ```unused_variables
+//! ```
+//! # #![allow(unused_variables)]
 //! # use alloc_wg::vec;
 //! let mut v = vec![1, 2, 3];
 //! let three = v[2];
@@ -80,8 +84,8 @@ use core::{
 
 use crate::{
     alloc::{AbortAlloc, AllocRef, Global, ReallocRef},
-    collect::TryExtend,
     collections::CollectionAllocErr,
+    iter::TryExtend,
 };
 
 use crate::{alloc::DeallocRef, boxed::Box, raw_vec::RawVec};
@@ -180,7 +184,8 @@ use crate::{alloc::DeallocRef, boxed::Box, raw_vec::RawVec};
 /// A `Vec` can be mutable. Slices, on the other hand, are read-only objects.
 /// To get a slice, use `&`. Example:
 ///
-/// ```unused_variables
+/// ```
+/// # #![allow(unused_variables)]
 /// # use alloc_wg::vec;
 /// fn read_slice(slice: &[usize]) {
 ///     // ...
@@ -327,9 +332,10 @@ impl<T> Vec<T> {
     ///
     /// # Examples
     ///
-    /// ```unused_variables, unused_mut
+    /// ```
+    /// # #![allow(unused_variables)]
     /// # use alloc_wg::vec::Vec;
-    /// let mut vec: Vec<i32> = Vec::new();
+    /// let vec: Vec<i32> = Vec::new();
     /// ```
     #[inline]
     #[must_use]
@@ -853,7 +859,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     ///
     /// # Examples
     ///
-    /// ```unused_variables
+    /// ```
+    /// # #![allow(unused_variables)]
     /// # use alloc_wg::vec;
     /// let v = vec![1, 2, 3];
     ///
@@ -2315,7 +2322,8 @@ impl<T, A: DeallocRef> Vec<T, A> {
     ///
     /// Using this method is equivalent to the following code:
     ///
-    /// ```unused_variables
+    /// ```
+    /// # #![allow(unused_variables)]
     /// # use alloc_wg::vec;
     /// # let some_predicate = |x: &mut i32| { *x == 2 || *x == 3 || *x == 6 };
     /// # let mut vec = vec![1, 2, 3, 4, 5, 6];

@@ -10,13 +10,15 @@ pub trait TryExtend<A> {
     ///
     /// ```
     /// # use alloc_wg::vec;
-    /// use alloc_wg::collect::TryExtend;
+    /// use alloc_wg::iter::TryExtend;
+    ///
     /// // You can extend a Vec<char> with some chars:
     /// let mut message = vec!['a', 'b', 'c'];
     ///
-    /// message.try_extend(['d', 'e', 'f'].iter()).unwrap();
+    /// message.try_extend(['d', 'e', 'f'].iter())?;
     ///
     /// assert_eq!(vec!['a', 'b', 'c', 'd', 'e', 'f'], message);
+    /// # Ok::<(), alloc_wg::collections::CollectionAllocErr<alloc_wg::alloc::AbortAlloc<alloc_wg::alloc::Global>>>(())
     /// ```
     fn try_extend<T: IntoIterator<Item = A>>(&mut self, iter: T) -> Result<(), Self::Err>;
 }

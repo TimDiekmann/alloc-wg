@@ -10,7 +10,8 @@
 //!
 //! There are multiple ways to create a new [`String`] from a string literal:
 //!
-//! ```unused_variables
+//! ```
+//! # #![allow(unused_variables)]
 //! # use alloc_wg::string::String;
 //! let s = String::from("Hello");
 //! let s = String::from("world");
@@ -22,7 +23,8 @@
 //!
 //! [`String`]: struct.String.html
 //!
-//! ```unused_variables
+//! ```
+//! # #![allow(unused_variables)]
 //! # use alloc_wg::string::String;
 //! let s = String::from("Hello");
 //!
@@ -68,8 +70,8 @@ use core::{
 use crate::{
     alloc::{AbortAlloc, AllocRef, DeallocRef, Global, ReallocRef},
     boxed::Box,
-    collect::TryExtend,
     collections::CollectionAllocErr,
+    iter::TryExtend,
     str::{from_boxed_utf8_unchecked, lossy},
     vec::Vec,
 };
@@ -91,7 +93,8 @@ pub use liballoc::string::{ParseError, ToString};
 ///
 /// You can create a `String` from a literal string with [`String::from`]:
 ///
-/// ```unused_variables
+/// ```
+/// # #![allow(unused_variables)]
 /// # use alloc_wg::string::String;
 /// let hello = String::from("Hello, world!");
 /// ```
@@ -159,7 +162,8 @@ pub use liballoc::string::{ParseError, ToString};
 /// methods. In addition, this means that you can pass a `String` to a
 /// function which takes a [`&str`] by using an ampersand (`&`):
 ///
-/// ```unused_variables
+/// ```
+/// # #![allow(unused_variables)]
 /// # use alloc_wg::string::String;
 ///
 /// fn takes_str(s: &str) {}
@@ -386,7 +390,8 @@ impl String {
     ///
     /// Basic usage:
     ///
-    /// ```unused_variables
+    /// ```
+    /// # #![allow(unused_variables)]
     /// # use alloc_wg::string::String;
     /// let s = String::new();
     /// ```
@@ -1840,7 +1845,8 @@ impl<A: DeallocRef> String<A> {
     ///
     /// Basic usage:
     ///
-    /// ```unused_variables
+    /// ```
+    /// # #![allow(unused_variables)]
     /// # use alloc_wg::string::String;
     /// let s = String::from("hello");
     ///
@@ -2216,7 +2222,8 @@ impl<A: DeallocRef> hash::Hash for String<A> {
 ///
 /// Concatenating two `String`s takes the first by value and borrows the second:
 ///
-/// ```unused_variables
+/// ```
+/// # #![allow(unused_variables)]
 /// # use alloc_wg::string::String;
 /// let a = String::from("hello");
 /// let b = String::from(" world");
@@ -2226,7 +2233,8 @@ impl<A: DeallocRef> hash::Hash for String<A> {
 ///
 /// If you want to keep using the first `String`, you can clone it and append to the clone instead:
 ///
-/// ```unused_variables
+/// ```
+/// # #![allow(unused_variables)]
 /// # use alloc_wg::string::String;
 /// let a = String::from("hello");
 /// let b = String::from(" world");
@@ -2236,8 +2244,9 @@ impl<A: DeallocRef> hash::Hash for String<A> {
 ///
 /// Concatenating `&str` slices can be done by converting the first to a `String`:
 ///
-/// ```unused_variables
-/// # use alloc_wg::string::ToString;
+/// ```
+/// # #![allow(unused_variables)]
+/// # use alloc_wg::string::String;
 /// let a = "hello";
 /// let b = " world";
 /// let c = String::from(a) + b;

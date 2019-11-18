@@ -12,7 +12,7 @@ use core::{
     num::NonZeroUsize,
     ptr::{self, NonNull},
 };
-pub use liballoc::alloc::{alloc, alloc_zeroed, dealloc, realloc};
+pub use liballoc::alloc::{alloc, alloc_zeroed, dealloc, handle_alloc_error, realloc, Layout};
 #[cfg(feature = "std")]
 use std::alloc::System;
 
