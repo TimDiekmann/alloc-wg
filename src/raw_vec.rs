@@ -294,6 +294,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// Gets the capacity of the allocation.
     ///
     /// This will always be `usize::MAX` if `T` is zero-sized.
+    #[allow(clippy::inline_always)]
     #[inline(always)]
     pub fn capacity(&self) -> usize {
         if mem::size_of::<T>() == 0 {

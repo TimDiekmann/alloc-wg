@@ -130,6 +130,7 @@ impl<T> Box<T> {
     /// # #[allow(unused_variables)]
     /// let five = Box::new(5);
     /// ```
+    #[allow(clippy::inline_always)]
     #[inline(always)]
     #[must_use]
     pub fn new(x: T) -> Self {
@@ -154,6 +155,7 @@ impl<T> Box<T> {
     ///
     /// assert_eq!(*five, 5)
     /// ```
+    #[allow(clippy::inline_always)]
     #[inline(always)]
     #[must_use]
     pub fn new_uninit() -> Box<mem::MaybeUninit<T>> {
@@ -162,6 +164,7 @@ impl<T> Box<T> {
 
     /// Constructs a new `Pin<Box<T>>`. If `T` does not implement `Unpin`, then
     /// `x` will be pinned in memory and unable to be moved.
+    #[allow(clippy::inline_always)]
     #[inline(always)]
     pub fn pin(x: T) -> Pin<Self> {
         Self::new(x).into()
@@ -185,6 +188,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # #[allow(unused_variables)]
     /// let five = Box::new_in(5, AbortAlloc(Global));
     /// ```
+    #[allow(clippy::inline_always)]
     #[inline(always)]
     pub fn new_in(x: T, a: A) -> Self
     where
@@ -240,6 +244,7 @@ impl<T, A: AllocRef> Box<T, A> {
     ///
     /// assert_eq!(*five, 5)
     /// ```
+    #[allow(clippy::inline_always)]
     #[inline(always)]
     pub fn new_uninit_in(a: A) -> Box<mem::MaybeUninit<T>, A>
     where
@@ -279,6 +284,7 @@ impl<T, A: AllocRef> Box<T, A> {
 
     /// Constructs a new `Pin<Box<T, A>>` with the specified allocator. If `T` does not implement
     /// `Unpin`, then `x` will be pinned in memory and unable to be moved.
+    #[allow(clippy::inline_always)]
     #[inline(always)]
     pub fn pin_in(x: T, a: A) -> Pin<Self>
     where
@@ -317,6 +323,7 @@ impl<T> Box<[T]> {
     ///
     /// assert_eq!(*values, [1, 2, 3]);
     /// ```
+    #[allow(clippy::inline_always)]
     #[inline(always)]
     #[must_use]
     pub fn new_uninit_slice(len: usize) -> Box<[mem::MaybeUninit<T>]> {
@@ -349,6 +356,7 @@ impl<T, A: AllocRef> Box<[T], A> {
     ///
     /// assert_eq!(*values, [1, 2, 3]);
     /// ```
+    #[allow(clippy::inline_always)]
     #[inline(always)]
     pub fn new_uninit_slice_in(len: usize, a: A) -> Box<[mem::MaybeUninit<T>], A>
     where
@@ -515,6 +523,7 @@ impl<T: ?Sized> Box<T> {
     /// ```
     ///
     /// [memory layout]: index.html#memory-layout
+    #[allow(clippy::inline_always)]
     #[inline(always)]
     pub unsafe fn from_raw(raw: *mut T) -> Self {
         Self::from_raw_in(raw, AbortAlloc(Global))
