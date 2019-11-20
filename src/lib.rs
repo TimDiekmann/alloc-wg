@@ -123,7 +123,7 @@ pub mod vec;
 extern crate alloc as liballoc;
 
 mod unchecked_unwrap;
-pub use self::unchecked_unwrap::*;
+use self::unchecked_unwrap::*;
 pub use liballoc::{borrow, fmt, rc, slice, sync};
 
 #[cfg(feature = "never_type")]
