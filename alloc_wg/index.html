@@ -1,0 +1,60 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `alloc_wg` crate."><meta name="keywords" content="rust, rustlang, rust-lang, alloc_wg"><title>alloc_wg - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../dark.css"><link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle"><script src="../storage.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="shortcut icon" href="../favicon.ico"><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../alloc_wg/index.html'><div class='logo-container'><img src='../rust-logo.png' alt='logo'></div></a><p class='location'>Crate alloc_wg</p><div class="sidebar-elems"><a id='all-types' href='all.html'><p>See all alloc_wg's items</p></a><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#macros">Macros</a></li><li><a href="#traits">Traits</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'alloc_wg', ty: 'mod', relpath: '../'};</script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../src/alloc_wg/lib.rs.html#1-195' title='goto source code'>[src]</a></span><span class='in-band'>Crate <a class="mod" href=''>alloc_wg</a></span></h1><div class='docblock'><p>An attempt to collect several proposals of <a href="https://github.com/rust-lang/wg-allocators">rust-lang/wg-allocators</a> into a
+MVP.</p>
+<h2 id="changes-regarding-the-current-alloc-trait" class="section-header"><a href="#changes-regarding-the-current-alloc-trait">Changes regarding the current <code>Alloc</code> trait</a></h2>
+<ul>
+<li>
+<p>The first thing to notice is, that <a href="https://doc.rust-lang.org/1.38.0/alloc/alloc/trait.Alloc.html"><code>Alloc</code></a> was renamed to <a href="../alloc_wg/alloc/trait.AllocRef.html"><code>AllocRef</code></a> in order to show that they are typically
+implemented for a reference or smart pointer or ZST, not directly for the type that actually holds the allocator’s
+state.</p>
+<p>Issue on WG repository: <a href="https://github.com/rust-lang/wg-allocators/issues/8">rust-lang/wg-allocators#8</a></p>
+</li>
+<li>
+<p><a href="../alloc_wg/alloc/trait.AllocRef.html"><code>AllocRef</code></a> was split up into <a href="../alloc_wg/alloc/trait.AllocRef.html"><code>AllocRef</code></a>, <a href="../alloc_wg/alloc/trait.DeallocRef.html"><code>DeallocRef</code></a>, and <a href="../alloc_wg/alloc/trait.ReallocRef.html"><code>ReallocRef</code></a> to make more flexible allocators
+possible.</p>
+<p>Issue: <a href="https://github.com/rust-lang/wg-allocators/issues/9">rust-lang/wg-allocators#9</a></p>
+</li>
+<li>
+<p>The allocators has to be associated with <a href="../alloc_wg/alloc/trait.BuildAllocRef.html"><code>BuildAllocRef</code></a>. It is related to the allocator traits similar how
+<a href="https://doc.rust-lang.org/1.38.0/core/hash/trait.BuildHasher.html"><code>BuildHasher</code></a> is related to <a href="https://doc.rust-lang.org/1.38.0/core/hash/trait.Hasher.html"><code>Hasher</code></a>. Although the signatures are different, it makes an even more flexible
+allocator design possible.</p>
+<p>Issue: <a href="https://github.com/rust-lang/wg-allocators/issues/12">rust-lang/wg-allocators#12</a></p>
+</li>
+<li>
+<p>Added an associative error type to <a href="../alloc_wg/alloc/trait.AllocRef.html"><code>AllocRef</code></a>. Besides adding the possibility of returning additional information on
+allocation failure, it's also possible to split the usage of the <a href="../alloc_wg/alloc/trait.AllocRef.html"><code>AllocRef</code></a> into a fallible and an infallible case.
+Personally I think this is a pretty big deal, as kernel programmer can rely on allocation, which will never fail. If
+an allocation can fail, only a <code>try_*_in</code> method may be available. To maintain backwards compatibility, <a href="../alloc_wg/alloc/struct.AbortAlloc.html"><code>AbortAlloc</code></a>
+was introduced. <a href="../alloc_wg/alloc/struct.AbortAlloc.html"><code>AbortAlloc</code></a> wraps another allocator, but aborts on OOM thus <code>AbortAlloc&lt;Global&gt;</code> may be used as
+default allocator for <a href="../alloc_wg/boxed/struct.Box.html"><code>Box</code></a> or <code>Vec</code>. To realize this, <a href="../alloc_wg/alloc/struct.AbortAlloc.html"><code>AbortAlloc</code></a> implements <code>AllocRef&lt;Error=!&gt;</code>.</p>
+<p>Issue: <a href="https://github.com/rust-lang/wg-allocators/issues/23">rust-lang/wg-allocators#23</a></p>
+</li>
+<li>
+<p>The new layout type <a href="../alloc_wg/alloc/struct.NonZeroLayout.html"><code>NonZeroLayout</code></a> was introduced. Currently, implementors of <a href="https://doc.rust-lang.org/1.38.0/alloc/alloc/trait.Alloc.html"><code>Alloc</code></a> can chose to allow
+zero-sized allocation so in a generic context it's impossible to rely on this, so banning zero-sized allocation is a
+possible step to prevent this. This also removes <code>unsafe</code> from <a href="../alloc_wg/alloc/trait.AllocRef.html#tymethod.alloc"><code>AllocRef::alloc</code></a> and <a href="../alloc_wg/alloc/trait.AllocRef.html#method.alloc_zeroed"><code>AllocRef::alloc_zeroed</code></a>, and
+unlocks the possibility to move the extension API like <code>alloc_array</code> into a separate trait.</p>
+<p>Issue: <a href="https://github.com/rust-lang/wg-allocators/issues/16">rust-lang/wg-allocators#16</a></p>
+</li>
+<li>
+<p>Support reallocating to a different alignment.</p>
+<p>Issue: <a href="https://github.com/rust-lang/wg-allocators/issues/5">rust-lang/wg-allocators#5</a></p>
+</li>
+</ul>
+</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table><tr class='module-item'><td><a class="mod" href="alloc/index.html" title='alloc_wg::alloc mod'>alloc</a></td><td class='docblock-short'></td></tr><tr class='module-item'><td><a class="mod" href="borrow/index.html" title='alloc_wg::borrow mod'>borrow</a></td><td class='docblock-short'><p>A module for working with borrowed data.</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="boxed/index.html" title='alloc_wg::boxed mod'>boxed</a></td><td class='docblock-short'><p>A pointer type for heap allocation.</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="clone/index.html" title='alloc_wg::clone mod'>clone</a></td><td class='docblock-short'></td></tr><tr class='module-item'><td><a class="mod" href="collections/index.html" title='alloc_wg::collections mod'>collections</a></td><td class='docblock-short'><p>Collection types.</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="fmt/index.html" title='alloc_wg::fmt mod'>fmt</a></td><td class='docblock-short'><p>Utilities for formatting and printing <code>String</code>s.</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="iter/index.html" title='alloc_wg::iter mod'>iter</a></td><td class='docblock-short'></td></tr><tr class='module-item'><td><a class="mod" href="raw_vec/index.html" title='alloc_wg::raw_vec mod'>raw_vec</a></td><td class='docblock-short'></td></tr><tr class='module-item'><td><a class="mod" href="rc/index.html" title='alloc_wg::rc mod'>rc</a></td><td class='docblock-short'><p>Single-threaded reference-counting pointers. 'Rc' stands for 'Reference
+Counted'.</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="slice/index.html" title='alloc_wg::slice mod'>slice</a></td><td class='docblock-short'><p>A dynamically-sized view into a contiguous sequence, <code>[T]</code>.</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="str/index.html" title='alloc_wg::str mod'>str</a></td><td class='docblock-short'><p>Unicode string slices.</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="string/index.html" title='alloc_wg::string mod'>string</a></td><td class='docblock-short'><p>A UTF-8 encoded, growable string.</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="sync/index.html" title='alloc_wg::sync mod'>sync</a></td><td class='docblock-short'><p>Thread-safe reference-counting pointers.</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="vec/index.html" title='alloc_wg::vec mod'>vec</a></td><td class='docblock-short'><p>A contiguous growable array type with heap-allocated contents, written
+<code>Vec&lt;T&gt;</code>.</p>
+</td></tr></table><h2 id='macros' class='section-header'><a href="#macros">Macros</a></h2>
+<table><tr class='module-item'><td><a class="macro" href="macro.format.html" title='alloc_wg::format macro'>format</a></td><td class='docblock-short'></td></tr><tr class='module-item'><td><a class="macro" href="macro.vec.html" title='alloc_wg::vec macro'>vec</a></td><td class='docblock-short'></td></tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table><tr class='module-item'><td><a class="trait" href="trait.UncheckedOptionExt.html" title='alloc_wg::UncheckedOptionExt trait'>UncheckedOptionExt</a></td><td class='docblock-short'><p>An extension trait for <code>Option&lt;T&gt;</code> providing unchecked unwrapping.</p>
+</td></tr><tr class='module-item'><td><a class="trait" href="trait.UncheckedResultExt.html" title='alloc_wg::UncheckedResultExt trait'>UncheckedResultExt</a></td><td class='docblock-short'><p>An extension trait for <code>Result&lt;T, E&gt;</code> providing unchecked unwrapping.</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../";window.currentCrate = "alloc_wg";</script><script src="../aliases.js"></script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>
