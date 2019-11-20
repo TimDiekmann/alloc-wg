@@ -930,6 +930,7 @@
 <span id="930">930</span>
 <span id="931">931</span>
 <span id="932">932</span>
+<span id="933">933</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">alloc</span>::{
@@ -1227,6 +1228,7 @@
     <span class="doccomment">/// Gets the capacity of the allocation.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// This will always be `usize::MAX` if `T` is zero-sized.</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">inline_always</span>)]</span>
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">capacity</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
         <span class="kw">if</span> <span class="ident">mem</span>::<span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {

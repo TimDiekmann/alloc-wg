@@ -1424,6 +1424,15 @@
 <span id="1424">1424</span>
 <span id="1425">1425</span>
 <span id="1426">1426</span>
+<span id="1427">1427</span>
+<span id="1428">1428</span>
+<span id="1429">1429</span>
+<span id="1430">1430</span>
+<span id="1431">1431</span>
+<span id="1432">1432</span>
+<span id="1433">1433</span>
+<span id="1434">1434</span>
+<span id="1435">1435</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! A pointer type for heap allocation.</span>
 <span class="doccomment">//!</span>
@@ -1557,6 +1566,7 @@
     <span class="doccomment">/// # #[allow(unused_variables)]</span>
     <span class="doccomment">/// let five = Box::new(5);</span>
     <span class="doccomment">/// ```</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">inline_always</span>)]</span>
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">x</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -1581,6 +1591,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// assert_eq!(*five, 5)</span>
     <span class="doccomment">/// ```</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">inline_always</span>)]</span>
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_uninit</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">mem</span>::<span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
@@ -1589,6 +1600,7 @@
 
     <span class="doccomment">/// Constructs a new `Pin&lt;Box&lt;T&gt;&gt;`. If `T` does not implement `Unpin`, then</span>
     <span class="doccomment">/// `x` will be pinned in memory and unable to be moved.</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">inline_always</span>)]</span>
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">pin</span>(<span class="ident">x</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Pin</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">x</span>).<span class="ident">into</span>()
@@ -1612,6 +1624,7 @@
     <span class="doccomment">/// # #[allow(unused_variables)]</span>
     <span class="doccomment">/// let five = Box::new_in(5, AbortAlloc(Global));</span>
     <span class="doccomment">/// ```</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">inline_always</span>)]</span>
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_in</span>(<span class="ident">x</span>: <span class="ident">T</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
@@ -1667,6 +1680,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// assert_eq!(*five, 5)</span>
     <span class="doccomment">/// ```</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">inline_always</span>)]</span>
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_uninit_in</span>(<span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">mem</span>::<span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">A</span><span class="op">&gt;</span>
     <span class="kw">where</span>
@@ -1706,6 +1720,7 @@
 
     <span class="doccomment">/// Constructs a new `Pin&lt;Box&lt;T, A&gt;&gt;` with the specified allocator. If `T` does not implement</span>
     <span class="doccomment">/// `Unpin`, then `x` will be pinned in memory and unable to be moved.</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">inline_always</span>)]</span>
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">pin_in</span>(<span class="ident">x</span>: <span class="ident">T</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Pin</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>
     <span class="kw">where</span>
@@ -1744,6 +1759,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// assert_eq!(*values, [1, 2, 3]);</span>
     <span class="doccomment">/// ```</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">inline_always</span>)]</span>
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_uninit_slice</span>(<span class="ident">len</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">mem</span>::<span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>]<span class="op">&gt;</span> {
@@ -1776,6 +1792,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// assert_eq!(*values, [1, 2, 3]);</span>
     <span class="doccomment">/// ```</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">inline_always</span>)]</span>
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_uninit_slice_in</span>(<span class="ident">len</span>: <span class="ident">usize</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">mem</span>::<span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>], <span class="ident">A</span><span class="op">&gt;</span>
     <span class="kw">where</span>
@@ -1942,6 +1959,7 @@
     <span class="doccomment">/// ```</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [memory layout]: index.html#memory-layout</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">inline_always</span>)]</span>
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_raw</span>(<span class="ident">raw</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span>::<span class="ident">from_raw_in</span>(<span class="ident">raw</span>, <span class="ident">AbortAlloc</span>(<span class="ident">Global</span>))
