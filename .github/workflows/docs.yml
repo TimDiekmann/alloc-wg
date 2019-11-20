@@ -11,9 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Rust
-          run: |
-            rustup set profile minimal
-            rustup default nightly
+        run: |
+          rustup set profile minimal
+          rustup default nightly
 
       - name: Checkout source code
         uses: actions/checkout@master
