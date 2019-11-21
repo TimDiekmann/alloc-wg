@@ -1,6 +1,5 @@
 use crate::{
     alloc::{
-        AbortAlloc,
         AllocRef,
         BuildAllocRef,
         CapacityOverflow,
@@ -51,7 +50,7 @@ use core::{
 /// field. This allows zero-sized types to not be special-cased by consumers of
 /// this type.
 // Using `NonNull` + `PhantomData` instead of `Unique` to stay on stable as long as possible
-pub struct RawVec<T, A: DeallocRef = AbortAlloc<Global>> {
+pub struct RawVec<T, A: DeallocRef = Global> {
     ptr: Unique<T>,
     capacity: usize,
     build_alloc: A::BuildAlloc,
@@ -89,7 +88,7 @@ impl<T> RawVec<T> {
             ptr: Unique::empty(),
             // FIXME(mark-i-m): use `cap` when ifs are allowed in const
             capacity: [0, !0][(mem::size_of::<T>() == 0) as usize],
-            build_alloc: AbortAlloc(Global),
+            build_alloc: Global,
         }
     }
 
@@ -110,7 +109,7 @@ impl<T> RawVec<T> {
     #[inline]
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity_in(capacity, AbortAlloc(Global))
+        Self::with_capacity_in(capacity, Global)
     }
 
     /// Like `with_capacity`, but guarantees the buffer is zeroed.
@@ -126,7 +125,7 @@ impl<T> RawVec<T> {
     #[inline]
     #[must_use]
     pub fn with_capacity_zeroed(capacity: usize) -> Self {
-        Self::with_capacity_zeroed_in(capacity, AbortAlloc(Global))
+        Self::with_capacity_zeroed_in(capacity, Global)
     }
 
     /// Reconstitutes a `RawVec` from a pointer, and capacity.
@@ -138,7 +137,7 @@ impl<T> RawVec<T> {
     /// If the ptr and capacity come from a `RawVec` created with `Global`, then this is guaranteed.
     #[inline]
     pub unsafe fn from_raw_parts(ptr: *mut T, capacity: usize) -> Self {
-        Self::from_raw_parts_in(ptr, capacity, AbortAlloc(Global))
+        Self::from_raw_parts_in(ptr, capacity, Global)
     }
 }
 
@@ -163,7 +162,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef,
     {
         match Self::try_with_capacity_in(capacity, a) {
             Ok(vec) => vec,
@@ -198,7 +197,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn with_capacity_zeroed_in(capacity: usize, a: A) -> Self
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef,
     {
         match Self::try_with_capacity_zeroed_in(capacity, a) {
             Ok(vec) => vec,
@@ -412,7 +411,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// ```
     pub fn double(&mut self)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef,
     {
         match self.try_double() {
             Ok(_) => (),
@@ -582,7 +581,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// ```
     pub fn reserve(&mut self, used_capacity: usize, needed_extra_capacity: usize)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef,
     {
         match self.try_reserve(used_capacity, needed_extra_capacity) {
             Ok(vec) => vec,
@@ -625,7 +624,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn reserve_exact(&mut self, used_capacity: usize, needed_extra_capacity: usize)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef,
     {
         match self.try_reserve_exact(used_capacity, needed_extra_capacity) {
             Ok(_) => (),
@@ -727,7 +726,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// Panics if the given amount is *larger* than the current capacity.
     pub fn shrink_to_fit(&mut self, amount: usize)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef,
     {
         match self.try_shrink_to_fit(amount) {
             Ok(_) => (),

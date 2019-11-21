@@ -5,7 +5,7 @@ pub trait CloneIn<A: AllocRef>: Sized {
 
     fn clone_in(&self, a: A) -> Self::Cloned
     where
-        A: AllocRef<Error = !>;
+        A: AllocRef;
 
     fn try_clone_in(&self, a: A) -> Result<Self::Cloned, A::Error>;
 }

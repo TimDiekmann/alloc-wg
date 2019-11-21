@@ -1,7 +1,14 @@
 # v0.7
 
 - Add `Vec`
-- **Breaking Change**: Change Parameter from `B: BuildAlloc` to `A: DeallocRef` to support type inference
+- Add `String`
+
+**Breaking Changes**: 
+
+- Change Parameter from `B: BuildAlloc` to `A: DeallocRef` to support type inference
+- Require nightly compiler
+- Remove `AbortAlloc`
+- Remove bound on `Error = !`
 
 # v0.6
 

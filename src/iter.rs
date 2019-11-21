@@ -17,7 +17,7 @@ pub trait TryExtend<A> {
     /// message.try_extend(['d', 'e', 'f'].iter())?;
     ///
     /// assert_eq!(vec!['a', 'b', 'c', 'd', 'e', 'f'], message);
-    /// # Ok::<(), alloc_wg::collections::CollectionAllocErr<alloc_wg::alloc::AbortAlloc<alloc_wg::alloc::Global>>>(())
+    /// # Ok::<(), alloc_wg::collections::CollectionAllocErr<alloc_wg::alloc::Global>>(())
     /// ```
     fn try_extend<T: IntoIterator<Item = A>>(&mut self, iter: T) -> Result<(), Self::Err>;
 }
