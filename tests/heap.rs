@@ -1,11 +1,11 @@
 use alloc_wg::alloc::{AllocRef, Global, NonZeroLayout};
 use core::fmt::Debug;
-use std::alloc::System;
 
 /// Issue #45955 and #62251.
 #[test]
+#[cfg(feature = "std")]
 fn alloc_system_overaligned_request() {
-    check_overalign_requests(System)
+    check_overalign_requests(std::alloc::System)
 }
 
 #[test]

@@ -435,21 +435,21 @@ fn test_vectors() {
 
 #[test]
 fn test_from_iterator() {
-    let s = "ศไทย中华Việt Nam".to_string();
+    let s = String::from("ศไทย中华Việt Nam");
     let t = "ศไทย中华";
     let u = "Việt Nam";
 
     let a: String = s.chars().collect();
     assert_eq!(s, a);
 
-    let mut b = t.to_string();
+    let mut b = String::from(t);
     b.extend(u.chars());
     assert_eq!(s, b);
 
     let c: String = vec![t, u].into_iter().collect();
     assert_eq!(s, c);
 
-    let mut d = t.to_string();
+    let mut d = String::from(t);
     d.extend(vec![u]);
     assert_eq!(s, d);
 }
