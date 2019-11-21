@@ -2833,7 +2833,7 @@ impl<T> Drop for IntoIter<T> {
 ///
 /// [`drain`]: struct.Vec.html#method.drain
 /// [`Vec`]: struct.Vec.html
-pub struct Drain<'a, T, A: DeallocRef> {
+pub struct Drain<'a, T, A: DeallocRef = AbortAlloc<Global>> {
     /// Index of tail to preserve
     tail_start: usize,
     /// Length of tail
@@ -2926,7 +2926,7 @@ impl<T, A: DeallocRef> FusedIterator for Drain<'_, T, A> {}
 /// [`splice()`]: struct.Vec.html#method.splice
 /// [`Vec`]: struct.Vec.html
 #[derive(Debug)]
-pub struct Splice<'a, I: Iterator + 'a, A>
+pub struct Splice<'a, I: Iterator + 'a, A = AbortAlloc<Global>>
 where
     A: ReallocRef<Error = crate::Never>,
 {
@@ -3049,7 +3049,7 @@ where
 
 /// An iterator produced by calling `drain_filter` on Vec.
 // #[derive(Debug)]
-pub struct DrainFilter<'a, T, F, A: DeallocRef>
+pub struct DrainFilter<'a, T, F, A: DeallocRef = AbortAlloc<Global>>
 where
     F: FnMut(&mut T) -> bool,
 {
@@ -3112,7 +3112,7 @@ where
     F: FnMut(&mut T) -> bool,
 {
     fn drop(&mut self) {
-        struct BackshiftOnDrop<'a, 'b, T, F, A: DeallocRef>
+        struct BackshiftOnDrop<'a, 'b, T, F, A: DeallocRef = AbortAlloc<Global>>
         where
             F: FnMut(&mut T) -> bool,
         {
