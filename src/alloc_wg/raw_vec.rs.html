@@ -931,6 +931,15 @@
 <span id="931">931</span>
 <span id="932">932</span>
 <span id="933">933</span>
+<span id="934">934</span>
+<span id="935">935</span>
+<span id="936">936</span>
+<span id="937">937</span>
+<span id="938">938</span>
+<span id="939">939</span>
+<span id="940">940</span>
+<span id="941">941</span>
+<span id="942">942</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">alloc</span>::{
@@ -1259,6 +1268,15 @@
             <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">cast</span>();
             <span class="kw">let</span> <span class="ident">alloc</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">build_alloc_mut</span>().<span class="ident">build_alloc_ref</span>(<span class="ident">ptr</span>, <span class="ident">layout</span>);
             (<span class="ident">alloc</span>, <span class="ident">layout</span>)
+        }
+    }
+
+    <span class="doccomment">/// Converts a `Box&lt;[T], A&gt;` into a `RawVec&lt;T, A&gt;`.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_box</span>(<span class="ident">slice</span>: <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">mem</span>::<span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>], <span class="ident">A</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">unsafe</span> {
+            <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">slice</span>.<span class="ident">len</span>();
+            <span class="kw">let</span> (<span class="ident">b</span>, <span class="ident">a</span>) <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">into_raw_alloc</span>(<span class="ident">slice</span>);
+            <span class="self">Self</span>::<span class="ident">from_raw_parts_in</span>(<span class="ident">b</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>, <span class="ident">len</span>, <span class="ident">a</span>)
         }
     }
 
