@@ -398,9 +398,10 @@ impl<T, A: AllocRef> Box<[T], A> {
             let layout = NonZeroLayout::array::<mem::MaybeUninit<T>>(len)?;
             a.alloc(layout)
                 .map_err(|inner| CollectionAllocErr::AllocError { layout, inner })?
+                .cast()
         };
         unsafe {
-            let slice = slice::from_raw_parts_mut(ptr.cast().as_ptr(), len);
+            let slice = slice::from_raw_parts_mut(ptr.as_ptr(), len);
             Ok(Box::from_raw_in(
                 NonNull::from(slice).as_ptr(),
                 a.get_build_alloc(),
