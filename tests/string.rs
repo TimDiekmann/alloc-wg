@@ -1,11 +1,4 @@
-use alloc_wg::{
-    alloc::Global,
-    borrow::Cow,
-    collections::CollectionAllocErr::*,
-    string::String,
-    vec,
-    vec::Vec,
-};
+use alloc_wg::{borrow::Cow, collections::CollectionAllocErr::*, string::String, vec, vec::Vec};
 use core::{isize, mem::size_of, usize};
 
 pub trait IntoCow<'a, B: ?Sized>
@@ -583,7 +576,7 @@ fn test_try_reserve() {
 
     {
         // Note: basic stuff is checked by test_reserve
-        let mut empty_string = String::new_in(Global);
+        let mut empty_string = String::new();
 
         // Check isize::MAX doesn't count as an overflow
         if let Err(CapacityOverflow) = empty_string.try_reserve(MAX_CAP) {
@@ -623,10 +616,7 @@ fn test_try_reserve() {
 
     {
         // Same basic idea, but with non-zero len
-        let mut ten_bytes = String::new_in(Global);
-        ten_bytes
-            .try_push_str("0123456789")
-            .expect("Could not create string with 10 bytes");
+        let mut ten_bytes = String::from("0123456789");
 
         if let Err(CapacityOverflow) = ten_bytes.try_reserve(MAX_CAP - 10) {
             panic!("isize::MAX shouldn't trigger an overflow!");
@@ -665,7 +655,7 @@ fn test_try_reserve_exact() {
     let guards_against_isize = size_of::<usize>() < 8;
 
     {
-        let mut empty_string = String::new_in(Global);
+        let mut empty_string = String::new();
 
         if let Err(CapacityOverflow) = empty_string.try_reserve_exact(MAX_CAP) {
             panic!("isize::MAX shouldn't trigger an overflow!");
@@ -698,10 +688,7 @@ fn test_try_reserve_exact() {
     }
 
     {
-        let mut ten_bytes = String::new_in(Global);
-        ten_bytes
-            .try_push_str("0123456789")
-            .expect("Could not create string with 10 bytes");
+        let mut ten_bytes = String::from("0123456789");
 
         if let Err(CapacityOverflow) = ten_bytes.try_reserve_exact(MAX_CAP - 10) {
             panic!("isize::MAX shouldn't trigger an overflow!");

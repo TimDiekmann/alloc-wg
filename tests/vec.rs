@@ -1,5 +1,4 @@
 use alloc_wg::{
-    alloc::Global,
     boxed::Box,
     collections::CollectionAllocErr::*,
     vec,
@@ -1127,7 +1126,7 @@ fn test_try_reserve() {
 
     {
         // Note: basic stuff is checked by test_reserve
-        let mut empty_bytes: Vec<u8, _> = Vec::new_in(Global);
+        let mut empty_bytes: Vec<u8, _> = Vec::new();
 
         // Check isize::MAX doesn't count as an overflow
         if let Err(CapacityOverflow) = empty_bytes.try_reserve(MAX_CAP) {
@@ -1165,8 +1164,7 @@ fn test_try_reserve() {
 
     {
         // Same basic idea, but with non-zero len
-        let mut ten_bytes: Vec<u8, _> = vec![try in Global; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-            .expect("Unable to allocate ten bytes");
+        let mut ten_bytes: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
         if let Err(CapacityOverflow) = ten_bytes.try_reserve(MAX_CAP - 10) {
             panic!("isize::MAX shouldn't trigger an overflow!");
@@ -1191,8 +1189,7 @@ fn test_try_reserve() {
 
     {
         // Same basic idea, but with interesting type size
-        let mut ten_u32s: Vec<u32, _> = vec![try in Global; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-            .expect("Unable to allocate 40 bytes");
+        let mut ten_u32s: Vec<u32> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
         if let Err(CapacityOverflow) = ten_u32s.try_reserve(MAX_CAP / 4 - 10) {
             panic!("isize::MAX shouldn't trigger an overflow!");
@@ -1229,7 +1226,7 @@ fn test_try_reserve_exact() {
     let guards_against_isize = size_of::<usize>() < 8;
 
     {
-        let mut empty_bytes: Vec<u8, _> = Vec::new_in(Global);
+        let mut empty_bytes: Vec<u8> = Vec::new();
 
         if let Err(CapacityOverflow) = empty_bytes.try_reserve_exact(MAX_CAP) {
             panic!("isize::MAX shouldn't trigger an overflow!");
@@ -1260,8 +1257,7 @@ fn test_try_reserve_exact() {
     }
 
     {
-        let mut ten_bytes: Vec<u8, _> = vec![try in Global; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-            .expect("Unable to allocate ten bytes");
+        let mut ten_bytes: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
         if let Err(CapacityOverflow) = ten_bytes.try_reserve_exact(MAX_CAP - 10) {
             panic!("isize::MAX shouldn't trigger an overflow!");
@@ -1284,8 +1280,7 @@ fn test_try_reserve_exact() {
     }
 
     {
-        let mut ten_u32s: Vec<u32, _> = vec![try in Global; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-            .expect("Unable to allocate 40 bytes");
+        let mut ten_u32s: Vec<u32> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
         if let Err(CapacityOverflow) = ten_u32s.try_reserve_exact(MAX_CAP / 4 - 10) {
             panic!("isize::MAX shouldn't trigger an overflow!");
