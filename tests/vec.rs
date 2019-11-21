@@ -2,6 +2,7 @@ use alloc_wg::{
     alloc::Global,
     boxed::Box,
     collections::CollectionAllocErr::*,
+    string::String,
     vec,
     vec::{Drain, IntoIter, Vec},
 };
