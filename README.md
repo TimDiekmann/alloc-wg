@@ -12,6 +12,9 @@ Alloc-WG
 An attempt to collect several proposals of [rust-lang/wg-allocators](https://github.com/rust-lang/wg-allocators) into a
 MVP.
 
+**This crate is WIP** and is designed to replace the alloc crate. However, this is not completely possible as crate, as some 
+compiler features are not possible for crates.
+
 Changes regarding the current `Alloc` trait
 -------------------------------------------
 
@@ -59,13 +62,13 @@ Changes regarding the current `Alloc` trait
 Currently associated containers
 -------------------------------
   
-- [`Box`] Missing Items:
-  - `FromIterator<A> for Box<[A]>` as `Vec` is not implemented yet.
+- [`Box`]struct
   - specialization of sized iterators as it's not possible for downstream crates.
   - Limited `T: Copy` for `Fn`-traits as it's not possible for downstream crates.
    
 - [`RawVec`]
 - [`Vec`]
+- [`String`]
 
 [`Alloc`]: https://doc.rust-lang.org/1.38.0/alloc/alloc/trait.Alloc.html
 [`AllocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.AllocRef.html
@@ -81,6 +84,7 @@ Currently associated containers
 [`Hasher`]: https://doc.rust-lang.org/1.38.0/core/hash/trait.Hasher.html
 [`NonZeroLayout`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/struct.NonZeroLayout.html
 [`AbortAlloc`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/struct.AbortAlloc.html
+[`String`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/string/struct.String.html
 
 License
 -------
