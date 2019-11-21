@@ -328,6 +328,15 @@ impl<T, A: DeallocRef> RawVec<T, A> {
         }
     }
 
+    /// Converts a `Box<[T], A>` into a `RawVec<T, A>`.
+    pub fn from_box(slice: Box<[mem::MaybeUninit<T>], A>) -> Self {
+        unsafe {
+            let len = slice.len();
+            let (b, a) = Box::into_raw_alloc(slice);
+            Self::from_raw_parts_in(b as *mut T, len, a)
+        }
+    }
+
     /// Converts the entire buffer into `Box<[mem::MaybeUninit<T>]>`.
     ///
     /// Note that this will correctly reconstitute any `cap` changes
