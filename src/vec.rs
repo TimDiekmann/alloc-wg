@@ -2524,6 +2524,28 @@ impl<T: Ord, A: DeallocRef> Ord for Vec<T, A> {
     }
 }
 
+#[cfg(feature = "dropck_eyepatch")]
+unsafe impl<#[may_dangle] T, A: DeallocRef> Drop for Vec<T, A> {
+    fn drop(&mut self) {
+        unsafe {
+            // use drop for [T]
+            ptr::drop_in_place(&mut self[..]);
+        }
+        // RawVec handles deallocation
+    }
+}
+
+#[cfg(not(feature = "dropck_eyepatch"))]
+impl<T, A: DeallocRef> Drop for Vec<T, A> {
+    fn drop(&mut self) {
+        unsafe {
+            // use drop for [T]
+            ptr::drop_in_place(&mut self[..]);
+        }
+        // RawVec handles deallocation
+    }
+}
+
 impl<T, A: DeallocRef> Default for Vec<T, A>
 where
     A: Default,
