@@ -19,9 +19,9 @@ jobs:
           - "--no-default-features"
     steps:
       - name: Install Rust
-        run: |
-          rustup set profile minimal
-          rustup default nightly
+        uses: hecrj/setup-rust-action@master
+        with:
+          rust-version: ${{ matrix.rust }}
 
       - name: Checkout source code
         uses: actions/checkout@master
