@@ -2066,6 +2066,7 @@ impl<T: Clone, A: ReallocRef> SpecFromElem<A> for T {
     }
 }
 
+#[allow(clippy::use_self)]
 impl<A: ReallocRef> SpecFromElem<A> for u8 {
     #[inline]
     fn try_from_elem_in(elem: Self, n: usize, a: A) -> Result<Vec<Self, A>, CollectionAllocErr<A>> {
@@ -2128,11 +2129,11 @@ impl_is_zero!(u64, |x| x == 0);
 impl_is_zero!(u128, |x| x == 0);
 impl_is_zero!(usize, |x| x == 0);
 
-impl_is_zero!(bool, |x| x == false);
+impl_is_zero!(bool, |x: Self| !x);
 impl_is_zero!(char, |x| x == '\0');
 
-impl_is_zero!(f32, |x: f32| x.to_bits() == 0);
-impl_is_zero!(f64, |x: f64| x.to_bits() == 0);
+impl_is_zero!(f32, |x: Self| x.to_bits() == 0);
+impl_is_zero!(f64, |x: Self| x.to_bits() == 0);
 
 unsafe impl<T> IsZero for *const T {
     #[inline]
@@ -2356,10 +2357,10 @@ where
         // vector being full in the few subsequent loop iterations.
         // So we get better branch prediction.
         let mut vector = match iter.next() {
-            None => return Ok(Vec::new_in(a)),
+            None => return Ok(Self::new_in(a)),
             Some(element) => {
                 let (lower, _) = iter.size_hint();
-                let mut vector = Vec::try_with_capacity_in(lower.saturating_add(1), a)?;
+                let mut vector = Self::try_with_capacity_in(lower.saturating_add(1), a)?;
                 unsafe {
                     ptr::write(vector.get_unchecked_mut(0), element);
                     vector.set_len(1);
@@ -2381,7 +2382,7 @@ where
     I: TrustedLen<Item = T>,
 {
     default fn try_from_iter_in(iter: I, a: A) -> Result<Self, CollectionAllocErr<A>> {
-        let mut vector = Vec::new_in(a);
+        let mut vector = Self::new_in(a);
         vector.try_spec_extend(iter)?;
         Ok(vector)
     }
@@ -2424,7 +2425,7 @@ impl<T, A: ReallocRef> SpecExtend<T, IntoIter<T, A>, A> for Vec<T, A> {
         let ptr: *const T = iter.buf.ptr();
         if ptr == iter.ptr {
             unsafe {
-                let vec = Vec::from_raw_parts_in(
+                let vec = Self::from_raw_parts_in(
                     iter.buf.ptr(),
                     iter.len(),
                     iter.buf.capacity(),
@@ -2434,7 +2435,7 @@ impl<T, A: ReallocRef> SpecExtend<T, IntoIter<T, A>, A> for Vec<T, A> {
                 Ok(vec)
             }
         } else {
-            let mut vector = Vec::new_in(a);
+            let mut vector = Self::new_in(a);
             vector.try_spec_extend(iter)?;
             Ok(vector)
         }
