@@ -767,11 +767,10 @@ fn assert_covariance() {
 #[test]
 fn from_into_inner() {
     let vec = vec![1, 2, 3];
-    let _ptr = vec.as_ptr();
+    let ptr = vec.as_ptr();
     let vec = vec.into_iter().collect::<Vec<_>>();
     assert_eq!(vec, [1, 2, 3]);
-    // FIXME: We don't specialize `Extend` in this crate
-    // assert_eq!(vec.as_ptr(), ptr);
+    assert_eq!(vec.as_ptr(), ptr);
 
     let ptr = &vec[1] as *const _;
     let mut it = vec.into_iter();

@@ -81,8 +81,7 @@ use core::{
     fmt,
     hash::{self, Hash},
     intrinsics::assume,
-    iter::{FromIterator, FusedIterator},
-    marker::PhantomData,
+    iter::{FromIterator, FusedIterator, TrustedLen},
     mem,
     ops::{
         self,
@@ -918,25 +917,21 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// [`clear`]: Vec::clear()
     /// [`drain`]: Vec::drain()
     pub fn truncate(&mut self, len: usize) {
-        if mem::needs_drop::<T>() {
-            let current_len = self.len;
-            unsafe {
-                let mut ptr = self.as_mut_ptr().add(self.len);
-                // Set the final length at the end, keeping in mind that
-                // dropping an element might panic. Works around a missed
-                // optimization, as seen in the following issue:
-                // https://github.com/rust-lang/rust/issues/51802
-                let mut local_len = SetLenOnDrop::new(&mut self.len);
-
-                // drop any extra elements
-                for _ in len..current_len {
-                    local_len.decrement_len(1);
-                    ptr = ptr.offset(-1);
-                    ptr::drop_in_place(ptr);
-                }
+        // This is safe because:
+        //
+        // * the slice passed to `drop_in_place` is valid; the `len > self.len`
+        //   case avoids creating an invalid slice, and
+        // * the `len` of the vector is shrunk before calling `drop_in_place`,
+        //   such that no value will be dropped twice in case `drop_in_place`
+        //   were to panic once (if it panics twice, the program aborts).
+        unsafe {
+            if len > self.len {
+                return;
             }
-        } else if len <= self.len {
+            #[allow(trivial_casts)]
+            let s = self.get_unchecked_mut(len..) as *mut _;
             self.len = len;
+            ptr::drop_in_place(s);
         }
     }
 
@@ -1793,7 +1788,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     }
 }
 
-impl<T: Clone, A: DeallocRef> Vec<T, A> {
+impl<T: Clone, A: ReallocRef> Vec<T, A> {
     /// Resizes the `Vec` in-place so that `len` is equal to `new_len`.
     ///
     /// If `new_len` is greater than `len`, the `Vec` is extended by the
@@ -1824,24 +1819,16 @@ impl<T: Clone, A: DeallocRef> Vec<T, A> {
     /// # Panics
     ///
     /// Panics if the reallocation fails.
-    pub fn resize(&mut self, new_len: usize, value: T)
-    where
-        A: ReallocRef,
-    {
-        let len = self.len();
-
-        if new_len > len {
-            self.extend_with(new_len - len, ExtendElement(value))
-        } else {
-            self.truncate(new_len);
+    pub fn resize(&mut self, new_len: usize, value: T) {
+        match self.try_resize(new_len, value) {
+            Ok(_) => (),
+            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
+            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
         }
     }
 
     /// Same as `resize` but returns errors instead of panicking
-    pub fn try_resize(&mut self, new_len: usize, value: T) -> Result<(), CollectionAllocErr<A>>
-    where
-        A: ReallocRef,
-    {
+    pub fn try_resize(&mut self, new_len: usize, value: T) -> Result<(), CollectionAllocErr<A>> {
         let len = self.len();
 
         if new_len > len {
@@ -1876,19 +1863,13 @@ impl<T: Clone, A: DeallocRef> Vec<T, A> {
     /// # Panics
     ///
     /// Panics if the reallocation fails.
-    pub fn extend_from_slice(&mut self, other: &[T])
-    where
-        A: ReallocRef,
-    {
-        self.extend(other.iter().cloned())
+    pub fn extend_from_slice(&mut self, other: &[T]) {
+        self.spec_extend(other.iter())
     }
 
     /// Same as `extend_from_slice` but returns errors instead of panicking
-    pub fn try_extend_from_slice(&mut self, other: &[T]) -> Result<(), CollectionAllocErr<A>>
-    where
-        A: ReallocRef,
-    {
-        self.try_extend(other.iter().cloned())
+    pub fn try_extend_from_slice(&mut self, other: &[T]) -> Result<(), CollectionAllocErr<A>> {
+        self.try_spec_extend(other.iter())
     }
 }
 
@@ -1929,18 +1910,6 @@ impl<T, F: FnMut() -> T> ExtendWith<T> for ExtendFunc<F> {
 }
 
 impl<T, A: DeallocRef> Vec<T, A> {
-    /// Extend the vector by `n` values, using the given generator.
-    fn extend_with<E: ExtendWith<T>>(&mut self, n: usize, value: E)
-    where
-        A: ReallocRef,
-    {
-        match self.try_extend_with(n, value) {
-            Ok(vec) => vec,
-            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
-        }
-    }
-
     /// Same as `extend_with` but returns errors instead of panicking.
     fn try_extend_with<E: ExtendWith<T>>(
         &mut self,
@@ -2002,11 +1971,6 @@ impl<'a> SetLenOnDrop<'a> {
     fn increment_len(&mut self, increment: usize) {
         self.local_len += increment;
     }
-
-    #[inline]
-    fn decrement_len(&mut self, decrement: usize) {
-        self.local_len -= decrement;
-    }
 }
 
 impl Drop for SetLenOnDrop<'_> {
@@ -2061,30 +2025,152 @@ impl<T: PartialEq, A: DeallocRef> Vec<T, A> {
 
 #[doc(hidden)]
 pub fn from_elem<T: Clone>(elem: T, n: usize) -> Vec<T> {
-    let mut v = Vec::with_capacity(n);
-    v.extend_with(n, ExtendElement(elem));
-    v
+    from_elem_in(elem, n, Global)
 }
 
 #[doc(hidden)]
-pub fn from_elem_in<T: Clone, A>(elem: T, n: usize, b: A) -> Vec<T, A>
+pub fn from_elem_in<T: Clone, A>(elem: T, n: usize, a: A) -> Vec<T, A>
 where
     A: ReallocRef,
 {
-    let mut v = Vec::with_capacity_in(n, b);
-    v.extend_with(n, ExtendElement(elem));
-    v
+    match try_from_elem_in(elem, n, a) {
+        Ok(vec) => vec,
+        Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
+        Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+    }
 }
 
 #[doc(hidden)]
 pub fn try_from_elem_in<T: Clone, A: ReallocRef>(
     elem: T,
     n: usize,
-    b: A,
+    a: A,
 ) -> Result<Vec<T, A>, CollectionAllocErr<A>> {
-    let mut v = Vec::try_with_capacity_in(n, b)?;
-    v.try_extend_with(n, ExtendElement(elem))?;
-    Ok(v)
+    <T as SpecFromElem<A>>::try_from_elem_in(elem, n, a)
+}
+
+// Specialization trait used for Vec::from_elem
+trait SpecFromElem<A: AllocRef>: Sized {
+    fn try_from_elem_in(elem: Self, n: usize, a: A) -> Result<Vec<Self, A>, CollectionAllocErr<A>>;
+}
+
+impl<T: Clone, A: ReallocRef> SpecFromElem<A> for T {
+    default fn try_from_elem_in(
+        elem: Self,
+        n: usize,
+        a: A,
+    ) -> Result<Vec<Self, A>, CollectionAllocErr<A>> {
+        let mut v = Vec::try_with_capacity_in(n, a)?;
+        v.try_extend_with(n, ExtendElement(elem))?;
+        Ok(v)
+    }
+}
+
+impl<A: ReallocRef> SpecFromElem<A> for u8 {
+    #[inline]
+    fn try_from_elem_in(elem: Self, n: usize, a: A) -> Result<Vec<Self, A>, CollectionAllocErr<A>> {
+        if elem == 0 {
+            return Ok(Vec {
+                buf: RawVec::try_with_capacity_zeroed_in(n, a)?,
+                len: n,
+            });
+        }
+        unsafe {
+            let mut v = Vec::try_with_capacity_in(n, a)?;
+            ptr::write_bytes(v.as_mut_ptr(), elem, n);
+            v.set_len(n);
+            Ok(v)
+        }
+    }
+}
+
+impl<T: Clone + IsZero, A: ReallocRef> SpecFromElem<A> for T {
+    #[inline]
+    fn try_from_elem_in(elem: Self, n: usize, a: A) -> Result<Vec<Self, A>, CollectionAllocErr<A>> {
+        if elem.is_zero() {
+            return Ok(Vec {
+                buf: RawVec::try_with_capacity_zeroed_in(n, a)?,
+                len: n,
+            });
+        }
+        let mut v = Vec::try_with_capacity_in(n, a)?;
+        v.try_extend_with(n, ExtendElement(elem))?;
+        Ok(v)
+    }
+}
+
+unsafe trait IsZero {
+    /// Whether this value is zero
+    fn is_zero(&self) -> bool;
+}
+
+macro_rules! impl_is_zero {
+    ($t:ty, $is_zero:expr) => {
+        unsafe impl IsZero for $t {
+            #[inline]
+            fn is_zero(&self) -> bool {
+                $is_zero(*self)
+            }
+        }
+    };
+}
+
+impl_is_zero!(i8, |x| x == 0);
+impl_is_zero!(i16, |x| x == 0);
+impl_is_zero!(i32, |x| x == 0);
+impl_is_zero!(i64, |x| x == 0);
+impl_is_zero!(i128, |x| x == 0);
+impl_is_zero!(isize, |x| x == 0);
+
+impl_is_zero!(u16, |x| x == 0);
+impl_is_zero!(u32, |x| x == 0);
+impl_is_zero!(u64, |x| x == 0);
+impl_is_zero!(u128, |x| x == 0);
+impl_is_zero!(usize, |x| x == 0);
+
+impl_is_zero!(bool, |x| x == false);
+impl_is_zero!(char, |x| x == '\0');
+
+impl_is_zero!(f32, |x: f32| x.to_bits() == 0);
+impl_is_zero!(f64, |x: f64| x.to_bits() == 0);
+
+unsafe impl<T> IsZero for *const T {
+    #[inline]
+    fn is_zero(&self) -> bool {
+        (*self).is_null()
+    }
+}
+
+unsafe impl<T> IsZero for *mut T {
+    #[inline]
+    fn is_zero(&self) -> bool {
+        (*self).is_null()
+    }
+}
+
+// `Option<&T>`, `Option<&mut T>` and `Option<Box<T>>` are guaranteed to represent `None` as null.
+// For fat pointers, the bytes that would be the pointer metadata in the `Some` variant
+// are padding in the `None` variant, so ignoring them and zero-initializing instead is ok.
+
+unsafe impl<T: ?Sized> IsZero for Option<&T> {
+    #[inline]
+    fn is_zero(&self) -> bool {
+        self.is_none()
+    }
+}
+
+unsafe impl<T: ?Sized> IsZero for Option<&mut T> {
+    #[inline]
+    fn is_zero(&self) -> bool {
+        self.is_none()
+    }
+}
+
+unsafe impl<T: ?Sized> IsZero for Option<Box<T>> {
+    #[inline]
+    fn is_zero(&self) -> bool {
+        self.is_none()
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2145,15 +2231,13 @@ impl<T> FromIterator<T> for Vec<T> {
     #[inline]
     #[must_use]
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        let mut v = Self::new();
-        v.extend(iter.into_iter());
-        v
+        <Self as SpecExtend<T, I::IntoIter, Global>>::from_iter_in(iter.into_iter(), Global)
     }
 }
 
 impl<T, A: DeallocRef> IntoIterator for Vec<T, A> {
     type Item = T;
-    type IntoIter = IntoIter<T>;
+    type IntoIter = IntoIter<T, A>;
 
     /// Creates a consuming iterator, that is, one that moves each value out of
     /// the vector (from start to end). The vector cannot be used after calling
@@ -2172,7 +2256,7 @@ impl<T, A: DeallocRef> IntoIterator for Vec<T, A> {
     #[inline]
     #[must_use]
     #[allow(clippy::cast_possible_wrap)]
-    fn into_iter(mut self) -> IntoIter<T> {
+    fn into_iter(mut self) -> IntoIter<T, A> {
         unsafe {
             let begin = self.as_mut_ptr();
             let end = if mem::size_of::<T>() == 0 {
@@ -2181,11 +2265,10 @@ impl<T, A: DeallocRef> IntoIterator for Vec<T, A> {
                 begin.add(self.len())
             };
             let cap = self.buf.capacity();
+            let build_alloc = ptr::read(self.buf.build_alloc_mut());
             mem::forget(self);
             IntoIter {
-                buf: NonNull::new_unchecked(begin),
-                phantom: PhantomData,
-                cap,
+                buf: RawVec::from_raw_parts_in(begin, cap, build_alloc),
                 ptr: begin,
                 end,
             }
@@ -2218,11 +2301,7 @@ where
 {
     #[inline]
     fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
-        let iter = iter.into_iter();
-        self.reserve(iter.size_hint().0);
-        for t in iter {
-            self.push(t);
-        }
+        <Self as SpecExtend<T, I::IntoIter, A>>::spec_extend(self, iter.into_iter())
     }
 }
 
@@ -2231,16 +2310,205 @@ impl<T, A: ReallocRef> TryExtend<T> for Vec<T, A> {
 
     #[inline]
     fn try_extend<I: IntoIterator<Item = T>>(&mut self, iter: I) -> Result<(), Self::Err> {
-        let iter = iter.into_iter();
-        self.try_reserve(iter.size_hint().0)?;
-        for t in iter {
-            self.try_push(t)?;
+        <Self as SpecExtend<T, I::IntoIter, A>>::try_spec_extend(self, iter.into_iter())
+    }
+}
+
+trait SpecExtend<T, I, A: ReallocRef>: Sized {
+    #[inline]
+    fn from_iter_in(iter: I, a: A) -> Self
+    where
+        A: AllocRef,
+    {
+        match Self::try_from_iter_in(iter, a) {
+            Ok(v) => v,
+            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
+            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+        }
+    }
+
+    fn try_from_iter_in(iter: I, a: A) -> Result<Self, CollectionAllocErr<A>>;
+
+    #[inline]
+    fn spec_extend(&mut self, iter: I)
+    where
+        A: AllocRef,
+    {
+        match self.try_spec_extend(iter) {
+            Ok(_) => (),
+            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
+            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+        }
+    }
+
+    fn try_spec_extend(&mut self, iter: I) -> Result<(), CollectionAllocErr<A>>;
+}
+
+impl<T, I, A> SpecExtend<T, I, A> for Vec<T, A>
+where
+    I: Iterator<Item = T>,
+    A: ReallocRef,
+{
+    default fn try_from_iter_in(mut iter: I, a: A) -> Result<Self, CollectionAllocErr<A>> {
+        // Unroll the first iteration, as the vector is going to be
+        // expanded on this iteration in every case when the iterable is not
+        // empty, but the loop in extend_desugared() is not going to see the
+        // vector being full in the few subsequent loop iterations.
+        // So we get better branch prediction.
+        let mut vector = match iter.next() {
+            None => return Ok(Vec::new_in(a)),
+            Some(element) => {
+                let (lower, _) = iter.size_hint();
+                let mut vector = Vec::try_with_capacity_in(lower.saturating_add(1), a)?;
+                unsafe {
+                    ptr::write(vector.get_unchecked_mut(0), element);
+                    vector.set_len(1);
+                }
+                vector
+            }
+        };
+        vector.try_spec_extend(iter)?;
+        Ok(vector)
+    }
+
+    default fn try_spec_extend(&mut self, iter: I) -> Result<(), CollectionAllocErr<A>> {
+        self.try_extend_desugared(iter)
+    }
+}
+
+impl<T, I, A: ReallocRef> SpecExtend<T, I, A> for Vec<T, A>
+where
+    I: TrustedLen<Item = T>,
+{
+    default fn try_from_iter_in(iter: I, a: A) -> Result<Self, CollectionAllocErr<A>> {
+        let mut vector = Vec::new_in(a);
+        vector.try_spec_extend(iter)?;
+        Ok(vector)
+    }
+
+    default fn try_spec_extend(&mut self, iter: I) -> Result<(), CollectionAllocErr<A>> {
+        // This is the case for a TrustedLen iterator.
+        let (low, high) = iter.size_hint();
+        if let Some(high_value) = high {
+            debug_assert_eq!(
+                low,
+                high_value,
+                "TrustedLen iterator's size hint is not exact: {:?}",
+                (low, high)
+            );
+        }
+        if let Some(additional) = high {
+            self.try_reserve(additional)?;
+            unsafe {
+                let mut ptr = self.as_mut_ptr().add(self.len());
+                let mut local_len = SetLenOnDrop::new(&mut self.len);
+                iter.for_each(move |element| {
+                    ptr::write(ptr, element);
+                    ptr = ptr.offset(1);
+                    // NB can't overflow since we would have had to alloc the address space
+                    local_len.increment_len(1);
+                });
+            }
+        } else {
+            self.try_extend_desugared(iter)?
+        }
+        Ok(())
+    }
+}
+
+impl<T, A: ReallocRef> SpecExtend<T, IntoIter<T, A>, A> for Vec<T, A> {
+    fn try_from_iter_in(iter: IntoIter<T, A>, mut a: A) -> Result<Self, CollectionAllocErr<A>> {
+        // A common case is passing a vector into a function which immediately
+        // re-collects into a vector. We can short circuit this if the IntoIter
+        // has not been advanced at all.
+        let ptr: *const T = iter.buf.ptr();
+        if ptr == iter.ptr {
+            unsafe {
+                let vec = Vec::from_raw_parts_in(
+                    iter.buf.ptr(),
+                    iter.len(),
+                    iter.buf.capacity(),
+                    a.get_build_alloc(),
+                );
+                mem::forget(iter);
+                Ok(vec)
+            }
+        } else {
+            let mut vector = Vec::new_in(a);
+            vector.try_spec_extend(iter)?;
+            Ok(vector)
+        }
+    }
+
+    fn try_spec_extend(&mut self, mut iter: IntoIter<T, A>) -> Result<(), CollectionAllocErr<A>> {
+        unsafe {
+            self.try_append_elements(iter.as_slice())?;
+        }
+        iter.ptr = iter.end;
+        Ok(())
+    }
+}
+
+impl<'a, T: 'a, I, A: ReallocRef> SpecExtend<&'a T, I, A> for Vec<T, A>
+where
+    I: Iterator<Item = &'a T>,
+    T: Clone,
+{
+    default fn try_from_iter_in(iterator: I, a: A) -> Result<Self, CollectionAllocErr<A>> {
+        SpecExtend::try_from_iter_in(iterator.cloned(), a)
+    }
+
+    default fn try_spec_extend(&mut self, iterator: I) -> Result<(), CollectionAllocErr<A>> {
+        self.try_spec_extend(iterator.cloned())
+    }
+}
+
+impl<'a, T: 'a, A: ReallocRef> SpecExtend<&'a T, slice::Iter<'a, T>, A> for Vec<T, A>
+where
+    T: Copy,
+{
+    fn try_spec_extend(&mut self, iter: slice::Iter<'a, T>) -> Result<(), CollectionAllocErr<A>> {
+        let slice = iter.as_slice();
+        self.try_reserve(slice.len())?;
+        unsafe {
+            let len = self.len();
+            self.set_len(len + slice.len());
+            self.get_unchecked_mut(len..).copy_from_slice(slice);
         }
         Ok(())
     }
 }
 
 impl<T, A: DeallocRef> Vec<T, A> {
+    fn try_extend_desugared<I: Iterator<Item = T>>(
+        &mut self,
+        mut iterator: I,
+    ) -> Result<(), CollectionAllocErr<A>>
+    where
+        A: ReallocRef,
+    {
+        // This is the case for a general iterator.
+        //
+        // This function should be the moral equivalent of:
+        //
+        //      for item in iterator {
+        //          self.push(item);
+        //      }
+        while let Some(element) = iterator.next() {
+            let len = self.len();
+            if len == self.capacity() {
+                let (lower, _) = iterator.size_hint();
+                self.try_reserve(lower.saturating_add(1))?;
+            }
+            unsafe {
+                ptr::write(self.get_unchecked_mut(len), element);
+                // NB can't overflow since we would have had to alloc the address space
+                self.set_len(len + 1);
+            }
+        }
+        Ok(())
+    }
+
     /// Creates a splicing iterator that replaces the specified range in the vector
     /// with the given `replace_with` iterator and yields the removed items.
     /// `replace_with` does not need to be the same length as `range`.
@@ -2584,21 +2852,19 @@ impl From<&str> for Vec<u8> {
 ///
 /// [`Vec`]: struct.Vec.html
 /// [`IntoIterator`]: ../../std/iter/trait.IntoIterator.html
-pub struct IntoIter<T> {
-    buf: NonNull<T>,
-    phantom: PhantomData<T>,
-    cap: usize,
+pub struct IntoIter<T, A: DeallocRef = Global> {
+    buf: RawVec<T, A>,
     ptr: *const T,
     end: *const T,
 }
 
-impl<T: fmt::Debug> fmt::Debug for IntoIter<T> {
+impl<T: fmt::Debug, A: DeallocRef> fmt::Debug for IntoIter<T, A> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("IntoIter").field(&self.as_slice()).finish()
     }
 }
 
-impl<T> IntoIter<T> {
+impl<T, A: DeallocRef> IntoIter<T, A> {
     /// Returns the remaining items of this iterator as a slice.
     ///
     /// # Examples
@@ -2636,10 +2902,10 @@ impl<T> IntoIter<T> {
     }
 }
 
-unsafe impl<T: Send> Send for IntoIter<T> {}
-unsafe impl<T: Sync> Sync for IntoIter<T> {}
+unsafe impl<T: Send, A: Send + DeallocRef> Send for IntoIter<T, A> {}
+unsafe impl<T: Sync, A: Send + DeallocRef> Sync for IntoIter<T, A> {}
 
-impl<T> Iterator for IntoIter<T> {
+impl<T, A: DeallocRef> Iterator for IntoIter<T, A> {
     type Item = T;
 
     #[inline]
@@ -2683,7 +2949,7 @@ impl<T> Iterator for IntoIter<T> {
     }
 }
 
-impl<T> DoubleEndedIterator for IntoIter<T> {
+impl<T, A: DeallocRef> DoubleEndedIterator for IntoIter<T, A> {
     #[inline]
     fn next_back(&mut self) -> Option<T> {
         unsafe {
@@ -2704,9 +2970,9 @@ impl<T> DoubleEndedIterator for IntoIter<T> {
     }
 }
 
-impl<T> ExactSizeIterator for IntoIter<T> {}
+impl<T, A: DeallocRef> ExactSizeIterator for IntoIter<T, A> {}
 
-impl<T> FusedIterator for IntoIter<T> {}
+impl<T, A: DeallocRef> FusedIterator for IntoIter<T, A> {}
 
 impl<T: Clone> Clone for IntoIter<T> {
     #[must_use]
@@ -2717,13 +2983,12 @@ impl<T: Clone> Clone for IntoIter<T> {
     }
 }
 
-impl<T> Drop for IntoIter<T> {
+impl<T, A: DeallocRef> Drop for IntoIter<T, A> {
     fn drop(&mut self) {
         // destroy the remaining elements
         for _x in self.by_ref() {}
 
         // RawVec handles deallocation
-        let _ = unsafe { RawVec::from_raw_parts(self.buf.as_ptr(), self.cap) };
     }
 }
 

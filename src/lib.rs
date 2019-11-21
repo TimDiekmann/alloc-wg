@@ -69,6 +69,8 @@
     const_generics,
     const_generic_impls_guard,
     unboxed_closures,
+    specialization,
+    trusted_len,
     unsized_locals,
     fn_traits
 )]
