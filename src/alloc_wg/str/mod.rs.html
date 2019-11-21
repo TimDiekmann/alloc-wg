@@ -100,21 +100,6 @@
 <span id="100">100</span>
 <span id="101">101</span>
 <span id="102">102</span>
-<span id="103">103</span>
-<span id="104">104</span>
-<span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! Unicode string slices.</span>
 <span class="doccomment">//!</span>
@@ -183,15 +168,6 @@
     <span class="ident">Utf8Error</span>,
 };
 
-<span class="comment">// Reimplementation of feature(str_internals)</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;nightly&quot;</span>))]</span>
-<span class="kw">mod</span> <span class="ident">str_internals</span>;
-
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;nightly&quot;</span>))]</span>
-<span class="kw">pub</span>(<span class="kw">in</span> <span class="kw">crate</span>) <span class="kw">use</span> <span class="self">self</span>::<span class="ident">str_internals</span>::<span class="ident">lossy</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;nightly&quot;</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">in</span> <span class="kw">crate</span>) <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">str</span>::<span class="ident">lossy</span>;
-
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">D</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">String</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span> {
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">borrow</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
@@ -214,12 +190,6 @@
 <span class="doccomment">/// Basic usage:</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```</span>
-<span class="doccomment">/// # // NOTE: Without nightly it&#39;s not possible to coerce unsized in downstream crates</span>
-<span class="doccomment">/// # #[cfg(not(feature = &quot;coerce_unsized&quot;))]</span>
-<span class="doccomment">/// # extern crate alloc;</span>
-<span class="doccomment">/// # #[cfg(not(feature = &quot;coerce_unsized&quot;))]</span>
-<span class="doccomment">/// # use alloc as alloc_wg;</span>
-<span class="doccomment">/// # #[cfg(feature = &quot;coerce_unsized&quot;)]</span>
 <span class="doccomment">/// use alloc_wg::boxed::Box;</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// let smile_utf8 = Box::new([226, 152, 186]);</span>

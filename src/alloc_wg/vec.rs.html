@@ -3228,46 +3228,6 @@
 <span id="3228">3228</span>
 <span id="3229">3229</span>
 <span id="3230">3230</span>
-<span id="3231">3231</span>
-<span id="3232">3232</span>
-<span id="3233">3233</span>
-<span id="3234">3234</span>
-<span id="3235">3235</span>
-<span id="3236">3236</span>
-<span id="3237">3237</span>
-<span id="3238">3238</span>
-<span id="3239">3239</span>
-<span id="3240">3240</span>
-<span id="3241">3241</span>
-<span id="3242">3242</span>
-<span id="3243">3243</span>
-<span id="3244">3244</span>
-<span id="3245">3245</span>
-<span id="3246">3246</span>
-<span id="3247">3247</span>
-<span id="3248">3248</span>
-<span id="3249">3249</span>
-<span id="3250">3250</span>
-<span id="3251">3251</span>
-<span id="3252">3252</span>
-<span id="3253">3253</span>
-<span id="3254">3254</span>
-<span id="3255">3255</span>
-<span id="3256">3256</span>
-<span id="3257">3257</span>
-<span id="3258">3258</span>
-<span id="3259">3259</span>
-<span id="3260">3260</span>
-<span id="3261">3261</span>
-<span id="3262">3262</span>
-<span id="3263">3263</span>
-<span id="3264">3264</span>
-<span id="3265">3265</span>
-<span id="3266">3266</span>
-<span id="3267">3267</span>
-<span id="3268">3268</span>
-<span id="3269">3269</span>
-<span id="3270">3270</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! A contiguous growable array type with heap-allocated contents, written</span>
 <span class="doccomment">//! `Vec&lt;T&gt;`.</span>
@@ -3339,11 +3299,19 @@
 <span class="doccomment">//! [`IndexMut`]: core::ops::IndexMut</span>
 <span class="doccomment">//! [`vec!`]: ../macro.vec.html</span>
 
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">alloc</span>::{<span class="ident">AbortAlloc</span>, <span class="ident">AllocRef</span>, <span class="ident">DeallocRef</span>, <span class="ident">Global</span>, <span class="ident">ReallocRef</span>},
+    <span class="ident">boxed</span>::<span class="ident">Box</span>,
+    <span class="ident">collections</span>::<span class="ident">CollectionAllocErr</span>,
+    <span class="ident">iter</span>::<span class="ident">TryExtend</span>,
+    <span class="ident">raw_vec</span>::<span class="ident">RawVec</span>,
+};
 <span class="kw">use</span> <span class="ident">core</span>::{
     <span class="ident">cmp</span>::{<span class="self">self</span>, <span class="ident">Ordering</span>},
     <span class="ident">convert</span>::<span class="ident">TryFrom</span>,
     <span class="ident">fmt</span>,
     <span class="ident">hash</span>::{<span class="self">self</span>, <span class="ident">Hash</span>},
+    <span class="ident">intrinsics</span>::<span class="ident">assume</span>,
     <span class="ident">iter</span>::{<span class="ident">FromIterator</span>, <span class="ident">FusedIterator</span>},
     <span class="ident">marker</span>::<span class="ident">PhantomData</span>,
     <span class="ident">mem</span>,
@@ -3357,14 +3325,6 @@
     <span class="ident">ptr</span>::{<span class="self">self</span>, <span class="ident">NonNull</span>},
     <span class="ident">slice</span>::{<span class="self">self</span>, <span class="ident">SliceIndex</span>},
 };
-
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">alloc</span>::{<span class="ident">AbortAlloc</span>, <span class="ident">AllocRef</span>, <span class="ident">Global</span>, <span class="ident">ReallocRef</span>},
-    <span class="ident">collections</span>::<span class="ident">CollectionAllocErr</span>,
-    <span class="ident">iter</span>::<span class="ident">TryExtend</span>,
-};
-
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">alloc</span>::<span class="ident">DeallocRef</span>, <span class="ident">boxed</span>::<span class="ident">Box</span>, <span class="ident">raw_vec</span>::<span class="ident">RawVec</span>};
 
 <span class="doccomment">/// A contiguous growable array type, written `Vec&lt;T&gt;` but pronounced &#39;vector&#39;.</span>
 <span class="doccomment">///</span>
@@ -3777,7 +3737,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity_in</span>(<span class="ident">capacity</span>: <span class="ident">usize</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="self">Self</span> {
             <span class="ident">buf</span>: <span class="ident">RawVec</span>::<span class="ident">with_capacity_in</span>(<span class="ident">capacity</span>, <span class="ident">a</span>),
@@ -3814,7 +3774,7 @@
     <span class="doccomment">/// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity_zeroed_in</span>(<span class="ident">capacity</span>: <span class="ident">usize</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="self">Self</span> {
             <span class="ident">buf</span>: <span class="ident">RawVec</span>::<span class="ident">with_capacity_zeroed_in</span>(<span class="ident">capacity</span>, <span class="ident">a</span>),
@@ -3936,7 +3896,7 @@
     <span class="doccomment">/// Panics if the reallocation fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reserve</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">additional</span>: <span class="ident">usize</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="self">self</span>.<span class="ident">buf</span>.<span class="ident">reserve</span>(<span class="self">self</span>.<span class="ident">len</span>, <span class="ident">additional</span>);
     }
@@ -3969,7 +3929,7 @@
     <span class="doccomment">/// Panics if the reallocation fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reserve_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">additional</span>: <span class="ident">usize</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="self">self</span>.<span class="ident">buf</span>.<span class="ident">reserve_exact</span>(<span class="self">self</span>.<span class="ident">len</span>, <span class="ident">additional</span>);
     }
@@ -4083,7 +4043,7 @@
     <span class="doccomment">/// Panics if the reallocation fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">shrink_to_fit</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">capacity</span>() <span class="op">!</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">len</span> {
             <span class="self">self</span>.<span class="ident">buf</span>.<span class="ident">shrink_to_fit</span>(<span class="self">self</span>.<span class="ident">len</span>);
@@ -4129,7 +4089,7 @@
     <span class="doccomment">/// * Panics if the reallocation fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">shrink_to</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">min_capacity</span>: <span class="ident">usize</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="self">self</span>.<span class="ident">buf</span>.<span class="ident">shrink_to_fit</span>(<span class="ident">cmp</span>::<span class="ident">max</span>(<span class="self">self</span>.<span class="ident">len</span>, <span class="ident">min_capacity</span>));
     }
@@ -4176,7 +4136,7 @@
     <span class="doccomment">/// Panics if the reallocation fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_boxed_slice</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">T</span>], <span class="ident">A</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_into_boxed_slice</span>() {
             <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>,
@@ -4341,10 +4301,7 @@
         <span class="comment">// We shadow the slice method of the same name to avoid going through</span>
         <span class="comment">// `deref`, which creates an intermediate reference.</span>
         <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">buf</span>.<span class="ident">ptr</span>();
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;core_intrinsics&quot;</span>)]</span>
-        <span class="kw">unsafe</span> {
-            <span class="ident">core</span>::<span class="ident">intrinsics</span>::<span class="ident">assume</span>(<span class="op">!</span><span class="ident">ptr</span>.<span class="ident">is_null</span>());
-        }
+        <span class="kw">unsafe</span> { <span class="ident">assume</span>(<span class="op">!</span><span class="ident">ptr</span>.<span class="ident">is_null</span>()) };
         <span class="ident">ptr</span>
     }
 
@@ -4380,10 +4337,7 @@
         <span class="comment">// We shadow the slice method of the same name to avoid going through</span>
         <span class="comment">// `deref_mut`, which creates an intermediate reference.</span>
         <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">buf</span>.<span class="ident">ptr</span>();
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;core_intrinsics&quot;</span>)]</span>
-        <span class="kw">unsafe</span> {
-            <span class="ident">core</span>::<span class="ident">intrinsics</span>::<span class="ident">assume</span>(<span class="op">!</span><span class="ident">ptr</span>.<span class="ident">is_null</span>());
-        }
+        <span class="kw">unsafe</span> { <span class="ident">assume</span>(<span class="op">!</span><span class="ident">ptr</span>.<span class="ident">is_null</span>()) };
         <span class="ident">ptr</span>
     }
 
@@ -4530,7 +4484,7 @@
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">index</span>: <span class="ident">usize</span>, <span class="ident">element</span>: <span class="ident">T</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_insert</span>(<span class="ident">index</span>, <span class="ident">element</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>,
@@ -4636,7 +4590,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">retain</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">f</span>: <span class="ident">F</span>)
     <span class="kw">where</span>
         <span class="ident">F</span>: <span class="ident">FnMut</span>(<span class="kw-2">&amp;</span><span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>,
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="self">self</span>.<span class="ident">drain_filter</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="op">!</span><span class="ident">f</span>(<span class="ident">x</span>));
     }
@@ -4719,7 +4673,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">push</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">value</span>: <span class="ident">T</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_push</span>(<span class="ident">value</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>,
@@ -4795,7 +4749,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_append</span>(<span class="ident">other</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>,
@@ -4980,7 +4934,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">split_off</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">at</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_split_off</span>(<span class="ident">at</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>,
@@ -5050,7 +5004,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">resize_with</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">new_len</span>: <span class="ident">usize</span>, <span class="ident">f</span>: <span class="ident">F</span>)
     <span class="kw">where</span>
         <span class="ident">F</span>: <span class="ident">FnMut</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span>,
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_resize_with</span>(<span class="ident">new_len</span>, <span class="ident">f</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>,
@@ -5104,7 +5058,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">leak</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="ident">vec</span>: <span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> [<span class="ident">T</span>]
     <span class="kw">where</span>
         <span class="ident">T</span>: <span class="lifetime">&#39;a</span>, <span class="comment">// Technically not needed, but kept to be explicit.</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="ident">Box</span>::<span class="ident">leak</span>(<span class="ident">vec</span>.<span class="ident">into_boxed_slice</span>())
     }
@@ -5123,7 +5077,7 @@
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_iter_in</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">I</span>, <span class="ident">b</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">new_in</span>(<span class="ident">b</span>);
         <span class="ident">v</span>.<span class="ident">extend</span>(<span class="ident">iter</span>.<span class="ident">into_iter</span>());
@@ -5164,7 +5118,7 @@
     <span class="doccomment">/// Panics if the reallocation fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">resize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">new_len</span>: <span class="ident">usize</span>, <span class="ident">value</span>: <span class="ident">T</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">len</span>();
 
@@ -5216,7 +5170,7 @@
     <span class="doccomment">/// Panics if the reallocation fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span>[<span class="ident">T</span>])
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="self">self</span>.<span class="ident">extend</span>(<span class="ident">other</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>())
     }
@@ -5270,7 +5224,7 @@
     <span class="doccomment">/// Extend the vector by `n` values, using the given generator.</span>
     <span class="kw">fn</span> <span class="ident">extend_with</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">ExtendWith</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">n</span>: <span class="ident">usize</span>, <span class="ident">value</span>: <span class="ident">E</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_extend_with</span>(<span class="ident">n</span>, <span class="ident">value</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>,
@@ -5407,7 +5361,7 @@
 <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_elem_in</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span>, <span class="ident">A</span><span class="op">&gt;</span>(<span class="ident">elem</span>: <span class="ident">T</span>, <span class="ident">n</span>: <span class="ident">usize</span>, <span class="ident">b</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity_in</span>(<span class="ident">n</span>, <span class="ident">b</span>);
     <span class="ident">v</span>.<span class="ident">extend_with</span>(<span class="ident">n</span>, <span class="ident">ExtendElement</span>(<span class="ident">elem</span>));
@@ -5552,7 +5506,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">extend</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) {
@@ -5616,7 +5570,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">splice</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">I</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">range</span>: <span class="ident">R</span>, <span class="ident">replace_with</span>: <span class="ident">I</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Splice</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">I</span>::<span class="ident">IntoIter</span>, <span class="ident">A</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
         <span class="ident">R</span>: <span class="ident">RangeBounds</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
         <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span>,
     {
@@ -5675,7 +5629,7 @@
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">drain_filter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">filter</span>: <span class="ident">F</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">DrainFilter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">T</span>, <span class="ident">F</span>, <span class="ident">A</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
         <span class="ident">F</span>: <span class="ident">FnMut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>,
     {
         <span class="kw">let</span> <span class="ident">old_len</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">len</span>();
@@ -5704,7 +5658,7 @@
 <span class="doccomment">/// [`copy_from_slice`]: ../../std/primitive.slice.html#method.copy_from_slice</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="lifetime">&#39;a</span> <span class="op">+</span> <span class="ident">Copy</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="kw">fn</span> <span class="ident">extend</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) {
         <span class="self">self</span>.<span class="ident">extend</span>(<span class="ident">iter</span>.<span class="ident">into_iter</span>().<span class="ident">cloned</span>())
@@ -5744,29 +5698,8 @@
 <span class="comment">// __impl_slice_eq1! { [] Cow&lt;&#39;_, [A]&gt;, &amp;[B], A: Clone }</span>
 <span class="comment">// __impl_slice_eq1! { [] Cow&lt;&#39;_, [A]&gt;, &amp;mut [B], A: Clone }</span>
 <span class="comment">// __impl_slice_eq1! { [] Cow&lt;&#39;_, [A]&gt;, Vec&lt;B&gt;, A: Clone }</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;const_generics&quot;</span>)]</span>
 <span class="macro">__impl_slice_eq1</span><span class="macro">!</span> { [<span class="ident">A</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span>] <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span>, [<span class="ident">U</span>; <span class="ident">N</span>], [<span class="ident">U</span>; <span class="ident">N</span>]: <span class="ident">core</span>::<span class="ident">array</span>::<span class="ident">LengthAtMost32</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span> }
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;const_generics&quot;</span>)]</span>
 <span class="macro">__impl_slice_eq1</span><span class="macro">!</span> { [<span class="ident">A</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span>] <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span>, <span class="kw-2">&amp;</span>[<span class="ident">U</span>; <span class="ident">N</span>], [<span class="ident">U</span>; <span class="ident">N</span>]: <span class="ident">core</span>::<span class="ident">array</span>::<span class="ident">LengthAtMost32</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span> }
-
-<span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">array_impls</span> {
-    ($(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">N</span>: <span class="ident">expr</span>)<span class="op">+</span>) <span class="op">=</span><span class="op">&gt;</span> {
-        $(
-            <span class="comment">// NOTE: Using macros to avoid const generics.</span>
-            <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;const_generics&quot;</span>))]</span>
-            <span class="macro">__impl_slice_eq1</span><span class="macro">!</span> { [<span class="ident">A</span>] <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span>, [<span class="ident">U</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">N</span>], <span class="ident">A</span>: <span class="ident">DeallocRef</span> }
-            <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;const_generics&quot;</span>))]</span>
-            <span class="macro">__impl_slice_eq1</span><span class="macro">!</span> { [<span class="ident">A</span>] <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span>, <span class="kw-2">&amp;</span>[<span class="ident">U</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">N</span>], <span class="ident">A</span>: <span class="ident">DeallocRef</span> }
-        )<span class="op">+</span>
-    }
-}
-
-<span class="macro">array_impls</span><span class="macro">!</span> {
-     <span class="number">0</span>  <span class="number">1</span>  <span class="number">2</span>  <span class="number">3</span>  <span class="number">4</span>  <span class="number">5</span>  <span class="number">6</span>  <span class="number">7</span>  <span class="number">8</span>  <span class="number">9</span>
-    <span class="number">10</span> <span class="number">11</span> <span class="number">12</span> <span class="number">13</span> <span class="number">14</span> <span class="number">15</span> <span class="number">16</span> <span class="number">17</span> <span class="number">18</span> <span class="number">19</span>
-    <span class="number">20</span> <span class="number">21</span> <span class="number">22</span> <span class="number">23</span> <span class="number">24</span> <span class="number">25</span> <span class="number">26</span> <span class="number">27</span> <span class="number">28</span> <span class="number">29</span>
-    <span class="number">30</span> <span class="number">31</span> <span class="number">32</span>
-}
 
 <span class="comment">// NOTE: some less important impls are omitted to reduce code bloat</span>
 <span class="comment">// FIXME(Centril): Reconsider this?</span>
@@ -5795,19 +5728,7 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dropck_eyepatch&quot;</span>)]</span>
 <span class="kw">unsafe</span> <span class="kw">impl</span><span class="op">&lt;</span><span class="attribute">#[<span class="ident">may_dangle</span>]</span> <span class="ident">T</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="kw">unsafe</span> {
-            <span class="comment">// use drop for [T]</span>
-            <span class="ident">ptr</span>::<span class="ident">drop_in_place</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>[..]);
-        }
-        <span class="comment">// RawVec handles deallocation</span>
-    }
-}
-
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dropck_eyepatch&quot;</span>))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="kw">unsafe</span> {
             <span class="comment">// use drop for [T]</span>
@@ -6199,7 +6120,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Splice</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">I</span>: <span class="ident">Iterator</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>, <span class="ident">A</span> <span class="op">=</span> <span class="ident">AbortAlloc</span><span class="op">&lt;</span><span class="ident">Global</span><span class="op">&gt;</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="ident">drain</span>: <span class="ident">Drain</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">I</span>::<span class="ident">Item</span>, <span class="ident">A</span><span class="op">&gt;</span>,
     <span class="ident">replace_with</span>: <span class="ident">I</span>,
@@ -6207,7 +6128,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">Iterator</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">Splice</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">I</span>, <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">I</span>::<span class="ident">Item</span>;
 
@@ -6222,19 +6143,18 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">Iterator</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">DoubleEndedIterator</span> <span class="kw">for</span> <span class="ident">Splice</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">I</span>, <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="kw">fn</span> <span class="ident">next_back</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Item</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">drain</span>.<span class="ident">next_back</span>()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">Iterator</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">ExactSizeIterator</span> <span class="kw">for</span> <span class="ident">Splice</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">I</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="kw">where</span> <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>
-{}
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">Iterator</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">ExactSizeIterator</span> <span class="kw">for</span> <span class="ident">Splice</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">I</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="kw">where</span> <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span> {}
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">Iterator</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Splice</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">I</span>, <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="self">self</span>.<span class="ident">drain</span>.<span class="ident">by_ref</span>().<span class="ident">for_each</span>(<span class="ident">drop</span>);
@@ -6280,7 +6200,7 @@
 <span class="doccomment">/// Private helper methods for `Splice::drop`</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">Drain</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="doccomment">/// The range from `self.vec.len` to `self.tail_start` contains elements</span>
     <span class="doccomment">/// that have been moved out.</span>

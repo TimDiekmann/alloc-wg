@@ -1410,30 +1410,6 @@
 <span id="1410">1410</span>
 <span id="1411">1411</span>
 <span id="1412">1412</span>
-<span id="1413">1413</span>
-<span id="1414">1414</span>
-<span id="1415">1415</span>
-<span id="1416">1416</span>
-<span id="1417">1417</span>
-<span id="1418">1418</span>
-<span id="1419">1419</span>
-<span id="1420">1420</span>
-<span id="1421">1421</span>
-<span id="1422">1422</span>
-<span id="1423">1423</span>
-<span id="1424">1424</span>
-<span id="1425">1425</span>
-<span id="1426">1426</span>
-<span id="1427">1427</span>
-<span id="1428">1428</span>
-<span id="1429">1429</span>
-<span id="1430">1430</span>
-<span id="1431">1431</span>
-<span id="1432">1432</span>
-<span id="1433">1433</span>
-<span id="1434">1434</span>
-<span id="1435">1435</span>
-<span id="1436">1436</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! A pointer type for heap allocation.</span>
 <span class="doccomment">//!</span>
@@ -1530,12 +1506,11 @@
     <span class="ident">future</span>::<span class="ident">Future</span>,
     <span class="ident">hash</span>::{<span class="ident">Hash</span>, <span class="ident">Hasher</span>},
     <span class="ident">iter</span>::<span class="ident">FusedIterator</span>,
-    <span class="ident">marker</span>::<span class="ident">PhantomData</span>,
     <span class="ident">mem</span>,
     <span class="ident">num</span>::<span class="ident">NonZeroUsize</span>,
     <span class="ident">ops</span>::{<span class="ident">Deref</span>, <span class="ident">DerefMut</span>},
     <span class="ident">pin</span>::<span class="ident">Pin</span>,
-    <span class="ident">ptr</span>::{<span class="self">self</span>, <span class="ident">NonNull</span>},
+    <span class="ident">ptr</span>::{<span class="self">self</span>, <span class="ident">NonNull</span>, <span class="ident">Unique</span>},
     <span class="ident">slice</span>,
     <span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>},
 };
@@ -1543,11 +1518,9 @@
 <span class="doccomment">/// A pointer type for heap allocation.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// See the [module-level documentation](index.html) for more.</span>
-<span class="comment">// Using `NonNull` + `PhantomData` instead of `Unique` to stay on stable as long as possible</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span> <span class="op">=</span> <span class="ident">AbortAlloc</span><span class="op">&lt;</span><span class="ident">Global</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">ptr</span>: <span class="ident">NonNull</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+    <span class="ident">ptr</span>: <span class="ident">Unique</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     <span class="ident">build_alloc</span>: <span class="ident">A</span>::<span class="ident">BuildAlloc</span>,
-    <span class="ident">_owned</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
 }
 <span class="comment">// TODO: Remove when using ptr::Unique</span>
 <span class="kw">unsafe</span> <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span> <span class="ident">Send</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span> {}
@@ -1629,7 +1602,7 @@
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_in</span>(<span class="ident">x</span>: <span class="ident">T</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">unsafe</span> { <span class="self">Self</span>::<span class="ident">try_new_in</span>(<span class="ident">x</span>, <span class="ident">a</span>).<span class="ident">unwrap_unchecked</span>() }
     }
@@ -1685,7 +1658,7 @@
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_uninit_in</span>(<span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">mem</span>::<span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">A</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">unsafe</span> { <span class="self">Self</span>::<span class="ident">try_new_uninit_in</span>(<span class="ident">a</span>).<span class="ident">unwrap_unchecked</span>() }
     }
@@ -1725,7 +1698,7 @@
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">pin_in</span>(<span class="ident">x</span>: <span class="ident">T</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Pin</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">unsafe</span> { <span class="self">Self</span>::<span class="ident">try_pin_in</span>(<span class="ident">x</span>, <span class="ident">a</span>).<span class="ident">unwrap_unchecked</span>() }
     }
@@ -1797,7 +1770,7 @@
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_uninit_slice_in</span>(<span class="ident">len</span>: <span class="ident">usize</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">mem</span>::<span class="ident">MaybeUninit</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>], <span class="ident">A</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="kw">unsafe</span> { <span class="self">Self</span>::<span class="ident">try_new_uninit_slice_in</span>(<span class="ident">len</span>, <span class="ident">a</span>).<span class="ident">unwrap_unchecked</span>() }
     }
@@ -2001,9 +1974,8 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_raw_in</span>(<span class="ident">raw</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>, <span class="ident">builder</span>: <span class="ident">A</span>::<span class="ident">BuildAlloc</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">ptr</span>: <span class="ident">NonNull</span>::<span class="ident">new_unchecked</span>(<span class="ident">raw</span>),
+            <span class="ident">ptr</span>: <span class="ident">Unique</span>::<span class="ident">new_unchecked</span>(<span class="ident">raw</span>),
             <span class="ident">build_alloc</span>: <span class="ident">builder</span>,
-            <span class="ident">_owned</span>: <span class="ident">PhantomData</span>,
         }
     }
 
@@ -2021,7 +1993,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">alloc_ref</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">A</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NonZeroLayout</span><span class="op">&gt;</span>) {
         <span class="kw">let</span> <span class="ident">layout</span> <span class="op">=</span> <span class="ident">NonZeroLayout</span>::<span class="ident">for_value</span>(<span class="self">self</span>.<span class="ident">as_ref</span>());
         <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">cast</span>();
-        <span class="kw">let</span> <span class="ident">alloc</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">build_alloc_mut</span>().<span class="ident">build_alloc_ref</span>(<span class="ident">ptr</span>, <span class="ident">layout</span>) };
+        <span class="kw">let</span> <span class="ident">alloc</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">build_alloc_mut</span>().<span class="ident">build_alloc_ref</span>(<span class="ident">ptr</span>.<span class="ident">into</span>(), <span class="ident">layout</span>) };
         (<span class="ident">alloc</span>, <span class="ident">layout</span>)
     }
 
@@ -2118,16 +2090,14 @@
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;ptr_internals&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_unique</span>(<span class="ident">b</span>: <span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">core</span>::<span class="ident">ptr</span>::<span class="ident">Unique</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_unique</span>(<span class="ident">b</span>: <span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Unique</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="self">Self</span>::<span class="ident">into_unique_alloc</span>(<span class="ident">b</span>).<span class="number">0</span>
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;ptr_internals&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_unique_alloc</span>(<span class="ident">b</span>: <span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">core</span>::<span class="ident">ptr</span>::<span class="ident">Unique</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">A</span>::<span class="ident">BuildAlloc</span>) {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="ident">b</span>.<span class="ident">ptr</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_unique_alloc</span>(<span class="ident">b</span>: <span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Unique</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">A</span>::<span class="ident">BuildAlloc</span>) {
+        <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="ident">b</span>.<span class="ident">ptr</span>;
         <span class="kw">unsafe</span> {
             <span class="kw">let</span> <span class="ident">alloc</span> <span class="op">=</span> <span class="ident">ptr</span>::<span class="ident">read</span>(<span class="ident">b</span>.<span class="ident">build_alloc</span>());
             <span class="ident">mem</span>::<span class="ident">forget</span>(<span class="ident">b</span>);
@@ -2138,7 +2108,7 @@
             <span class="comment">// without some care, the pointer we are returning here still carries</span>
             <span class="comment">// the tag of `b`, with `Unique` permission.</span>
             <span class="comment">// We round-trip through a mutable reference to avoid that.</span>
-            (<span class="ident">core</span>::<span class="ident">ptr</span>::<span class="ident">Unique</span>::<span class="ident">new_unchecked</span>(<span class="ident">ptr</span>.<span class="ident">as_mut</span>()), <span class="ident">alloc</span>)
+            (<span class="ident">ptr</span>, <span class="ident">alloc</span>)
         }
     }
 
@@ -2197,12 +2167,11 @@
         <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="ident">boxed</span>.<span class="ident">ptr</span>;
         <span class="ident">ptr</span>::<span class="ident">drop_in_place</span>(<span class="ident">ptr</span>.<span class="ident">as_ptr</span>());
         <span class="kw">if</span> <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">alloc</span>, <span class="prelude-val">Some</span>(<span class="ident">layout</span>)) <span class="op">=</span> <span class="ident">boxed</span>.<span class="ident">alloc_ref</span>() {
-            <span class="ident">alloc</span>.<span class="ident">dealloc</span>(<span class="ident">ptr</span>.<span class="ident">cast</span>(), <span class="ident">layout</span>)
+            <span class="ident">alloc</span>.<span class="ident">dealloc</span>(<span class="ident">ptr</span>.<span class="ident">cast</span>().<span class="ident">into</span>(), <span class="ident">layout</span>)
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dropck_eyepatch&quot;</span>)]</span>
 <span class="kw">unsafe</span> <span class="kw">impl</span><span class="op">&lt;</span><span class="attribute">#[<span class="ident">may_dangle</span>]</span> <span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="ident">drop_box</span>(<span class="self">self</span>);
@@ -2212,7 +2181,7 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Default</span>,
-    <span class="ident">A</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -2220,11 +2189,10 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;coerce_unsized&quot;</span>)]</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">use_self</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">T</span>], <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -2238,11 +2206,10 @@
     <span class="ident">Box</span>::<span class="ident">from_raw_in</span>(<span class="ident">ptr</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">str</span>, <span class="ident">b</span>)
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;coerce_unsized&quot;</span>)]</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">use_self</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">str</span>, <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -2250,16 +2217,9 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dropck_eyepatch&quot;</span>))]</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="ident">drop_box</span>(<span class="self">self</span>);
-    }
-}
-
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span>, <span class="ident">A</span>: <span class="ident">Clone</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     <span class="ident">A</span>::<span class="ident">BuildAlloc</span>: <span class="ident">Clone</span>,
 {
     <span class="doccomment">/// Returns a new box with a `clone()` of this box&#39;s contents.</span>
@@ -2286,7 +2246,7 @@
         <span class="kw">let</span> <span class="ident">old_layout</span> <span class="op">=</span> <span class="ident">NonZeroLayout</span>::<span class="ident">for_value</span>(<span class="self">self</span>.<span class="ident">as_ref</span>());
 
         <span class="kw">unsafe</span> {
-            <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">b</span>.<span class="ident">build_alloc_ref</span>(<span class="ident">old_ptr</span>, <span class="ident">old_layout</span>);
+            <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">b</span>.<span class="ident">build_alloc_ref</span>(<span class="ident">old_ptr</span>.<span class="ident">into</span>(), <span class="ident">old_layout</span>);
             <span class="self">self</span>.<span class="ident">clone_in</span>(<span class="ident">a</span>)
         }
     }
@@ -2322,7 +2282,7 @@
 
     <span class="kw">fn</span> <span class="ident">clone_in</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">a</span>: <span class="ident">B</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Cloned</span>
     <span class="kw">where</span>
-        <span class="ident">B</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+        <span class="ident">B</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     {
         <span class="ident">Box</span>::<span class="ident">new_in</span>(<span class="self">self</span>.<span class="ident">as_ref</span>().<span class="ident">clone</span>(), <span class="ident">a</span>)
     }
@@ -2426,7 +2386,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="doccomment">/// Converts a generic type `T` into a `Box&lt;T&gt;`</span>
     <span class="doccomment">///</span>
@@ -2460,7 +2420,7 @@
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">use_self</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Copy</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">T</span>]<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">T</span>], <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="doccomment">/// Converts a `&amp;[T]` into a `Box&lt;[T], B&gt;`</span>
     <span class="doccomment">///</span>
@@ -2489,7 +2449,7 @@
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">use_self</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">str</span>, <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">Default</span> <span class="op">+</span> <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
 {
     <span class="doccomment">/// Converts a `&amp;str` into a `Box&lt;str&gt;`</span>
     <span class="doccomment">///</span>
@@ -2535,22 +2495,21 @@
     }
 }
 
-<span class="comment">//#[cfg(feature = &quot;boxed_slice_try_from&quot;)]</span>
-<span class="comment">//#[allow(clippy::use_self)]</span>
-<span class="comment">//impl&lt;T, const N: usize&gt; core::convert::TryFrom&lt;Box&lt;[T]&gt;&gt; for Box&lt;[T; N]&gt;</span>
-<span class="comment">//where</span>
-<span class="comment">//    [T; N]: core::array::LengthAtMost32,</span>
-<span class="comment">//{</span>
-<span class="comment">//    type Error = Box&lt;[T]&gt;;</span>
-<span class="comment">//</span>
-<span class="comment">//    fn try_from(boxed_slice: Box&lt;[T]&gt;) -&gt; Result&lt;Self, Self::Error&gt; {</span>
-<span class="comment">//        if boxed_slice.len() == N {</span>
-<span class="comment">//            Ok(unsafe { Self::from_raw(Box::into_raw(boxed_slice) as *mut [T; N]) })</span>
-<span class="comment">//        } else {</span>
-<span class="comment">//            Err(boxed_slice)</span>
-<span class="comment">//        }</span>
-<span class="comment">//    }</span>
-<span class="comment">//}</span>
+<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">use_self</span>)]</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="kw">const</span> <span class="ident">N</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">core</span>::<span class="ident">convert</span>::<span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">T</span>]<span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">T</span>; <span class="ident">N</span>]<span class="op">&gt;</span>
+<span class="kw">where</span>
+    [<span class="ident">T</span>; <span class="ident">N</span>]: <span class="ident">core</span>::<span class="ident">array</span>::<span class="ident">LengthAtMost32</span>,
+{
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">T</span>]<span class="op">&gt;</span>;
+
+    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">boxed_slice</span>: <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">T</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="ident">boxed_slice</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">N</span> {
+            <span class="prelude-val">Ok</span>(<span class="kw">unsafe</span> { <span class="self">Self</span>::<span class="ident">from_raw</span>(<span class="ident">Box</span>::<span class="ident">into_raw</span>(<span class="ident">boxed_slice</span>) <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> [<span class="ident">T</span>; <span class="ident">N</span>]) })
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">boxed_slice</span>)
+        }
+    }
+}
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">use_self</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Any</span>, <span class="ident">A</span><span class="op">&gt;</span> {
@@ -2650,7 +2609,6 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;receiver_trait&quot;</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">core</span>::<span class="ident">ops</span>::<span class="ident">Receiver</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span> {}
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">Iterator</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">A</span><span class="op">&gt;</span> {
@@ -2701,7 +2659,6 @@
         (<span class="kw-2">*</span><span class="kw-2">*</span><span class="self">self</span>).<span class="ident">len</span>()
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;exact_size_is_empty&quot;</span>)]</span>
     <span class="kw">fn</span> <span class="ident">is_empty</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         (<span class="kw-2">*</span><span class="kw-2">*</span><span class="self">self</span>).<span class="ident">is_empty</span>()
     }
@@ -2709,7 +2666,6 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">FusedIterator</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">FusedIterator</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">I</span>, <span class="ident">A</span><span class="op">&gt;</span> {}
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fn_traits&quot;</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Args</span>, <span class="ident">F</span>: <span class="ident">FnOnce</span><span class="op">&lt;</span><span class="ident">Args</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Copy</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">FnOnce</span><span class="op">&lt;</span><span class="ident">Args</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">A</span><span class="op">&gt;</span> {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">F</span> <span class="kw">as</span> <span class="ident">FnOnce</span><span class="op">&lt;</span><span class="ident">Args</span><span class="op">&gt;</span><span class="op">&gt;</span>::<span class="ident">Output</span>;
 
@@ -2718,21 +2674,18 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fn_traits&quot;</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Args</span>, <span class="ident">F</span>: <span class="ident">FnMut</span><span class="op">&lt;</span><span class="ident">Args</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Copy</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">FnMut</span><span class="op">&lt;</span><span class="ident">Args</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">A</span><span class="op">&gt;</span> {
     <span class="kw">extern</span> <span class="string">&quot;rust-call&quot;</span> <span class="kw">fn</span> <span class="ident">call_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">args</span>: <span class="ident">Args</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Output</span> {
         <span class="op">&lt;</span><span class="ident">F</span> <span class="kw">as</span> <span class="ident">FnMut</span><span class="op">&lt;</span><span class="ident">Args</span><span class="op">&gt;</span><span class="op">&gt;</span>::<span class="ident">call_mut</span>(<span class="self">self</span>, <span class="ident">args</span>)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fn_traits&quot;</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Args</span>, <span class="ident">F</span>: <span class="ident">Fn</span><span class="op">&lt;</span><span class="ident">Args</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Copy</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">Fn</span><span class="op">&lt;</span><span class="ident">Args</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">A</span><span class="op">&gt;</span> {
     <span class="kw">extern</span> <span class="string">&quot;rust-call&quot;</span> <span class="kw">fn</span> <span class="ident">call</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="ident">Args</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Output</span> {
         <span class="op">&lt;</span><span class="ident">F</span> <span class="kw">as</span> <span class="ident">Fn</span><span class="op">&lt;</span><span class="ident">Args</span><span class="op">&gt;</span><span class="op">&gt;</span>::<span class="ident">call</span>(<span class="self">self</span>, <span class="ident">args</span>)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;coerce_unsized&quot;</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="ident">core</span>::<span class="ident">marker</span>::<span class="ident">Unsize</span><span class="op">&lt;</span><span class="ident">U</span><span class="op">&gt;</span>, <span class="ident">U</span>: <span class="question-mark">?</span><span class="ident">Sized</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span>
     <span class="ident">core</span>::<span class="ident">ops</span>::<span class="ident">CoerceUnsized</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="ident">U</span>, <span class="ident">A</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span>
 {
@@ -2742,7 +2695,6 @@
 <span class="comment">// implement it only for Global, and System</span>
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">impl_dispatch_from_dyn</span> {
     (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">ty</span>) <span class="op">=</span><span class="op">&gt;</span> {
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dispatch_from_dyn&quot;</span>)]</span>
         <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="question-mark">?</span><span class="ident">Sized</span> <span class="op">+</span> <span class="ident">core</span>::<span class="ident">marker</span>::<span class="ident">Unsize</span><span class="op">&lt;</span><span class="ident">U</span><span class="op">&gt;</span>, <span class="ident">U</span>: <span class="question-mark">?</span><span class="ident">Sized</span><span class="op">&gt;</span>
             <span class="ident">core</span>::<span class="ident">ops</span>::<span class="ident">DispatchFromDyn</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="ident">U</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span><span class="op">&gt;</span>
         {
@@ -2760,14 +2712,14 @@
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">items_after_statements</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span>, <span class="ident">A</span>: <span class="ident">Clone</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">T</span>], <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
+    <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
     <span class="ident">A</span>::<span class="ident">BuildAlloc</span>: <span class="ident">Clone</span>,
 {
     <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">b</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">build_alloc</span>().<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">old_ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">cast</span>();
         <span class="kw">let</span> <span class="ident">old_layout</span> <span class="op">=</span> <span class="ident">NonZeroLayout</span>::<span class="ident">for_value</span>(<span class="self">self</span>.<span class="ident">as_ref</span>());
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">b</span>.<span class="ident">build_alloc_ref</span>(<span class="ident">old_ptr</span>, <span class="ident">old_layout</span>) };
+        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="ident">b</span>.<span class="ident">build_alloc_ref</span>(<span class="ident">old_ptr</span>.<span class="ident">into</span>(), <span class="ident">old_layout</span>) };
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">new</span> <span class="op">=</span> <span class="ident">BoxBuilder</span> {
             <span class="ident">data</span>: <span class="ident">RawVec</span>::<span class="ident">with_capacity_in</span>(<span class="self">self</span>.<span class="ident">len</span>(), <span class="ident">a</span>),
