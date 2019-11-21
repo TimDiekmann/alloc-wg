@@ -3175,59 +3175,6 @@
 <span id="3175">3175</span>
 <span id="3176">3176</span>
 <span id="3177">3177</span>
-<span id="3178">3178</span>
-<span id="3179">3179</span>
-<span id="3180">3180</span>
-<span id="3181">3181</span>
-<span id="3182">3182</span>
-<span id="3183">3183</span>
-<span id="3184">3184</span>
-<span id="3185">3185</span>
-<span id="3186">3186</span>
-<span id="3187">3187</span>
-<span id="3188">3188</span>
-<span id="3189">3189</span>
-<span id="3190">3190</span>
-<span id="3191">3191</span>
-<span id="3192">3192</span>
-<span id="3193">3193</span>
-<span id="3194">3194</span>
-<span id="3195">3195</span>
-<span id="3196">3196</span>
-<span id="3197">3197</span>
-<span id="3198">3198</span>
-<span id="3199">3199</span>
-<span id="3200">3200</span>
-<span id="3201">3201</span>
-<span id="3202">3202</span>
-<span id="3203">3203</span>
-<span id="3204">3204</span>
-<span id="3205">3205</span>
-<span id="3206">3206</span>
-<span id="3207">3207</span>
-<span id="3208">3208</span>
-<span id="3209">3209</span>
-<span id="3210">3210</span>
-<span id="3211">3211</span>
-<span id="3212">3212</span>
-<span id="3213">3213</span>
-<span id="3214">3214</span>
-<span id="3215">3215</span>
-<span id="3216">3216</span>
-<span id="3217">3217</span>
-<span id="3218">3218</span>
-<span id="3219">3219</span>
-<span id="3220">3220</span>
-<span id="3221">3221</span>
-<span id="3222">3222</span>
-<span id="3223">3223</span>
-<span id="3224">3224</span>
-<span id="3225">3225</span>
-<span id="3226">3226</span>
-<span id="3227">3227</span>
-<span id="3228">3228</span>
-<span id="3229">3229</span>
-<span id="3230">3230</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! A contiguous growable array type with heap-allocated contents, written</span>
 <span class="doccomment">//! `Vec&lt;T&gt;`.</span>
@@ -3635,22 +3582,6 @@
         <span class="self">Self</span>::<span class="ident">with_capacity_in</span>(<span class="ident">capacity</span>, <span class="ident">AbortAlloc</span>(<span class="ident">Global</span>))
     }
 
-    <span class="doccomment">/// Like `with_capacity`, but guarantees the buffer is zeroed.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// * if the requested capacity exceeds `usize::MAX` bytes.</span>
-    <span class="doccomment">/// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Aborts</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// * on OOM</span>
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="attribute">#[<span class="ident">must_use</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity_zeroed</span>(<span class="ident">capacity</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>::<span class="ident">with_capacity_zeroed_in</span>(<span class="ident">capacity</span>, <span class="ident">AbortAlloc</span>(<span class="ident">Global</span>))
-    }
-
     <span class="doccomment">/// Creates a `Vec&lt;T&gt;` directly from the raw components of another vector.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Safety</span>
@@ -3760,43 +3691,6 @@
     {
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">buf</span>: <span class="ident">RawVec</span>::<span class="ident">try_with_capacity_in</span>(<span class="ident">capacity</span>, <span class="ident">a</span>)<span class="question-mark">?</span>,
-            <span class="ident">len</span>: <span class="number">0</span>,
-        })
-    }
-
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="doccomment">/// Like `with_capacity_zeroed` but parameterized over the choice of allocator for the returned</span>
-    <span class="doccomment">/// `Vec`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// * if the requested capacity exceeds `usize::MAX` bytes.</span>
-    <span class="doccomment">/// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity_zeroed_in</span>(<span class="ident">capacity</span>: <span class="ident">usize</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
-    {
-        <span class="self">Self</span> {
-            <span class="ident">buf</span>: <span class="ident">RawVec</span>::<span class="ident">with_capacity_zeroed_in</span>(<span class="ident">capacity</span>, <span class="ident">a</span>),
-            <span class="ident">len</span>: <span class="number">0</span>,
-        }
-    }
-
-    <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="doccomment">/// Like `with_capacity_zeroed` but parameterized over the choice of allocator for the returned</span>
-    <span class="doccomment">/// `Vec`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Errors</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// * `CapacityOverflow` if the requested capacity exceeds `usize::MAX` bytes.</span>
-    <span class="doccomment">/// * `CapacityOverflow` on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.</span>
-    <span class="doccomment">/// * `AllocError` on OOM</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_with_capacity_zeroed_in</span>(<span class="ident">capacity</span>: <span class="ident">usize</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">CollectionAllocErr</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span>,
-    {
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">buf</span>: <span class="ident">RawVec</span>::<span class="ident">try_with_capacity_zeroed_in</span>(<span class="ident">capacity</span>, <span class="ident">a</span>)<span class="question-mark">?</span>,
             <span class="ident">len</span>: <span class="number">0</span>,
         })
     }
