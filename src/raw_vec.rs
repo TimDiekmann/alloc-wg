@@ -16,11 +16,10 @@ use core::{
     alloc::Layout,
     cmp,
     convert::{TryFrom, TryInto},
-    marker::PhantomData,
     mem,
     num::NonZeroUsize,
     ptr,
-    ptr::NonNull,
+    ptr::{NonNull, Unique},
     slice,
 };
 
@@ -53,10 +52,9 @@ use core::{
 /// this type.
 // Using `NonNull` + `PhantomData` instead of `Unique` to stay on stable as long as possible
 pub struct RawVec<T, A: DeallocRef = AbortAlloc<Global>> {
-    ptr: NonNull<T>,
+    ptr: Unique<T>,
     capacity: usize,
     build_alloc: A::BuildAlloc,
-    _owned: PhantomData<T>,
 }
 
 impl<T> RawVec<T> {
@@ -88,11 +86,10 @@ impl<T> RawVec<T> {
 
         // `Unique::empty()` doubles as "unallocated" and "zero-sized allocation".
         Self {
-            ptr: NonNull::dangling(),
+            ptr: Unique::empty(),
             // FIXME(mark-i-m): use `cap` when ifs are allowed in const
             capacity: [0, !0][(mem::size_of::<T>() == 0) as usize],
             build_alloc: AbortAlloc(Global),
-            _owned: PhantomData,
         }
     }
 
@@ -150,10 +147,9 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     pub fn new_in(mut a: A) -> Self {
         let capacity = if mem::size_of::<T>() == 0 { !0 } else { 0 };
         Self {
-            ptr: NonNull::dangling(),
+            ptr: Unique::empty(),
             capacity,
             build_alloc: a.get_build_alloc(),
-            _owned: PhantomData,
         }
     }
 
@@ -167,7 +163,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
-        A: AllocRef<Error = crate::Never>,
+        A: AllocRef<Error = !>,
     {
         match Self::try_with_capacity_in(capacity, a) {
             Ok(vec) => vec,
@@ -202,7 +198,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn with_capacity_zeroed_in(capacity: usize, a: A) -> Self
     where
-        A: AllocRef<Error = crate::Never>,
+        A: AllocRef<Error = !>,
     {
         match Self::try_with_capacity_zeroed_in(capacity, a) {
             Ok(vec) => vec,
@@ -257,10 +253,9 @@ impl<T, A: DeallocRef> RawVec<T, A> {
         };
 
         Ok(Self {
-            ptr,
+            ptr: ptr.into(),
             capacity,
             build_alloc: alloc.get_build_alloc(),
-            _owned: PhantomData,
         })
     }
 
@@ -277,10 +272,9 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     ) -> Self {
         debug_assert!(!ptr.is_null());
         Self {
-            ptr: NonNull::new_unchecked(ptr),
+            ptr: Unique::new_unchecked(ptr),
             capacity,
             build_alloc,
-            _owned: PhantomData,
         }
     }
 
@@ -323,7 +317,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
                 .try_into()
                 .ok();
             let ptr = self.ptr.cast();
-            let alloc = self.build_alloc_mut().build_alloc_ref(ptr, layout);
+            let alloc = self.build_alloc_mut().build_alloc_ref(ptr.into(), layout);
             (alloc, layout)
         }
     }
@@ -418,7 +412,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// ```
     pub fn double(&mut self)
     where
-        A: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = !>,
     {
         match self.try_double() {
             Ok(_) => (),
@@ -458,7 +452,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
                 let new_cap = 2 * self.capacity;
                 let new_layout = alloc_guard(new_cap * elem_size, mem::align_of::<T>())?;
                 let ptr = alloc
-                    .realloc(self.ptr.cast(), old_layout, new_layout)
+                    .realloc(self.ptr.cast().into(), old_layout, new_layout)
                     .map_err(|inner| CollectionAllocErr::AllocError {
                         inner,
                         layout: new_layout,
@@ -479,7 +473,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
                 (new_cap.get(), ptr.cast())
             };
 
-            self.ptr = ptr;
+            self.ptr = ptr.into();
             self.capacity = new_cap;
             Ok(())
         }
@@ -540,7 +534,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
             let new_cap = 2 * self.capacity;
             let new_layout = alloc_guard(new_cap * elem_size, mem::align_of::<T>())?;
             debug_assert_eq!(old_layout.align(), new_layout.align());
-            Ok(alloc.grow_in_place(self.ptr.cast(), old_layout, new_layout.size()))
+            Ok(alloc.grow_in_place(self.ptr.cast().into(), old_layout, new_layout.size()))
         }
     }
 
@@ -588,7 +582,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// ```
     pub fn reserve(&mut self, used_capacity: usize, needed_extra_capacity: usize)
     where
-        A: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = !>,
     {
         match self.try_reserve(used_capacity, needed_extra_capacity) {
             Ok(vec) => vec,
@@ -631,7 +625,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn reserve_exact(&mut self, used_capacity: usize, needed_extra_capacity: usize)
     where
-        A: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = !>,
     {
         match self.try_reserve_exact(used_capacity, needed_extra_capacity) {
             Ok(_) => (),
@@ -716,7 +710,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
             // (regardless of whether `self.cap - used_capacity` wrapped).
             // Therefore, we can safely call `grow_in_place`.
             // FIXME: may crash and burn on over-reserve
-            if alloc.grow_in_place(self.ptr.cast(), old_layout, new_layout.size()) {
+            if alloc.grow_in_place(self.ptr.cast().into(), old_layout, new_layout.size()) {
                 self.capacity = new_cap;
                 Ok(true)
             } else {
@@ -733,7 +727,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// Panics if the given amount is *larger* than the current capacity.
     pub fn shrink_to_fit(&mut self, amount: usize)
     where
-        A: ReallocRef<Error = crate::Never>,
+        A: ReallocRef<Error = !>,
     {
         match self.try_shrink_to_fit(amount) {
             Ok(_) => (),
@@ -792,7 +786,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
                 let align = NonZeroUsize::new_unchecked(mem::align_of::<T>());
                 let old_layout = NonZeroLayout::from_size_align_unchecked(old_size, align);
                 let new_layout = alloc_guard(new_size.get(), align.get())?;
-                let ptr = self.ptr.cast();
+                let ptr = self.ptr.cast().into();
                 self.ptr = self
                     .build_alloc
                     .build_alloc_ref(ptr, Some(old_layout))
@@ -801,7 +795,8 @@ impl<T, A: DeallocRef> RawVec<T, A> {
                         layout: NonZeroLayout::from_size_align_unchecked(new_size, align),
                         inner,
                     })?
-                    .cast();
+                    .cast()
+                    .into();
             }
             self.capacity = amount;
         }
@@ -847,7 +842,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
 
         let (mut alloc, old_layout) = self.alloc_ref();
         let result = if let Some(layout) = old_layout {
-            unsafe { alloc.realloc(self.ptr.cast(), layout, new_layout) }
+            unsafe { alloc.realloc(self.ptr.cast().into(), layout, new_layout) }
         } else {
             alloc.alloc(new_layout)
         };
@@ -857,7 +852,8 @@ impl<T, A: DeallocRef> RawVec<T, A> {
                 layout: new_layout,
                 inner,
             })?
-            .cast();
+            .cast()
+            .into();
         self.capacity = new_cap.get();
 
         Ok(())
@@ -869,10 +865,9 @@ impl<T, A: DeallocRef> From<Box<[T], A>> for RawVec<T, A> {
         let len = slice.len();
         let (ptr, builder) = Box::into_raw_non_null_alloc(slice);
         Self {
-            ptr: ptr.cast(),
+            ptr: ptr.cast().into(),
             capacity: len,
             build_alloc: builder,
-            _owned: PhantomData,
         }
     }
 }
@@ -888,21 +883,12 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// Frees the memory owned by the `RawVec` *without* trying to Drop its contents.
     pub fn dealloc_buffer(&mut self) {
         if let (mut alloc, Some(layout)) = self.alloc_ref() {
-            unsafe { alloc.dealloc(self.ptr.cast(), layout) }
+            unsafe { alloc.dealloc(self.ptr.cast().into(), layout) }
         }
     }
 }
 
-#[cfg(feature = "dropck_eyepatch")]
 unsafe impl<#[may_dangle] T, A: DeallocRef> Drop for RawVec<T, A> {
-    /// Frees the memory owned by the `RawVec` *without* trying to Drop its contents.
-    fn drop(&mut self) {
-        self.dealloc_buffer();
-    }
-}
-
-#[cfg(not(feature = "dropck_eyepatch"))]
-impl<T, A: DeallocRef> Drop for RawVec<T, A> {
     /// Frees the memory owned by the `RawVec` *without* trying to Drop its contents.
     fn drop(&mut self) {
         self.dealloc_buffer();

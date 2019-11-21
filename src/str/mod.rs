@@ -65,15 +65,6 @@ pub use liballoc::str::{
     Utf8Error,
 };
 
-// Reimplementation of feature(str_internals)
-#[cfg(not(feature = "nightly"))]
-mod str_internals;
-
-#[cfg(not(feature = "nightly"))]
-pub(in crate) use self::str_internals::lossy;
-#[cfg(feature = "nightly")]
-pub(in crate) use core::str::lossy;
-
 impl<D: DeallocRef> Borrow<str> for String<D> {
     #[inline]
     fn borrow(&self) -> &str {
@@ -96,12 +87,6 @@ impl<D: DeallocRef> BorrowMut<str> for String<D> {
 /// Basic usage:
 ///
 /// ```
-/// # // NOTE: Without nightly it's not possible to coerce unsized in downstream crates
-/// # #[cfg(not(feature = "coerce_unsized"))]
-/// # extern crate alloc;
-/// # #[cfg(not(feature = "coerce_unsized"))]
-/// # use alloc as alloc_wg;
-/// # #[cfg(feature = "coerce_unsized")]
 /// use alloc_wg::boxed::Box;
 ///
 /// let smile_utf8 = Box::new([226, 152, 186]);

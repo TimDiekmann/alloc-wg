@@ -13,34 +13,21 @@ jobs:
           - windows-latest
           - macOS-latest
         rust:
-          - stable
-          - beta
           - nightly
         cargo_flags:
           - ""
           - "--no-default-features"
-          - "--features nightly"
-          - "--features nightly --no-default-features"
-        exclude:
-          - rust: stable
-            cargo_flags: "--features nightly"
-          - rust: stable
-            cargo_flags: "--features nightly --no-default-features"
-          - rust: beta
-            cargo_flags: "--features nightly"
-          - rust: beta
-            cargo_flags: "--features nightly --no-default-features"
     steps:
       - name: Install Rust
-        uses: hecrj/setup-rust-action@master
-        with:
-          rust-version: ${{ matrix.rust }}
+        run: |
+          rustup set profile minimal
+          rustup default nightly
 
       - name: Checkout source code
         uses: actions/checkout@master
 
       - name: Build
-        run: cargo build --all ${{ matrix.cargo_flags }} ${{ matrix.additional_flags }}
+        run: cargo build --all ${{ matrix.cargo_flags }}
 
       - name: Test
-        run: cargo test --all ${{ matrix.cargo_flags }} ${{ matrix.additional_flags }}
+        run: cargo test --all ${{ matrix.cargo_flags }}

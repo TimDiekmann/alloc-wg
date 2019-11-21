@@ -33,7 +33,7 @@ impl<A: DeallocRef> DeallocRef for AbortAlloc<A> {
 }
 
 impl<A: AllocRef> AllocRef for AbortAlloc<A> {
-    type Error = crate::Never;
+    type Error = !;
 
     fn alloc(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
         self.0

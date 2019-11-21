@@ -12,7 +12,7 @@ Alloc-WG
 An attempt to collect several proposals of [rust-lang/wg-allocators](https://github.com/rust-lang/wg-allocators) into a
 MVP.
 
-**This crate is WIP** and is designed to replace the alloc crate. However, this is not completely possible as crate, as some 
+**This crate is WIP**, requires a nightly compiler, and is designed to replace the alloc crate. However, this is not completely possible as crate, as some 
 compiler features are not possible for crates.
 
 Changes regarding the current `Alloc` trait

@@ -17,25 +17,3 @@ maintenance = { status = "actively-developed" }
 [features]
 std = []
 default = ["std"]
-dropck_eyepatch = []
-coerce_unsized = []
-const_generics = []
-core_intrinsics = []
-dispatch_from_dyn = []
-exact_size_is_empty = []
-fn_traits = []
-never_type = []
-boxed_slice_try_from = ["const_generics"]
-receiver_trait = []
-nightly = [
-    "dropck_eyepatch",
-    "coerce_unsized",
-    "const_generics",
-    "core_intrinsics",
-    "dispatch_from_dyn",
-    "exact_size_is_empty",
-    "fn_traits",
-    "never_type",
-    "boxed_slice_try_from",
-    "receiver_trait",
-]

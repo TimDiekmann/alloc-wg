@@ -55,26 +55,22 @@
 //! [`NonZeroLayout`]: crate::alloc::NonZeroLayout
 //! [`AbortAlloc`]: crate::alloc::AbortAlloc
 
-#![cfg_attr(feature = "dropck_eyepatch", feature(dropck_eyepatch))]
-#![cfg_attr(feature = "coerce_unsized", feature(coerce_unsized))]
-#![cfg_attr(feature = "core_intrinsics", feature(core_intrinsics))]
-#![cfg_attr(feature = "never_type", feature(never_type))]
-#![cfg_attr(feature = "nightly", feature(str_internals))]
-#![cfg_attr(feature = "dispatch_from_dyn", feature(dispatch_from_dyn))]
-#![cfg_attr(
-    any(feature = "coerce_unsized", feature = "dispatch_from_dyn"),
-    feature(unsize)
-)]
-#![cfg_attr(feature = "exact_size_is_empty", feature(exact_size_is_empty))]
-#![cfg_attr(feature = "receiver_trait", feature(receiver_trait))]
-#![cfg_attr(
-    feature = "const_generics",
-    feature(const_generics, const_generic_impls_guard),
-    allow(incomplete_features)
-)]
-#![cfg_attr(
-    feature = "fn_traits",
-    feature(unboxed_closures, unsized_locals, fn_traits)
+#![feature(
+    dropck_eyepatch,
+    coerce_unsized,
+    core_intrinsics,
+    never_type,
+    ptr_internals,
+    str_internals,
+    dispatch_from_dyn,
+    unsize,
+    exact_size_is_empty,
+    receiver_trait,
+    const_generics,
+    const_generic_impls_guard,
+    unboxed_closures,
+    unsized_locals,
+    fn_traits
 )]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![doc(test(attr(
@@ -108,7 +104,7 @@
     unused_lifetimes,
     unused_qualifications
 )]
-#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::module_name_repetitions, incomplete_features)]
 
 pub mod alloc;
 pub mod boxed;
@@ -125,11 +121,6 @@ extern crate alloc as liballoc;
 mod unchecked_unwrap;
 use self::unchecked_unwrap::*;
 pub use liballoc::{borrow, fmt, rc, slice, sync};
-
-#[cfg(feature = "never_type")]
-type Never = !;
-#[cfg(not(feature = "never_type"))]
-type Never = core::convert::Infallible;
 
 #[macro_export]
 macro_rules! vec {
