@@ -37,10 +37,7 @@ Changes regarding the current `Alloc` trait
 
 - Added an associative error type to [`AllocRef`]. Besides adding the possibility of returning additional information on
   allocation failure, it's also possible to split the usage of the [`AllocRef`] into a fallible and an infallible case.
-  Personally I think this is a pretty big deal, as kernel programmer can rely on allocation, which will never fail. If
-  an allocation can fail, only a `try_*_in` method may be available. To maintain backwards compatibility, [`AbortAlloc`]
-  was introduced. [`AbortAlloc`] wraps another allocator, but aborts on OOM thus `AbortAlloc<Global>` may be used as
-  default allocator for [`Box`] or `Vec`. To realize this, [`AbortAlloc`] implements `AllocRef<Error=!>`.
+  Personally I think this is a pretty big deal, as kernel programmer can rely on allocation, which will never fail.
 
   Issue: [rust-lang/wg-allocators#23](https://github.com/rust-lang/wg-allocators/issues/23)
 
@@ -54,10 +51,6 @@ Changes regarding the current `Alloc` trait
 - Support reallocating to a different alignment.
 
   Issue: [rust-lang/wg-allocators#5](https://github.com/rust-lang/wg-allocators/issues/5)
-
-- Add support for `_zeroed` buffer in `Vec`.
-
-  Issue: [rust-lang/wg-allocators#32](https://github.com/rust-lang/wg-allocators/issues/32)
 
 Currently associated containers
 -------------------------------
