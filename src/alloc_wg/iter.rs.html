@@ -41,7 +41,7 @@
     <span class="doccomment">/// message.try_extend([&#39;d&#39;, &#39;e&#39;, &#39;f&#39;].iter())?;</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// assert_eq!(vec![&#39;a&#39;, &#39;b&#39;, &#39;c&#39;, &#39;d&#39;, &#39;e&#39;, &#39;f&#39;], message);</span>
-    <span class="doccomment">/// # Ok::&lt;(), alloc_wg::collections::CollectionAllocErr&lt;alloc_wg::alloc::AbortAlloc&lt;alloc_wg::alloc::Global&gt;&gt;&gt;(())</span>
+    <span class="doccomment">/// # Ok::&lt;(), alloc_wg::collections::CollectionAllocErr&lt;alloc_wg::alloc::Global&gt;&gt;(())</span>
     <span class="doccomment">/// ```</span>
     <span class="kw">fn</span> <span class="ident">try_extend</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">A</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="self">Self</span>::<span class="prelude-val">Err</span><span class="op">&gt;</span>;
 }

@@ -317,18 +317,10 @@
 <span id="317">317</span>
 <span id="318">318</span>
 <span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="kw">mod</span> <span class="ident">abort</span>;
 <span class="kw">mod</span> <span class="ident">layout</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::{
-    <span class="ident">abort</span>::<span class="ident">AbortAlloc</span>,
-    <span class="ident">layout</span>::{<span class="ident">LayoutErr</span>, <span class="ident">NonZeroLayout</span>},
-};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">layout</span>::{<span class="ident">LayoutErr</span>, <span class="ident">NonZeroLayout</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">alloc</span>::<span class="ident">GlobalAlloc</span>;
 <span class="kw">use</span> <span class="ident">core</span>::{
     <span class="ident">cmp</span>,

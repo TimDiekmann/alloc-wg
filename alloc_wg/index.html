@@ -23,9 +23,9 @@ allocator design possible.</p>
 <p>Added an associative error type to <a href="../alloc_wg/alloc/trait.AllocRef.html"><code>AllocRef</code></a>. Besides adding the possibility of returning additional information on
 allocation failure, it's also possible to split the usage of the <a href="../alloc_wg/alloc/trait.AllocRef.html"><code>AllocRef</code></a> into a fallible and an infallible case.
 Personally I think this is a pretty big deal, as kernel programmer can rely on allocation, which will never fail. If
-an allocation can fail, only a <code>try_*_in</code> method may be available. To maintain backwards compatibility, <a href="../alloc_wg/alloc/struct.AbortAlloc.html"><code>AbortAlloc</code></a>
-was introduced. <a href="../alloc_wg/alloc/struct.AbortAlloc.html"><code>AbortAlloc</code></a> wraps another allocator, but aborts on OOM thus <code>AbortAlloc&lt;Global&gt;</code> may be used as
-default allocator for <a href="../alloc_wg/boxed/struct.Box.html"><code>Box</code></a> or <code>Vec</code>. To realize this, <a href="../alloc_wg/alloc/struct.AbortAlloc.html"><code>AbortAlloc</code></a> implements <code>AllocRef&lt;Error=!&gt;</code>.</p>
+an allocation can fail, only a <code>try_*_in</code> method may be available. To maintain backwards compatibility, <a href="crate::alloc::AbortAlloc"><code>AbortAlloc</code></a>
+was introduced. <a href="crate::alloc::AbortAlloc"><code>AbortAlloc</code></a> wraps another allocator, but aborts on OOM thus <code>AbortAlloc&lt;Global&gt;</code> may be used as
+default allocator for <a href="../alloc_wg/boxed/struct.Box.html"><code>Box</code></a> or <code>Vec</code>. To realize this, <a href="crate::alloc::AbortAlloc"><code>AbortAlloc</code></a> implements <code>AllocRef&lt;Error=!&gt;</code>.</p>
 <p>Issue: <a href="https://github.com/rust-lang/wg-allocators/issues/23">rust-lang/wg-allocators#23</a></p>
 </li>
 <li>

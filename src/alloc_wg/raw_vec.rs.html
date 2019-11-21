@@ -925,11 +925,9 @@
 <span id="925">925</span>
 <span id="926">926</span>
 <span id="927">927</span>
-<span id="928">928</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">alloc</span>::{
-        <span class="ident">AbortAlloc</span>,
         <span class="ident">AllocRef</span>,
         <span class="ident">BuildAllocRef</span>,
         <span class="ident">CapacityOverflow</span>,
@@ -980,7 +978,7 @@
 <span class="doccomment">/// field. This allows zero-sized types to not be special-cased by consumers of</span>
 <span class="doccomment">/// this type.</span>
 <span class="comment">// Using `NonNull` + `PhantomData` instead of `Unique` to stay on stable as long as possible</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RawVec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span> <span class="op">=</span> <span class="ident">AbortAlloc</span><span class="op">&lt;</span><span class="ident">Global</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RawVec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span> <span class="op">=</span> <span class="ident">Global</span><span class="op">&gt;</span> {
     <span class="ident">ptr</span>: <span class="ident">Unique</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     <span class="ident">capacity</span>: <span class="ident">usize</span>,
     <span class="ident">build_alloc</span>: <span class="ident">A</span>::<span class="ident">BuildAlloc</span>,
@@ -1018,7 +1016,7 @@
             <span class="ident">ptr</span>: <span class="ident">Unique</span>::<span class="ident">empty</span>(),
             <span class="comment">// FIXME(mark-i-m): use `cap` when ifs are allowed in const</span>
             <span class="ident">capacity</span>: [<span class="number">0</span>, <span class="op">!</span><span class="number">0</span>][(<span class="ident">mem</span>::<span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="op">=</span><span class="op">=</span> <span class="number">0</span>) <span class="kw">as</span> <span class="ident">usize</span>],
-            <span class="ident">build_alloc</span>: <span class="ident">AbortAlloc</span>(<span class="ident">Global</span>),
+            <span class="ident">build_alloc</span>: <span class="ident">Global</span>,
         }
     }
 
@@ -1039,7 +1037,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity</span>(<span class="ident">capacity</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>::<span class="ident">with_capacity_in</span>(<span class="ident">capacity</span>, <span class="ident">AbortAlloc</span>(<span class="ident">Global</span>))
+        <span class="self">Self</span>::<span class="ident">with_capacity_in</span>(<span class="ident">capacity</span>, <span class="ident">Global</span>)
     }
 
     <span class="doccomment">/// Like `with_capacity`, but guarantees the buffer is zeroed.</span>
@@ -1055,7 +1053,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity_zeroed</span>(<span class="ident">capacity</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>::<span class="ident">with_capacity_zeroed_in</span>(<span class="ident">capacity</span>, <span class="ident">AbortAlloc</span>(<span class="ident">Global</span>))
+        <span class="self">Self</span>::<span class="ident">with_capacity_zeroed_in</span>(<span class="ident">capacity</span>, <span class="ident">Global</span>)
     }
 
     <span class="doccomment">/// Reconstitutes a `RawVec` from a pointer, and capacity.</span>
@@ -1067,7 +1065,7 @@
     <span class="doccomment">/// If the ptr and capacity come from a `RawVec` created with `Global`, then this is guaranteed.</span>
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_raw_parts</span>(<span class="ident">ptr</span>: <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="ident">T</span>, <span class="ident">capacity</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>::<span class="ident">from_raw_parts_in</span>(<span class="ident">ptr</span>, <span class="ident">capacity</span>, <span class="ident">AbortAlloc</span>(<span class="ident">Global</span>))
+        <span class="self">Self</span>::<span class="ident">from_raw_parts_in</span>(<span class="ident">ptr</span>, <span class="ident">capacity</span>, <span class="ident">Global</span>)
     }
 }
 
@@ -1092,7 +1090,7 @@
     <span class="doccomment">/// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity_in</span>(<span class="ident">capacity</span>: <span class="ident">usize</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span>,
     {
         <span class="kw">match</span> <span class="self">Self</span>::<span class="ident">try_with_capacity_in</span>(<span class="ident">capacity</span>, <span class="ident">a</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>,
@@ -1127,7 +1125,7 @@
     <span class="doccomment">/// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity_zeroed_in</span>(<span class="ident">capacity</span>: <span class="ident">usize</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span>,
     {
         <span class="kw">match</span> <span class="self">Self</span>::<span class="ident">try_with_capacity_zeroed_in</span>(<span class="ident">capacity</span>, <span class="ident">a</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>,
@@ -1341,7 +1339,7 @@
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">double</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_double</span>() {
             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
@@ -1511,7 +1509,7 @@
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reserve</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">used_capacity</span>: <span class="ident">usize</span>, <span class="ident">needed_extra_capacity</span>: <span class="ident">usize</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_reserve</span>(<span class="ident">used_capacity</span>, <span class="ident">needed_extra_capacity</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>,
@@ -1554,7 +1552,7 @@
     <span class="doccomment">/// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reserve_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">used_capacity</span>: <span class="ident">usize</span>, <span class="ident">needed_extra_capacity</span>: <span class="ident">usize</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_reserve_exact</span>(<span class="ident">used_capacity</span>, <span class="ident">needed_extra_capacity</span>) {
             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
@@ -1656,7 +1654,7 @@
     <span class="doccomment">/// Panics if the given amount is *larger* than the current capacity.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">shrink_to_fit</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">amount</span>: <span class="ident">usize</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_shrink_to_fit</span>(<span class="ident">amount</span>) {
             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
