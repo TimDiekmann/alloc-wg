@@ -6104,7 +6104,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// [`drain`]: struct.Vec.html#method.drain</span>
 <span class="doccomment">/// [`Vec`]: struct.Vec.html</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Drain</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Drain</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span> <span class="op">=</span> <span class="ident">AbortAlloc</span><span class="op">&lt;</span><span class="ident">Global</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Index of tail to preserve</span>
     <span class="ident">tail_start</span>: <span class="ident">usize</span>,
     <span class="doccomment">/// Length of tail</span>
@@ -6197,7 +6197,7 @@
 <span class="doccomment">/// [`splice()`]: struct.Vec.html#method.splice</span>
 <span class="doccomment">/// [`Vec`]: struct.Vec.html</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Splice</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">I</span>: <span class="ident">Iterator</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>, <span class="ident">A</span><span class="op">&gt;</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Splice</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">I</span>: <span class="ident">Iterator</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>, <span class="ident">A</span> <span class="op">=</span> <span class="ident">AbortAlloc</span><span class="op">&lt;</span><span class="ident">Global</span><span class="op">&gt;</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">A</span>: <span class="ident">ReallocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">Never</span><span class="op">&gt;</span>,
 {
@@ -6320,7 +6320,7 @@
 
 <span class="doccomment">/// An iterator produced by calling `drain_filter` on Vec.</span>
 <span class="comment">// #[derive(Debug)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DrainFilter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">F</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DrainFilter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>, <span class="ident">F</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span> <span class="op">=</span> <span class="ident">AbortAlloc</span><span class="op">&lt;</span><span class="ident">Global</span><span class="op">&gt;</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">F</span>: <span class="ident">FnMut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>,
 {
@@ -6383,7 +6383,7 @@
     <span class="ident">F</span>: <span class="ident">FnMut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>,
 {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="kw">struct</span> <span class="ident">BackshiftOnDrop</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">T</span>, <span class="ident">F</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span>
+        <span class="kw">struct</span> <span class="ident">BackshiftOnDrop</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">T</span>, <span class="ident">F</span>, <span class="ident">A</span>: <span class="ident">DeallocRef</span> <span class="op">=</span> <span class="ident">AbortAlloc</span><span class="op">&lt;</span><span class="ident">Global</span><span class="op">&gt;</span><span class="op">&gt;</span>
         <span class="kw">where</span>
             <span class="ident">F</span>: <span class="ident">FnMut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>,
         {
