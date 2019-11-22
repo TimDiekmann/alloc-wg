@@ -5,12 +5,138 @@ pub use core::alloc::GlobalAlloc;
 use core::{
     cmp,
     fmt,
+    intrinsics::likely,
     num::NonZeroUsize,
     ptr::{self, NonNull},
 };
-pub use liballoc::alloc::{alloc, alloc_zeroed, dealloc, handle_alloc_error, realloc, Layout};
+pub use liballoc::alloc::Layout;
 #[cfg(feature = "std")]
 use std::alloc::System;
+
+/// Abort on memory allocation error or failure.
+///
+/// Callers of memory allocation APIs wishing to abort computation
+/// in response to an allocation error are encouraged to call this function,
+/// rather than directly invoking `panic!` or similar.
+///
+/// The default behavior of this function is to print a message to standard error
+/// and abort the process.
+/// It can be replaced with [`set_alloc_error_hook`] and [`take_alloc_error_hook`].
+///
+/// [`set_alloc_error_hook`]: https://doc.rust-lang.org/nightly/std/alloc/fn.set_alloc_error_hook.html
+/// [`take_alloc_error_hook`]: https://doc.rust-lang.org/nightly/std/alloc/fn.take_alloc_error_hook.html
+#[allow(clippy::inline_always)]
+#[inline(always)]
+#[deprecated = "allocation functions returns an error, use that instead"]
+pub fn handle_alloc_error(layout: Layout) -> ! {
+    liballoc::alloc::handle_alloc_error(layout)
+}
+
+/// Allocate memory with the global allocator.
+///
+/// This function forwards calls to the [`GlobalAlloc::alloc`] method
+/// of the allocator registered with the `#[global_allocator]` attribute
+/// if there is one, or the `std` crate’s default.
+///
+/// # Safety
+///
+/// See [`GlobalAlloc::alloc`].
+///
+/// [`GlobalAlloc::alloc`]: GlobalAlloc::alloc
+///
+/// # Examples
+///
+/// ```
+/// use alloc_wg::alloc::{alloc, dealloc, Layout};
+///
+/// unsafe {
+///     let layout = Layout::new::<u16>();
+///     let ptr = alloc(layout);
+///
+///     *(ptr as *mut u16) = 42;
+///     assert_eq!(*(ptr as *mut u16), 42);
+///
+///     dealloc(ptr, layout);
+/// }
+/// ```
+#[allow(clippy::inline_always)]
+#[inline(always)]
+#[must_use = "allocating is expected to be expensive"]
+#[deprecated = "Use `Global::alloc` instead"]
+pub unsafe fn alloc(layout: Layout) -> *mut u8 {
+    liballoc::alloc::alloc(layout)
+}
+
+/// Deallocate memory with the global allocator.
+///
+/// This function forwards calls to the [`GlobalAlloc::dealloc`] method
+/// of the allocator registered with the `#[global_allocator]` attribute
+/// if there is one, or the `std` crate’s default.
+///
+/// # Safety
+///
+/// See [`GlobalAlloc::dealloc`].
+///
+/// [`GlobalAlloc::dealloc`]: GlobalAlloc::dealloc
+#[allow(clippy::inline_always)]
+#[inline(always)]
+#[deprecated = "Use `Global::dealloc` instead"]
+pub unsafe fn dealloc(ptr: *mut u8, layout: Layout) {
+    liballoc::alloc::dealloc(ptr, layout)
+}
+
+/// Reallocate memory with the global allocator.
+///
+/// This function forwards calls to the [`GlobalAlloc::realloc`] method
+/// of the allocator registered with the `#[global_allocator]` attribute
+/// if there is one, or the `std` crate’s default.
+///
+/// # Safety
+///
+/// See [`GlobalAlloc::realloc`].
+///
+/// [`GlobalAlloc::realloc`]: GlobalAlloc::realloc
+#[allow(clippy::inline_always)]
+#[inline(always)]
+#[must_use = "reallocating is expected to be expensive"]
+#[deprecated = "Use `Global::realloc` instead"]
+pub unsafe fn realloc(ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+    liballoc::alloc::realloc(ptr, layout, new_size)
+}
+
+/// Allocate zero-initialized memory with the global allocator.
+///
+/// This function forwards calls to the [`GlobalAlloc::alloc_zeroed`] method
+/// of the allocator registered with the `#[global_allocator]` attribute
+/// if there is one, or the `std` crate’s default.
+///
+/// # Safety
+///
+/// See [`GlobalAlloc::alloc_zeroed`].
+///
+/// [`GlobalAlloc::alloc_zeroed`]: GlobalAlloc::alloc_zeroed
+///
+/// # Examples
+///
+/// ```
+/// use alloc_wg::alloc::{alloc_zeroed, dealloc, Layout};
+///
+/// unsafe {
+///     let layout = Layout::new::<u16>();
+///     let ptr = alloc_zeroed(layout);
+///
+///     assert_eq!(*(ptr as *mut u16), 0);
+///
+///     dealloc(ptr, layout);
+/// }
+/// ```
+#[allow(clippy::inline_always)]
+#[inline(always)]
+#[must_use = "allocating is expected to be expensive"]
+#[deprecated = "Use `Global::alloc_zeroed` instead"]
+pub unsafe fn alloc_zeroed(layout: Layout) -> *mut u8 {
+    liballoc::alloc::alloc_zeroed(layout)
+}
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct CapacityOverflow;
@@ -212,6 +338,7 @@ impl DeallocRef for Global {
     }
 
     unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: NonZeroLayout) {
+        #[allow(deprecated)]
         dealloc(ptr.as_ptr(), layout.into())
     }
 }
@@ -220,23 +347,31 @@ impl AllocRef for Global {
     type Error = AllocErr;
 
     fn alloc(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
-        unsafe { NonNull::new(alloc(layout.into())).ok_or(AllocErr) }
+        #[allow(deprecated)]
+        unsafe {
+            NonNull::new(alloc(layout.into())).ok_or(AllocErr)
+        }
     }
 
     fn alloc_zeroed(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
-        unsafe { NonNull::new(alloc_zeroed(layout.into())).ok_or(AllocErr) }
+        #[allow(deprecated)]
+        unsafe {
+            NonNull::new(alloc_zeroed(layout.into())).ok_or(AllocErr)
+        }
     }
 }
 
 impl ReallocRef for Global {
+    // FIXME: Remove `else` branch. This is needed, as std provides old method.
     unsafe fn realloc(
         &mut self,
         ptr: NonNull<u8>,
         old_layout: NonZeroLayout,
         new_layout: NonZeroLayout,
     ) -> Result<NonNull<u8>, Self::Error> {
-        // FIXME: Remove `else` branch. This is needed, as std provides old method.
-        if old_layout.align() == new_layout.align() {
+        // TODO: Test if this is a well suited case for `likely`
+        if likely(old_layout.align() == new_layout.align()) {
+            #[allow(deprecated)]
             NonNull::new(realloc(
                 ptr.as_ptr(),
                 old_layout.into(),
@@ -284,7 +419,8 @@ impl ReallocRef for System {
         old_layout: NonZeroLayout,
         new_layout: NonZeroLayout,
     ) -> Result<NonNull<u8>, Self::Error> {
-        if old_layout.align() == new_layout.align() {
+        // TODO: Test if this is a well suited case for `likely`
+        if likely(old_layout.align() == new_layout.align()) {
             NonNull::new(GlobalAlloc::realloc(
                 self,
                 ptr.as_ptr(),
@@ -305,15 +441,12 @@ unsafe fn alloc_copy_dealloc<A: ReallocRef>(
     old_layout: NonZeroLayout,
     new_layout: NonZeroLayout,
 ) -> Result<NonNull<u8>, A::Error> {
-    let result = alloc.alloc(new_layout);
-
-    if let Ok(new_ptr) = result {
-        ptr::copy_nonoverlapping(
-            ptr.as_ptr(),
-            new_ptr.as_ptr(),
-            cmp::min(old_layout.size().get(), new_layout.size().get()),
-        );
-        alloc.dealloc(ptr, old_layout);
-    }
-    result
+    let new_ptr = alloc.alloc(new_layout)?;
+    ptr::copy_nonoverlapping(
+        ptr.as_ptr(),
+        new_ptr.as_ptr(),
+        cmp::min(old_layout.size().get(), new_layout.size().get()),
+    );
+    alloc.dealloc(ptr, old_layout);
+    Ok(new_ptr)
 }
