@@ -80,7 +80,7 @@ use core::{
 #[cfg(feature = "std")]
 use std::borrow::Cow;
 
-use crate::alloc::handle_alloc_error;
+use crate::{alloc::handle_alloc_error, clone::CloneIn};
 pub use liballoc::string::{ParseError, ToString};
 
 /// A UTF-8 encoded, growable string.
@@ -1991,8 +1991,13 @@ impl fmt::Display for FromUtf16Error {
     }
 }
 
-impl Clone for String {
-    #[must_use]
+impl<A> Clone for String<A>
+where
+    A: AllocRef,
+    A::BuildAlloc: Clone,
+{
+    #[inline]
+    #[must_use = "Cloning is expected to be expensive"]
     fn clone(&self) -> Self {
         Self {
             vec: self.vec.clone(),
@@ -2001,6 +2006,26 @@ impl Clone for String {
 
     fn clone_from(&mut self, source: &Self) {
         self.vec.clone_from(&source.vec);
+    }
+}
+
+#[allow(clippy::use_self)]
+impl<A: AllocRef, B: AllocRef> CloneIn<B> for String<A> {
+    type Cloned = String<B>;
+
+    #[inline]
+    #[must_use = "Cloning is expected to be expensive"]
+    fn clone_in(&self, a: B) -> Self::Cloned {
+        String {
+            vec: self.vec.clone_in(a),
+        }
+    }
+
+    #[inline]
+    fn try_clone_in(&self, a: B) -> Result<Self::Cloned, B::Error> {
+        Ok(String {
+            vec: self.vec.try_clone_in(a)?,
+        })
     }
 }
 

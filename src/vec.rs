@@ -69,15 +69,7 @@
 //! [`vec!`]: ../macro.vec.html
 
 use crate::{
-    alloc::{
-        handle_alloc_error,
-        AllocRef,
-        BuildAllocRef,
-        DeallocRef,
-        Global,
-        NonZeroLayout,
-        ReallocRef,
-    },
+    alloc::{handle_alloc_error, AllocRef, BuildAllocRef, DeallocRef, Global, ReallocRef},
     boxed::Box,
     clone::CloneIn,
     collections::CollectionAllocErr,
