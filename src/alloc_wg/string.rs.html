@@ -2618,6 +2618,7 @@
 <span id="2618">2618</span>
 <span id="2619">2619</span>
 <span id="2620">2620</span>
+<span id="2621">2621</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! A UTF-8 encoded, growable string.</span>
 <span class="doccomment">//!</span>
@@ -2701,6 +2702,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">borrow</span>::<span class="ident">Cow</span>;
 
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">alloc</span>::<span class="ident">handle_alloc_error</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">liballoc</span>::<span class="ident">string</span>::{<span class="ident">ParseError</span>, <span class="ident">ToString</span>};
 
 <span class="doccomment">/// A UTF-8 encoded, growable string.</span>
@@ -3330,7 +3332,7 @@
         <span class="kw">match</span> <span class="self">Self</span>::<span class="ident">try_from_utf8_lossy_in</span>(<span class="ident">v</span>, <span class="ident">a</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
             <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;Infallible allocation&quot;</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
         }
     }
 
@@ -3876,7 +3878,7 @@
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_push</span>(<span class="ident">ch</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
             <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;Infallible allocation&quot;</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
         }
     }
 
@@ -4128,7 +4130,7 @@
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_insert</span>(<span class="ident">idx</span>, <span class="ident">ch</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
             <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;Infallible allocation&quot;</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
         }
     }
 
@@ -4203,7 +4205,7 @@
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_insert_str</span>(<span class="ident">idx</span>, <span class="ident">string</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
             <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;Infallible allocation&quot;</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
         }
     }
 
@@ -4326,7 +4328,7 @@
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_split_off</span>(<span class="ident">at</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
             <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;Infallible allocation&quot;</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
         }
     }
 

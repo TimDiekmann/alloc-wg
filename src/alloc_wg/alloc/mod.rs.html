@@ -431,25 +431,6 @@
 <span id="431">431</span>
 <span id="432">432</span>
 <span id="433">433</span>
-<span id="434">434</span>
-<span id="435">435</span>
-<span id="436">436</span>
-<span id="437">437</span>
-<span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
-<span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
-<span id="451">451</span>
-<span id="452">452</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">mod</span> <span class="ident">layout</span>;
 
@@ -462,28 +443,9 @@
     <span class="ident">num</span>::<span class="ident">NonZeroUsize</span>,
     <span class="ident">ptr</span>::{<span class="self">self</span>, <span class="ident">NonNull</span>},
 };
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">liballoc</span>::<span class="ident">alloc</span>::<span class="ident">Layout</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">liballoc</span>::<span class="ident">alloc</span>::{<span class="ident">handle_alloc_error</span>, <span class="ident">Layout</span>};
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">alloc</span>::<span class="ident">System</span>;
-
-<span class="doccomment">/// Abort on memory allocation error or failure.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Callers of memory allocation APIs wishing to abort computation</span>
-<span class="doccomment">/// in response to an allocation error are encouraged to call this function,</span>
-<span class="doccomment">/// rather than directly invoking `panic!` or similar.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The default behavior of this function is to print a message to standard error</span>
-<span class="doccomment">/// and abort the process.</span>
-<span class="doccomment">/// It can be replaced with [`set_alloc_error_hook`] and [`take_alloc_error_hook`].</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// [`set_alloc_error_hook`]: https://doc.rust-lang.org/nightly/std/alloc/fn.set_alloc_error_hook.html</span>
-<span class="doccomment">/// [`take_alloc_error_hook`]: https://doc.rust-lang.org/nightly/std/alloc/fn.take_alloc_error_hook.html</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">inline_always</span>)]</span>
-<span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
-<span class="attribute">#[<span class="ident">deprecated</span> <span class="op">=</span> <span class="string">&quot;allocation functions returns an error, use that instead&quot;</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>: <span class="ident">Layout</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="op">!</span> {
-    <span class="ident">liballoc</span>::<span class="ident">alloc</span>::<span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>)
-}
 
 <span class="doccomment">/// Allocate memory with the global allocator.</span>
 <span class="doccomment">///</span>

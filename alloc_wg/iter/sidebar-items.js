@@ -1,1 +1,1 @@
-initSidebarItems({"trait":[["TryExtend","Extend a collection \"fallibly\" with the contents of an iterator."]]});
+initSidebarItems({"trait":[["FromIteratorIn",""],["IteratorExt",""],["TryExtend","Extend a collection \"fallibly\" with the contents of an iterator."]]});
