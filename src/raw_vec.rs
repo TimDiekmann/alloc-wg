@@ -311,14 +311,20 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// Returns the allocator used by this `RawVec` and the used layout, if any.
     /// The layout is `None` if the capacity of this `RawVec` is `0` or if `T` is a zero sized type.
     pub fn alloc_ref(&mut self) -> (A, Option<NonZeroLayout>) {
-        let size = mem::size_of::<T>() * self.capacity;
+        let layout = self.current_layout();
         unsafe {
-            let layout = Layout::from_size_align_unchecked(size, mem::align_of::<T>())
-                .try_into()
-                .ok();
             let ptr = self.ptr.cast();
             let alloc = self.build_alloc_mut().build_alloc_ref(ptr.into(), layout);
             (alloc, layout)
+        }
+    }
+
+    pub fn current_layout(&self) -> Option<NonZeroLayout> {
+        let size = mem::size_of::<T>() * self.capacity;
+        unsafe {
+            Layout::from_size_align_unchecked(size, mem::align_of::<T>())
+                .try_into()
+                .ok()
         }
     }
 

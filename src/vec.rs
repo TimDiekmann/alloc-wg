@@ -69,7 +69,15 @@
 //! [`vec!`]: ../macro.vec.html
 
 use crate::{
-    alloc::{handle_alloc_error, AllocRef, DeallocRef, Global, ReallocRef},
+    alloc::{
+        handle_alloc_error,
+        AllocRef,
+        BuildAllocRef,
+        DeallocRef,
+        Global,
+        NonZeroLayout,
+        ReallocRef,
+    },
     boxed::Box,
     clone::CloneIn,
     collections::CollectionAllocErr,
@@ -2177,11 +2185,22 @@ unsafe impl<T: ?Sized> IsZero for Option<Box<T>> {
 // Common trait implementations for Vec
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<T: Clone> Clone for Vec<T> {
+impl<T: Clone, A> Clone for Vec<T, A>
+where
+    A: AllocRef,
+    A::BuildAlloc: Clone,
+{
     #[must_use]
     #[inline]
     fn clone(&self) -> Self {
-        self.clone_in(Global)
+        let mut b = self.buf.build_alloc().clone();
+        let old_layout = self.buf.current_layout();
+
+        unsafe {
+            let old_ptr = NonNull::new_unchecked(self.buf.ptr());
+            let a = b.build_alloc_ref(old_ptr.cast(), old_layout);
+            self.clone_in(a)
+        }
     }
 }
 

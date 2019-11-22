@@ -783,7 +783,7 @@ where
     }
 }
 
-impl<T: Clone, A: Clone> Clone for Box<T, A>
+impl<T: Clone, A> Clone for Box<T, A>
 where
     A: AllocRef,
     A::BuildAlloc: Clone,
