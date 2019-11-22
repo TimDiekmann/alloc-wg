@@ -926,6 +926,12 @@
 <span id="926">926</span>
 <span id="927">927</span>
 <span id="928">928</span>
+<span id="929">929</span>
+<span id="930">930</span>
+<span id="931">931</span>
+<span id="932">932</span>
+<span id="933">933</span>
+<span id="934">934</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">alloc</span>::{
@@ -1240,14 +1246,20 @@
     <span class="doccomment">/// Returns the allocator used by this `RawVec` and the used layout, if any.</span>
     <span class="doccomment">/// The layout is `None` if the capacity of this `RawVec` is `0` or if `T` is a zero sized type.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">alloc_ref</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">A</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NonZeroLayout</span><span class="op">&gt;</span>) {
-        <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">mem</span>::<span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="op">*</span> <span class="self">self</span>.<span class="ident">capacity</span>;
+        <span class="kw">let</span> <span class="ident">layout</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">current_layout</span>();
         <span class="kw">unsafe</span> {
-            <span class="kw">let</span> <span class="ident">layout</span> <span class="op">=</span> <span class="ident">Layout</span>::<span class="ident">from_size_align_unchecked</span>(<span class="ident">size</span>, <span class="ident">mem</span>::<span class="ident">align_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>())
-                .<span class="ident">try_into</span>()
-                .<span class="ident">ok</span>();
             <span class="kw">let</span> <span class="ident">ptr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ptr</span>.<span class="ident">cast</span>();
             <span class="kw">let</span> <span class="ident">alloc</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">build_alloc_mut</span>().<span class="ident">build_alloc_ref</span>(<span class="ident">ptr</span>.<span class="ident">into</span>(), <span class="ident">layout</span>);
             (<span class="ident">alloc</span>, <span class="ident">layout</span>)
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">current_layout</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NonZeroLayout</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="ident">mem</span>::<span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="op">*</span> <span class="self">self</span>.<span class="ident">capacity</span>;
+        <span class="kw">unsafe</span> {
+            <span class="ident">Layout</span>::<span class="ident">from_size_align_unchecked</span>(<span class="ident">size</span>, <span class="ident">mem</span>::<span class="ident">align_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>())
+                .<span class="ident">try_into</span>()
+                .<span class="ident">ok</span>()
         }
     }
 

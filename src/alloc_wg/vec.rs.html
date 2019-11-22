@@ -3465,6 +3465,25 @@
 <span id="3465">3465</span>
 <span id="3466">3466</span>
 <span id="3467">3467</span>
+<span id="3468">3468</span>
+<span id="3469">3469</span>
+<span id="3470">3470</span>
+<span id="3471">3471</span>
+<span id="3472">3472</span>
+<span id="3473">3473</span>
+<span id="3474">3474</span>
+<span id="3475">3475</span>
+<span id="3476">3476</span>
+<span id="3477">3477</span>
+<span id="3478">3478</span>
+<span id="3479">3479</span>
+<span id="3480">3480</span>
+<span id="3481">3481</span>
+<span id="3482">3482</span>
+<span id="3483">3483</span>
+<span id="3484">3484</span>
+<span id="3485">3485</span>
+<span id="3486">3486</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! A contiguous growable array type with heap-allocated contents, written</span>
 <span class="doccomment">//! `Vec&lt;T&gt;`.</span>
@@ -3537,7 +3556,15 @@
 <span class="doccomment">//! [`vec!`]: ../macro.vec.html</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">alloc</span>::{<span class="ident">handle_alloc_error</span>, <span class="ident">AllocRef</span>, <span class="ident">DeallocRef</span>, <span class="ident">Global</span>, <span class="ident">ReallocRef</span>},
+    <span class="ident">alloc</span>::{
+        <span class="ident">handle_alloc_error</span>,
+        <span class="ident">AllocRef</span>,
+        <span class="ident">BuildAllocRef</span>,
+        <span class="ident">DeallocRef</span>,
+        <span class="ident">Global</span>,
+        <span class="ident">NonZeroLayout</span>,
+        <span class="ident">ReallocRef</span>,
+    },
     <span class="ident">boxed</span>::<span class="ident">Box</span>,
     <span class="ident">clone</span>::<span class="ident">CloneIn</span>,
     <span class="ident">collections</span>::<span class="ident">CollectionAllocErr</span>,
@@ -5645,11 +5672,22 @@
 <span class="comment">// Common trait implementations for Vec</span>
 <span class="comment">////////////////////////////////////////////////////////////////////////////////</span>
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">A</span>: <span class="ident">AllocRef</span>,
+    <span class="ident">A</span>::<span class="ident">BuildAlloc</span>: <span class="ident">Clone</span>,
+{
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">clone_in</span>(<span class="ident">Global</span>)
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">b</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">buf</span>.<span class="ident">build_alloc</span>().<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">old_layout</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">buf</span>.<span class="ident">current_layout</span>();
+
+        <span class="kw">unsafe</span> {
+            <span class="kw">let</span> <span class="ident">old_ptr</span> <span class="op">=</span> <span class="ident">NonNull</span>::<span class="ident">new_unchecked</span>(<span class="self">self</span>.<span class="ident">buf</span>.<span class="ident">ptr</span>());
+            <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">b</span>.<span class="ident">build_alloc_ref</span>(<span class="ident">old_ptr</span>.<span class="ident">cast</span>(), <span class="ident">old_layout</span>);
+            <span class="self">self</span>.<span class="ident">clone_in</span>(<span class="ident">a</span>)
+        }
     }
 }
 
