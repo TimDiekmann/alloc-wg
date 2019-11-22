@@ -182,10 +182,6 @@
 <span id="182">182</span>
 <span id="183">183</span>
 <span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! An attempt to collect several proposals of [rust-lang/wg-allocators](https://github.com/rust-lang/wg-allocators) into a</span>
 <span class="doccomment">//! MVP.</span>
@@ -212,10 +208,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! - Added an associative error type to [`AllocRef`]. Besides adding the possibility of returning additional information on</span>
 <span class="doccomment">//!   allocation failure, it&#39;s also possible to split the usage of the [`AllocRef`] into a fallible and an infallible case.</span>
-<span class="doccomment">//!   Personally I think this is a pretty big deal, as kernel programmer can rely on allocation, which will never fail. If</span>
-<span class="doccomment">//!   an allocation can fail, only a `try_*_in` method may be available. To maintain backwards compatibility, [`AbortAlloc`]</span>
-<span class="doccomment">//!   was introduced. [`AbortAlloc`] wraps another allocator, but aborts on OOM thus `AbortAlloc&lt;Global&gt;` may be used as</span>
-<span class="doccomment">//!   default allocator for [`Box`] or `Vec`. To realize this, [`AbortAlloc`] implements `AllocRef&lt;Error=!&gt;`.</span>
+<span class="doccomment">//!   Personally I think this is a pretty big deal, as kernel programmer can rely on allocation, which will never fail.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//!   Issue: [rust-lang/wg-allocators#23](https://github.com/rust-lang/wg-allocators/issues/23)</span>
 <span class="doccomment">//!</span>
@@ -242,7 +235,6 @@
 <span class="doccomment">//! [`BuildHasher`]: https://doc.rust-lang.org/1.38.0/core/hash/trait.BuildHasher.html</span>
 <span class="doccomment">//! [`Hasher`]: https://doc.rust-lang.org/1.38.0/core/hash/trait.Hasher.html</span>
 <span class="doccomment">//! [`NonZeroLayout`]: crate::alloc::NonZeroLayout</span>
-<span class="doccomment">//! [`AbortAlloc`]: crate::alloc::AbortAlloc</span>
 
 <span class="attribute">#![<span class="ident">feature</span>(
     <span class="ident">dropck_eyepatch</span>,
