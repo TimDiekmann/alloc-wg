@@ -3476,14 +3476,6 @@
 <span id="3476">3476</span>
 <span id="3477">3477</span>
 <span id="3478">3478</span>
-<span id="3479">3479</span>
-<span id="3480">3480</span>
-<span id="3481">3481</span>
-<span id="3482">3482</span>
-<span id="3483">3483</span>
-<span id="3484">3484</span>
-<span id="3485">3485</span>
-<span id="3486">3486</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! A contiguous growable array type with heap-allocated contents, written</span>
 <span class="doccomment">//! `Vec&lt;T&gt;`.</span>
@@ -3556,15 +3548,7 @@
 <span class="doccomment">//! [`vec!`]: ../macro.vec.html</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">alloc</span>::{
-        <span class="ident">handle_alloc_error</span>,
-        <span class="ident">AllocRef</span>,
-        <span class="ident">BuildAllocRef</span>,
-        <span class="ident">DeallocRef</span>,
-        <span class="ident">Global</span>,
-        <span class="ident">NonZeroLayout</span>,
-        <span class="ident">ReallocRef</span>,
-    },
+    <span class="ident">alloc</span>::{<span class="ident">handle_alloc_error</span>, <span class="ident">AllocRef</span>, <span class="ident">BuildAllocRef</span>, <span class="ident">DeallocRef</span>, <span class="ident">Global</span>, <span class="ident">ReallocRef</span>},
     <span class="ident">boxed</span>::<span class="ident">Box</span>,
     <span class="ident">clone</span>::<span class="ident">CloneIn</span>,
     <span class="ident">collections</span>::<span class="ident">CollectionAllocErr</span>,
