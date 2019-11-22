@@ -184,10 +184,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// ```
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn new_in(x: T, a: A) -> Self
-    where
-        A: AllocRef,
-    {
+    pub fn new_in(x: T, a: A) -> Self {
         unsafe { Self::try_new_in(x, a).unwrap_unchecked() }
     }
 
@@ -237,10 +234,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// ```
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn new_uninit_in(a: A) -> Box<mem::MaybeUninit<T>, A>
-    where
-        A: AllocRef,
-    {
+    pub fn new_uninit_in(a: A) -> Box<mem::MaybeUninit<T>, A> {
         unsafe { Self::try_new_uninit_in(a).unwrap_unchecked() }
     }
 
@@ -277,10 +271,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// `Unpin`, then `x` will be pinned in memory and unable to be moved.
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn pin_in(x: T, a: A) -> Pin<Self>
-    where
-        A: AllocRef,
-    {
+    pub fn pin_in(x: T, a: A) -> Pin<Self> {
         unsafe { Self::try_pin_in(x, a).unwrap_unchecked() }
     }
 
@@ -346,10 +337,7 @@ impl<T, A: AllocRef> Box<[T], A> {
     /// ```
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn new_uninit_slice_in(len: usize, a: A) -> Box<[mem::MaybeUninit<T>], A>
-    where
-        A: AllocRef,
-    {
+    pub fn new_uninit_slice_in(len: usize, a: A) -> Box<[mem::MaybeUninit<T>], A> {
         unsafe { Self::try_new_uninit_slice_in(len, a).unwrap_unchecked() }
     }
 
@@ -858,10 +846,7 @@ where
 impl<T: Clone, A: AllocRef, B: AllocRef> CloneIn<B> for Box<T, A> {
     type Cloned = Box<T, B>;
 
-    fn clone_in(&self, a: B) -> Self::Cloned
-    where
-        B: AllocRef,
-    {
+    fn clone_in(&self, a: B) -> Self::Cloned {
         Box::new_in(self.as_ref().clone(), a)
     }
 
