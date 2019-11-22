@@ -80,6 +80,7 @@ use core::{
 #[cfg(feature = "std")]
 use std::borrow::Cow;
 
+use crate::alloc::handle_alloc_error;
 pub use liballoc::string::{ParseError, ToString};
 
 /// A UTF-8 encoded, growable string.
@@ -709,7 +710,7 @@ impl<A: DeallocRef> String<A> {
         match Self::try_from_utf8_lossy_in(v, a) {
             Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -1255,7 +1256,7 @@ impl<A: DeallocRef> String<A> {
         match self.try_push(ch) {
             Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -1507,7 +1508,7 @@ impl<A: DeallocRef> String<A> {
         match self.try_insert(idx, ch) {
             Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -1582,7 +1583,7 @@ impl<A: DeallocRef> String<A> {
         match self.try_insert_str(idx, string) {
             Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -1705,7 +1706,7 @@ impl<A: DeallocRef> String<A> {
         match self.try_split_off(at) {
             Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 

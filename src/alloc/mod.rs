@@ -9,28 +9,9 @@ use core::{
     num::NonZeroUsize,
     ptr::{self, NonNull},
 };
-pub use liballoc::alloc::Layout;
+pub use liballoc::alloc::{handle_alloc_error, Layout};
 #[cfg(feature = "std")]
 use std::alloc::System;
-
-/// Abort on memory allocation error or failure.
-///
-/// Callers of memory allocation APIs wishing to abort computation
-/// in response to an allocation error are encouraged to call this function,
-/// rather than directly invoking `panic!` or similar.
-///
-/// The default behavior of this function is to print a message to standard error
-/// and abort the process.
-/// It can be replaced with [`set_alloc_error_hook`] and [`take_alloc_error_hook`].
-///
-/// [`set_alloc_error_hook`]: https://doc.rust-lang.org/nightly/std/alloc/fn.set_alloc_error_hook.html
-/// [`take_alloc_error_hook`]: https://doc.rust-lang.org/nightly/std/alloc/fn.take_alloc_error_hook.html
-#[allow(clippy::inline_always)]
-#[inline(always)]
-#[deprecated = "allocation functions returns an error, use that instead"]
-pub fn handle_alloc_error(layout: Layout) -> ! {
-    liballoc::alloc::handle_alloc_error(layout)
-}
 
 /// Allocate memory with the global allocator.
 ///

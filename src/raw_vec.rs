@@ -1,5 +1,6 @@
 use crate::{
     alloc::{
+        handle_alloc_error,
         AllocRef,
         BuildAllocRef,
         CapacityOverflow,
@@ -167,7 +168,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
         match Self::try_with_capacity_in(capacity, a) {
             Ok(vec) => vec,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -202,7 +203,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
         match Self::try_with_capacity_zeroed_in(capacity, a) {
             Ok(vec) => vec,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -416,7 +417,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
         match self.try_double() {
             Ok(_) => (),
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -586,7 +587,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
         match self.try_reserve(used_capacity, needed_extra_capacity) {
             Ok(vec) => vec,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 

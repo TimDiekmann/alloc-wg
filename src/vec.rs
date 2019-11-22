@@ -69,10 +69,11 @@
 //! [`vec!`]: ../macro.vec.html
 
 use crate::{
-    alloc::{AllocRef, DeallocRef, Global, ReallocRef},
+    alloc::{handle_alloc_error, AllocRef, DeallocRef, Global, ReallocRef},
     boxed::Box,
+    clone::CloneIn,
     collections::CollectionAllocErr,
-    iter::TryExtend,
+    iter::{FromIteratorIn, TryExtend},
     raw_vec::RawVec,
 };
 use core::{
@@ -848,7 +849,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
         match self.try_into_boxed_slice() {
             Ok(vec) => vec,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -1192,7 +1193,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
         match self.try_insert(index, element) {
             Ok(vec) => vec,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -1381,8 +1382,19 @@ impl<T, A: DeallocRef> Vec<T, A> {
         match self.try_push(value) {
             Ok(vec) => vec,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
+    }
+
+    unsafe fn push_unchecked(&mut self, value: T)
+    where
+        A: AllocRef,
+    {
+        let len = self.len();
+        debug_assert!(self.capacity() > len);
+        ptr::write(self.get_unchecked_mut(len), value);
+        // NB can't overflow since we would have had to alloc the address space
+        self.set_len(len + 1);
     }
 
     /// Same as `push` but returns errors instead of panicking
@@ -1397,9 +1409,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
             self.try_reserve(1)?;
         }
         unsafe {
-            let end = self.as_mut_ptr().add(self.len);
-            ptr::write(end, value);
-            self.len += 1;
+            self.push_unchecked(value);
         }
         Ok(())
     }
@@ -1457,7 +1467,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
         match self.try_append(other) {
             Ok(vec) => vec,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -1642,7 +1652,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
         match self.try_split_off(at) {
             Ok(vec) => vec,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -1712,7 +1722,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
         match self.try_resize_with(new_len, f) {
             Ok(vec) => vec,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -1775,17 +1785,6 @@ impl<T, A: DeallocRef> Vec<T, A> {
     {
         Ok(Box::leak(vec.try_into_boxed_slice()?))
     }
-
-    #[inline]
-    #[must_use]
-    pub fn from_iter_in<I: IntoIterator<Item = T>>(iter: I, b: A) -> Self
-    where
-        A: ReallocRef,
-    {
-        let mut v = Self::new_in(b);
-        v.extend(iter.into_iter());
-        v
-    }
 }
 
 impl<T: Clone, A: ReallocRef> Vec<T, A> {
@@ -1823,7 +1822,7 @@ impl<T: Clone, A: ReallocRef> Vec<T, A> {
         match self.try_resize(new_len, value) {
             Ok(_) => (),
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -2036,7 +2035,7 @@ where
     match try_from_elem_in(elem, n, a) {
         Ok(vec) => vec,
         Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-        Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+        Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
     }
 }
 
@@ -2180,10 +2179,35 @@ unsafe impl<T: ?Sized> IsZero for Option<Box<T>> {
 
 impl<T: Clone> Clone for Vec<T> {
     #[must_use]
+    #[inline]
     fn clone(&self) -> Self {
-        let mut v = Self::with_capacity(self.len());
-        v.extend(self.iter().cloned());
+        self.clone_in(Global)
+    }
+}
+
+#[allow(clippy::use_self)]
+impl<T: Clone, A: AllocRef, B: AllocRef> CloneIn<B> for Vec<T, A> {
+    type Cloned = Vec<T, B>;
+
+    fn clone_in(&self, a: B) -> Self::Cloned {
+        let mut v = Vec::with_capacity_in(self.len(), a);
+
+        self.iter()
+            .cloned()
+            .for_each(|element| unsafe { v.push_unchecked(element) });
         v
+    }
+
+    fn try_clone_in(&self, a: B) -> Result<Self::Cloned, B::Error> {
+        let mut v = Vec::try_with_capacity_in(self.len(), a).map_err(|e| match e {
+            CollectionAllocErr::CapacityOverflow => unreachable!("capacity overflow in clone"),
+            CollectionAllocErr::AllocError { inner, .. } => inner,
+        })?;
+
+        self.iter()
+            .cloned()
+            .for_each(|element| unsafe { v.push_unchecked(element) });
+        Ok(v)
     }
 }
 
@@ -2233,6 +2257,22 @@ impl<T> FromIterator<T> for Vec<T> {
     #[must_use]
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         <Self as SpecExtend<T, I::IntoIter, Global>>::from_iter_in(iter.into_iter(), Global)
+    }
+}
+
+impl<T, A: ReallocRef> FromIteratorIn<T, A> for Vec<T, A> {
+    #[inline]
+    #[must_use]
+    fn from_iter_in<I: IntoIterator<Item = T>>(iter: I, a: A) -> Self {
+        <Self as SpecExtend<T, I::IntoIter, A>>::from_iter_in(iter.into_iter(), a)
+    }
+
+    #[inline]
+    fn try_from_iter_in<I: IntoIterator<Item = T>>(
+        iter: I,
+        a: A,
+    ) -> Result<Self, CollectionAllocErr<A>> {
+        <Self as SpecExtend<T, I::IntoIter, A>>::try_from_iter_in(iter.into_iter(), a)
     }
 }
 
@@ -2315,30 +2355,24 @@ impl<T, A: ReallocRef> TryExtend<T> for Vec<T, A> {
     }
 }
 
-trait SpecExtend<T, I, A: ReallocRef>: Sized {
+trait SpecExtend<T, I, A: AllocRef>: Sized {
     #[inline]
-    fn from_iter_in(iter: I, a: A) -> Self
-    where
-        A: AllocRef,
-    {
+    fn from_iter_in(iter: I, a: A) -> Self {
         match Self::try_from_iter_in(iter, a) {
             Ok(v) => v,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
     fn try_from_iter_in(iter: I, a: A) -> Result<Self, CollectionAllocErr<A>>;
 
     #[inline]
-    fn spec_extend(&mut self, iter: I)
-    where
-        A: AllocRef,
-    {
+    fn spec_extend(&mut self, iter: I) {
         match self.try_spec_extend(iter) {
             Ok(_) => (),
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!("Infallible allocation"),
+            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
         }
     }
 
@@ -2502,9 +2536,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
                 self.try_reserve(lower.saturating_add(1))?;
             }
             unsafe {
-                ptr::write(self.get_unchecked_mut(len), element);
-                // NB can't overflow since we would have had to alloc the address space
-                self.set_len(len + 1);
+                self.push_unchecked(element);
             }
         }
         Ok(())
