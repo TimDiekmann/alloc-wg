@@ -148,11 +148,7 @@ pub trait BuildAllocRef: Sized {
     /// * `layout` must *fit* that block of memory
     /// * the alignment of the `layout` must match the alignment used to allocate that block of
     ///   memory
-    unsafe fn build_alloc_ref(
-        &self,
-        ptr: NonNull<u8>,
-        layout: Option<NonZeroLayout>,
-    ) -> Self::Ref;
+    unsafe fn build_alloc_ref(&self, ptr: NonNull<u8>, layout: Option<NonZeroLayout>) -> Self::Ref;
 }
 
 pub trait DeallocRef: Sized {

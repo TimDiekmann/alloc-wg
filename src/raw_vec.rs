@@ -223,11 +223,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
         Self::allocate_in(capacity, true, a)
     }
 
-    fn allocate_in(
-        capacity: usize,
-        zeroed: bool,
-        alloc: A,
-    ) -> Result<Self, CollectionAllocErr<A>>
+    fn allocate_in(capacity: usize, zeroed: bool, alloc: A) -> Result<Self, CollectionAllocErr<A>>
     where
         A: AllocRef,
     {
