@@ -472,6 +472,7 @@ impl<T> Vec<T> {
 
 impl<T, A: DeallocRef> Vec<T, A> {
     /// Like `new` but parameterized over the choice of allocator for the returned `Vec`.
+    #[allow(clippy::needless_pass_by_value)]
     #[inline]
     pub fn new_in(a: A) -> Self {
         Self {
@@ -487,6 +488,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     ///
     /// * if the requested capacity exceeds `usize::MAX` bytes.
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
+    #[allow(clippy::needless_pass_by_value)]
     #[inline]
     pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
@@ -506,6 +508,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// * `CapacityOverflow` if the requested capacity exceeds `usize::MAX` bytes.
     /// * `CapacityOverflow` on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     /// * `AllocError` on OOM
+    #[allow(clippy::needless_pass_by_value)]
     #[inline]
     pub fn try_with_capacity_in(capacity: usize, a: A) -> Result<Self, CollectionAllocErr<A>>
     where

@@ -182,7 +182,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # #[allow(unused_variables)]
     /// let five = Box::new_in(5, Global);
     /// ```
-    #[allow(clippy::inline_always)]
+    #[allow(clippy::inline_always, clippy::needless_pass_by_value)]
     #[inline(always)]
     pub fn new_in(x: T, a: A) -> Self {
         unsafe { Self::try_new_in(x, a).unwrap_unchecked() }
@@ -201,6 +201,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// let five = Box::try_new_in(5, Global)?;
     /// # Ok::<_, alloc_wg::alloc::AllocErr>(())
     /// ```
+    #[allow(clippy::needless_pass_by_value)]
     pub fn try_new_in(x: T, a: A) -> Result<Self, A::Error> {
         let ptr = if let Ok(layout) = NonZeroLayout::new::<T>() {
             let ptr = a.alloc(layout)?.cast::<T>();
@@ -232,7 +233,7 @@ impl<T, A: AllocRef> Box<T, A> {
     ///
     /// assert_eq!(*five, 5)
     /// ```
-    #[allow(clippy::inline_always)]
+    #[allow(clippy::inline_always, clippy::needless_pass_by_value)]
     #[inline(always)]
     pub fn new_uninit_in(a: A) -> Box<mem::MaybeUninit<T>, A> {
         unsafe { Self::try_new_uninit_in(a).unwrap_unchecked() }
@@ -257,6 +258,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// assert_eq!(*five, 5);
     /// # Ok::<_, alloc_wg::alloc::AllocErr>(())
     /// ```
+    #[allow(clippy::needless_pass_by_value)]
     pub fn try_new_uninit_in(a: A) -> Result<Box<mem::MaybeUninit<T>, A>, A::Error> {
         let ptr = if let Ok(layout) = NonZeroLayout::new::<T>() {
             let ptr: NonNull<mem::MaybeUninit<T>> = a.alloc(layout)?.cast();
@@ -269,7 +271,7 @@ impl<T, A: AllocRef> Box<T, A> {
 
     /// Constructs a new `Pin<Box<T, A>>` with the specified allocator. If `T` does not implement
     /// `Unpin`, then `x` will be pinned in memory and unable to be moved.
-    #[allow(clippy::inline_always)]
+    #[allow(clippy::inline_always, clippy::needless_pass_by_value)]
     #[inline(always)]
     pub fn pin_in(x: T, a: A) -> Pin<Self> {
         unsafe { Self::try_pin_in(x, a).unwrap_unchecked() }
@@ -277,6 +279,7 @@ impl<T, A: AllocRef> Box<T, A> {
 
     /// Constructs a new `Pin<Box<T, A>>` with the specified allocator. If `T` does not implement
     /// `Unpin`, then `x` will be pinned in memory and unable to be moved.
+    #[allow(clippy::needless_pass_by_value)]
     #[inline]
     pub fn try_pin_in(x: T, a: A) -> Result<Pin<Self>, A::Error> {
         Self::try_new_in(x, a).map(Pin::from)
@@ -335,7 +338,7 @@ impl<T, A: AllocRef> Box<[T], A> {
     ///
     /// assert_eq!(*values, [1, 2, 3]);
     /// ```
-    #[allow(clippy::inline_always)]
+    #[allow(clippy::inline_always, clippy::needless_pass_by_value)]
     #[inline(always)]
     pub fn new_uninit_slice_in(len: usize, a: A) -> Box<[mem::MaybeUninit<T>], A> {
         unsafe { Self::try_new_uninit_slice_in(len, a).unwrap_unchecked() }
@@ -363,6 +366,7 @@ impl<T, A: AllocRef> Box<[T], A> {
     /// assert_eq!(*values, [1, 2, 3]);
     /// # Ok::<_, alloc_wg::collections::CollectionAllocErr<Global>>(())
     /// ```
+    #[allow(clippy::needless_pass_by_value)]
     pub fn try_new_uninit_slice_in(
         len: usize,
         a: A,

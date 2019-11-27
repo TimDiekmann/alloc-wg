@@ -566,6 +566,7 @@ impl String {
 
 impl<A: DeallocRef> String<A> {
     /// Like `new` but parameterized over the choice of allocator for the returned `String`.
+    #[allow(clippy::needless_pass_by_value)]
     #[inline]
     pub fn new_in(a: A) -> Self {
         Self {
@@ -577,6 +578,7 @@ impl<A: DeallocRef> String<A> {
     ///
     /// # Panics
     /// Panics if the allocation fails.
+    #[allow(clippy::needless_pass_by_value)]
     #[inline]
     pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
@@ -588,6 +590,7 @@ impl<A: DeallocRef> String<A> {
     }
 
     /// Like `with_capacity_in` but returns errors instead of panicking.
+    #[allow(clippy::needless_pass_by_value)]
     #[inline]
     pub fn try_with_capacity_in(capacity: usize, a: A) -> Result<Self, CollectionAllocErr<A>>
     where
@@ -602,6 +605,7 @@ impl<A: DeallocRef> String<A> {
     ///
     /// # Panics
     /// Panics if the allocation fails.
+    #[allow(clippy::needless_pass_by_value)]
     #[inline]
     pub fn from_str_in(s: &str, a: A) -> Self
     where
@@ -613,6 +617,7 @@ impl<A: DeallocRef> String<A> {
     }
 
     /// Like `from_str_in` but returns errors instead of panicking.
+    #[allow(clippy::needless_pass_by_value)]
     #[inline]
     pub fn try_from_str_in(s: &str, a: A) -> Result<Self, CollectionAllocErr<A>>
     where
@@ -703,6 +708,7 @@ impl<A: DeallocRef> String<A> {
     /// # Panics
     ///
     /// Panics if allocation fails.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn from_utf8_lossy_in(v: &[u8], a: A) -> Self
     where
         A: ReallocRef,
@@ -715,6 +721,7 @@ impl<A: DeallocRef> String<A> {
     }
 
     /// Like `from_utf8_lossy_in` but returns errors instead of panicking.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn try_from_utf8_lossy_in(v: &[u8], a: A) -> Result<Self, CollectionAllocErr<A>>
     where
         A: ReallocRef,
@@ -751,6 +758,7 @@ impl<A: DeallocRef> String<A> {
     }
 
     /// Like `from_utf16` but parameterized over the choice of allocator for the returned `String`.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn from_utf16_in(v: &[u16], a: A) -> Result<Self, FromUtf16Error>
     where
         A: ReallocRef,

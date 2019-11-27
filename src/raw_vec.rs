@@ -144,6 +144,7 @@ impl<T> RawVec<T> {
 
 impl<T, A: DeallocRef> RawVec<T, A> {
     /// Like `new` but parameterized over the choice of allocator for the returned `RawVec`.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn new_in(a: A) -> Self {
         let capacity = if mem::size_of::<T>() == 0 { !0 } else { 0 };
         Self {
@@ -161,6 +162,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     ///
     /// * if the requested capacity exceeds `usize::MAX` bytes.
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
         A: AllocRef,
@@ -181,6 +183,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * `CapacityOverflow` if the requested capacity exceeds `usize::MAX` bytes.
     /// * `CapacityOverflow` on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     /// * `AllocError` on OOM
+    #[allow(clippy::needless_pass_by_value)]
     pub fn try_with_capacity_in(capacity: usize, a: A) -> Result<Self, CollectionAllocErr<A>>
     where
         A: AllocRef,
@@ -196,6 +199,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     ///
     /// * if the requested capacity exceeds `usize::MAX` bytes.
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn with_capacity_zeroed_in(capacity: usize, a: A) -> Self
     where
         A: AllocRef,
@@ -216,6 +220,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * `CapacityOverflow` if the requested capacity exceeds `usize::MAX` bytes.
     /// * `CapacityOverflow` on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     /// * `AllocError` on OOM
+    #[allow(clippy::needless_pass_by_value)]
     pub fn try_with_capacity_zeroed_in(capacity: usize, a: A) -> Result<Self, CollectionAllocErr<A>>
     where
         A: AllocRef,
@@ -223,6 +228,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
         Self::allocate_in(capacity, true, a)
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn allocate_in(capacity: usize, zeroed: bool, alloc: A) -> Result<Self, CollectionAllocErr<A>>
     where
         A: AllocRef,
