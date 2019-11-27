@@ -201,7 +201,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// let five = Box::try_new_in(5, Global)?;
     /// # Ok::<_, alloc_wg::alloc::AllocErr>(())
     /// ```
-    pub fn try_new_in(x: T, mut a: A) -> Result<Self, A::Error> {
+    pub fn try_new_in(x: T, a: A) -> Result<Self, A::Error> {
         let ptr = if let Ok(layout) = NonZeroLayout::new::<T>() {
             let ptr = a.alloc(layout)?.cast::<T>();
             unsafe {
@@ -257,7 +257,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// assert_eq!(*five, 5);
     /// # Ok::<_, alloc_wg::alloc::AllocErr>(())
     /// ```
-    pub fn try_new_uninit_in(mut a: A) -> Result<Box<mem::MaybeUninit<T>, A>, A::Error> {
+    pub fn try_new_uninit_in(a: A) -> Result<Box<mem::MaybeUninit<T>, A>, A::Error> {
         let ptr = if let Ok(layout) = NonZeroLayout::new::<T>() {
             let ptr: NonNull<mem::MaybeUninit<T>> = a.alloc(layout)?.cast();
             ptr
@@ -365,7 +365,7 @@ impl<T, A: AllocRef> Box<[T], A> {
     /// ```
     pub fn try_new_uninit_slice_in(
         len: usize,
-        mut a: A,
+        a: A,
     ) -> Result<Box<[mem::MaybeUninit<T>], A>, CollectionAllocErr<A>> {
         let ptr = if mem::size_of::<T>() == 0 || len == 0 {
             NonNull::dangling()
@@ -732,7 +732,7 @@ fn drop_box<T: ?Sized, A: DeallocRef>(boxed: &mut Box<T, A>) {
     unsafe {
         let ptr = boxed.ptr;
         ptr::drop_in_place(ptr.as_ptr());
-        if let (mut alloc, Some(layout)) = boxed.alloc_ref() {
+        if let (alloc, Some(layout)) = boxed.alloc_ref() {
             alloc.dealloc(ptr.cast().into(), layout)
         }
     }
@@ -807,7 +807,7 @@ where
     /// ```
     #[inline]
     fn clone(&self) -> Self {
-        let mut b = self.build_alloc().clone();
+        let b = self.build_alloc().clone();
         let old_ptr = self.ptr.cast();
         let old_layout = NonZeroLayout::for_value(self.as_ref());
 
@@ -1276,7 +1276,7 @@ where
     A::BuildAlloc: Clone,
 {
     fn clone(&self) -> Self {
-        let mut b = self.build_alloc().clone();
+        let b = self.build_alloc().clone();
         let old_ptr = self.ptr.cast();
         let old_layout = NonZeroLayout::for_value(self.as_ref());
         let a = unsafe { b.build_alloc_ref(old_ptr.into(), old_layout) };

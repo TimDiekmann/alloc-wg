@@ -144,7 +144,7 @@ impl<T> RawVec<T> {
 
 impl<T, A: DeallocRef> RawVec<T, A> {
     /// Like `new` but parameterized over the choice of allocator for the returned `RawVec`.
-    pub fn new_in(mut a: A) -> Self {
+    pub fn new_in(a: A) -> Self {
         let capacity = if mem::size_of::<T>() == 0 { !0 } else { 0 };
         Self {
             ptr: Unique::empty(),
@@ -226,7 +226,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     fn allocate_in(
         capacity: usize,
         zeroed: bool,
-        mut alloc: A,
+        alloc: A,
     ) -> Result<Self, CollectionAllocErr<A>>
     where
         A: AllocRef,
@@ -443,7 +443,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
                 return Err(CollectionAllocErr::CapacityOverflow);
             }
 
-            let (mut alloc, old_layout) = self.alloc_ref();
+            let (alloc, old_layout) = self.alloc_ref();
             let (new_cap, ptr) = if let Some(old_layout) = old_layout {
                 // Since we guarantee that we never allocate more than
                 // `isize::MAX` bytes, `elem_size * self.cap <= isize::MAX` as
@@ -524,7 +524,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
                 return Err(CapacityOverflow);
             }
 
-            let (mut alloc, old_layout) = if let (alloc, Some(layout)) = self.alloc_ref() {
+            let (alloc, old_layout) = if let (alloc, Some(layout)) = self.alloc_ref() {
                 (alloc, layout)
             } else {
                 return Ok(false); // nothing to double
@@ -701,7 +701,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
             return Ok(false);
         }
 
-        let (mut alloc, old_layout) = if let (alloc, Some(layout)) = self.alloc_ref() {
+        let (alloc, old_layout) = if let (alloc, Some(layout)) = self.alloc_ref() {
             (alloc, layout)
         } else {
             return Ok(false); // nothing to double
@@ -846,7 +846,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
 
         let _ = alloc_guard(new_layout.size().get(), new_layout.align().get())?;
 
-        let (mut alloc, old_layout) = self.alloc_ref();
+        let (alloc, old_layout) = self.alloc_ref();
         let result = if let Some(layout) = old_layout {
             unsafe { alloc.realloc(self.ptr.cast().into(), layout, new_layout) }
         } else {
@@ -888,7 +888,7 @@ enum ReserveStrategy {
 impl<T, A: DeallocRef> RawVec<T, A> {
     /// Frees the memory owned by the `RawVec` *without* trying to Drop its contents.
     pub fn dealloc_buffer(&mut self) {
-        if let (mut alloc, Some(layout)) = self.alloc_ref() {
+        if let (alloc, Some(layout)) = self.alloc_ref() {
             unsafe { alloc.dealloc(self.ptr.cast().into(), layout) }
         }
     }

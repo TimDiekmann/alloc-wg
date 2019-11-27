@@ -2185,7 +2185,7 @@ where
     #[must_use]
     #[inline]
     fn clone(&self) -> Self {
-        let mut b = self.buf.build_alloc().clone();
+        let b = self.buf.build_alloc().clone();
         let old_layout = self.buf.current_layout();
 
         unsafe {
@@ -2463,7 +2463,7 @@ where
 }
 
 impl<T, A: ReallocRef> SpecExtend<T, IntoIter<T, A>, A> for Vec<T, A> {
-    fn try_from_iter_in(iter: IntoIter<T, A>, mut a: A) -> Result<Self, CollectionAllocErr<A>> {
+    fn try_from_iter_in(iter: IntoIter<T, A>, a: A) -> Result<Self, CollectionAllocErr<A>> {
         // A common case is passing a vector into a function which immediately
         // re-collects into a vector. We can short circuit this if the IntoIter
         // has not been advanced at all.

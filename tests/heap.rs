@@ -13,7 +13,7 @@ fn std_heap_overaligned_request() {
     check_overalign_requests(Global)
 }
 
-fn check_overalign_requests<T: AllocRef>(mut allocator: T)
+fn check_overalign_requests<T: AllocRef>(allocator: T)
 where
     T::Error: Debug,
 {
