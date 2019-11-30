@@ -13,8 +13,8 @@ pub use liballoc::alloc::{handle_alloc_error, Layout};
 #[cfg(feature = "std")]
 use std::alloc::System;
 
-mod panic_adaptor;
-pub use self::panic_adaptor::AbortAlloc;
+mod abort;
+pub use self::abort::AbortAlloc;
 
 /// Allocate memory with the global allocator.
 ///
