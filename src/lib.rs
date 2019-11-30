@@ -67,7 +67,8 @@
     specialization,
     trusted_len,
     unsized_locals,
-    fn_traits
+    fn_traits,
+    exhaustive_patterns
 )]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![doc(test(attr(
@@ -115,8 +116,6 @@ pub mod vec;
 
 extern crate alloc as liballoc;
 
-mod unchecked_unwrap;
-use self::unchecked_unwrap::*;
 pub use liballoc::{borrow, fmt, rc, slice, sync};
 
 #[macro_export]

@@ -1,6 +1,5 @@
 use crate::{
     alloc::{
-        handle_alloc_error,
         AllocRef,
         BuildAllocRef,
         CapacityOverflow,
@@ -34,7 +33,6 @@ use core::{
 /// * Catches all overflows in capacity computations (promotes them to "capacity overflow" panics)
 /// * Guards against 32-bit systems allocating more than `isize::MAX` bytes
 /// * Guards against overflowing your length
-/// * Aborts on OOM or calls `handle_alloc_error` as applicable
 /// * Avoids freeing `Unique::empty()`
 /// * Contains a `ptr::Unique` and thus endows the user with all related benefits
 ///
@@ -164,12 +162,13 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
-        A: AllocRef,
+        A: AllocRef<Error = !>,
     {
         match Self::try_with_capacity_in(capacity, a) {
             Ok(vec) => vec,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
+            #[allow(unreachable_patterns)] // TODO rustc bug?
+            Err(CollectionAllocErr::AllocError { inner: e, .. }) => e,
         }
     }
 
@@ -199,12 +198,13 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn with_capacity_zeroed_in(capacity: usize, a: A) -> Self
     where
-        A: AllocRef,
+        A: AllocRef<Error = !>,
     {
         match Self::try_with_capacity_zeroed_in(capacity, a) {
             Ok(vec) => vec,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
+            #[allow(unreachable_patterns)] // TODO rustc bug?
+            Err(CollectionAllocErr::AllocError { inner: e, .. }) => e,
         }
     }
 
@@ -419,12 +419,13 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// ```
     pub fn double(&mut self)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         match self.try_double() {
             Ok(_) => (),
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
+            #[allow(unreachable_patterns)] // TODO rustc bug?
+            Err(CollectionAllocErr::AllocError { inner: e, .. }) => e,
         }
     }
 
@@ -589,12 +590,13 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// ```
     pub fn reserve(&mut self, used_capacity: usize, needed_extra_capacity: usize)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         match self.try_reserve(used_capacity, needed_extra_capacity) {
             Ok(vec) => vec,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
+            #[allow(unreachable_patterns)] // TODO rustc bug?
+            Err(CollectionAllocErr::AllocError { inner: e, .. }) => e,
         }
     }
 

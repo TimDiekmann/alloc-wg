@@ -83,7 +83,6 @@ use crate::{
     clone::CloneIn,
     collections::CollectionAllocErr,
     raw_vec::RawVec,
-    UncheckedResultExt,
 };
 use core::{
     any::Any,
@@ -184,8 +183,12 @@ impl<T, A: AllocRef> Box<T, A> {
     /// ```
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn new_in(x: T, a: A) -> Self {
-        unsafe { Self::try_new_in(x, a).unwrap_unchecked() }
+    pub fn new_in(x: T, a: A) -> Self
+    where
+        A: AllocRef<Error = !>,
+    {
+        let Ok(b) = Self::try_new_in(x, a);
+        b
     }
 
     /// Tries to allocate memory with the given allocator and then places `x` into it.
@@ -234,8 +237,12 @@ impl<T, A: AllocRef> Box<T, A> {
     /// ```
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn new_uninit_in(a: A) -> Box<mem::MaybeUninit<T>, A> {
-        unsafe { Self::try_new_uninit_in(a).unwrap_unchecked() }
+    pub fn new_uninit_in(a: A) -> Box<mem::MaybeUninit<T>, A>
+    where
+        A: AllocRef<Error = !>,
+    {
+        let Ok(b) = Self::try_new_uninit_in(a);
+        b
     }
 
     /// Tries to construct a new box with uninitialized contents in a specified allocator.
@@ -271,8 +278,12 @@ impl<T, A: AllocRef> Box<T, A> {
     /// `Unpin`, then `x` will be pinned in memory and unable to be moved.
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn pin_in(x: T, a: A) -> Pin<Self> {
-        unsafe { Self::try_pin_in(x, a).unwrap_unchecked() }
+    pub fn pin_in(x: T, a: A) -> Pin<Self>
+    where
+        A: AllocRef<Error = !>,
+    {
+        let Ok(b) = Self::try_pin_in(x, a);
+        b
     }
 
     /// Constructs a new `Pin<Box<T, A>>` with the specified allocator. If `T` does not implement
@@ -314,7 +325,7 @@ impl<T> Box<[T]> {
 }
 
 #[allow(clippy::use_self)]
-impl<T, A: AllocRef> Box<[T], A> {
+impl<T, A: AllocRef<Error = !>> Box<[T], A> {
     /// Construct a new boxed slice with uninitialized contents with the spoecified allocator.
     ///
     /// # Example
@@ -338,9 +349,17 @@ impl<T, A: AllocRef> Box<[T], A> {
     #[allow(clippy::inline_always)]
     #[inline(always)]
     pub fn new_uninit_slice_in(len: usize, a: A) -> Box<[mem::MaybeUninit<T>], A> {
-        unsafe { Self::try_new_uninit_slice_in(len, a).unwrap_unchecked() }
+        match Self::try_new_uninit_slice_in(len, a) {
+            Ok(b) => b,
+            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
+            #[allow(unreachable_patterns)] // TODO rustc bug?
+            Err(CollectionAllocErr::AllocError { inner: e, .. }) => e,
+        }
     }
+}
 
+#[allow(clippy::use_self)]
+impl<T, A: AllocRef> Box<[T], A> {
     /// Tries to construct a new boxed slice with uninitialized contents with the spoecified
     /// allocator.
     ///
@@ -747,7 +766,7 @@ unsafe impl<#[may_dangle] T: ?Sized, A: DeallocRef> Drop for Box<T, A> {
 impl<T, A> Default for Box<T, A>
 where
     T: Default,
-    A: Default + AllocRef,
+    A: Default + AllocRef<Error = !>,
 {
     #[must_use]
     fn default() -> Self {
@@ -756,7 +775,7 @@ where
 }
 
 #[allow(clippy::use_self)]
-impl<T, A> Default for Box<[T], A>
+impl<T, A: AllocRef<Error = !>> Default for Box<[T], A>
 where
     A: Default + AllocRef,
 {
@@ -773,7 +792,7 @@ unsafe fn from_boxed_utf8_unchecked<A: DeallocRef>(v: Box<[u8], A>) -> Box<str, 
 }
 
 #[allow(clippy::use_self)]
-impl<A> Default for Box<str, A>
+impl<A: AllocRef<Error = !>> Default for Box<str, A>
 where
     A: Default + AllocRef,
 {
@@ -783,7 +802,7 @@ where
     }
 }
 
-impl<T: Clone, A> Clone for Box<T, A>
+impl<T: Clone, A: AllocRef<Error = !>> Clone for Box<T, A>
 where
     A: AllocRef,
     A::BuildAlloc: Clone,
@@ -846,7 +865,10 @@ where
 impl<T: Clone, A: AllocRef, B: AllocRef> CloneIn<B> for Box<T, A> {
     type Cloned = Box<T, B>;
 
-    fn clone_in(&self, a: B) -> Self::Cloned {
+    fn clone_in(&self, a: B) -> Self::Cloned
+    where
+        B: AllocRef<Error = !>,
+    {
         Box::new_in(self.as_ref().clone(), a)
     }
 
@@ -947,7 +969,7 @@ impl<T: ?Sized + Hasher, A: DeallocRef> Hasher for Box<T, A> {
     }
 }
 
-impl<T, A> From<T> for Box<T, A>
+impl<T, A: AllocRef<Error = !>> From<T> for Box<T, A>
 where
     A: Default + AllocRef,
 {
@@ -983,7 +1005,7 @@ impl<T: ?Sized, A: DeallocRef> From<Box<T, A>> for Pin<Box<T, A>> {
 #[allow(clippy::use_self)]
 impl<T: Copy, A> From<&[T]> for Box<[T], A>
 where
-    A: Default + AllocRef,
+    A: Default + AllocRef<Error = !>,
 {
     /// Converts a `&[T]` into a `Box<[T], B>`
     ///
@@ -1012,7 +1034,7 @@ where
 #[allow(clippy::use_self)]
 impl<A> From<&str> for Box<str, A>
 where
-    A: Default + AllocRef,
+    A: Default + AllocRef<Error = !>,
 {
     /// Converts a `&str` into a `Box<str>`
     ///
@@ -1272,7 +1294,7 @@ impl_dispatch_from_dyn!(std::alloc::System);
 #[allow(clippy::items_after_statements)]
 impl<T: Clone, A: Clone> Clone for Box<[T], A>
 where
-    A: AllocRef,
+    A: AllocRef<Error = !>,
     A::BuildAlloc: Clone,
 {
     fn clone(&self) -> Self {
@@ -1382,4 +1404,11 @@ impl<F: ?Sized + Future + Unpin, A: DeallocRef> Future for Box<F, A> {
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         F::poll(Pin::new(&mut *self), cx)
     }
+}
+
+// One central function responsible for reporting capacity overflows. This'll
+// ensure that the code generation related to these panics is minimal as there's
+// only one location which panics rather than a bunch throughout the module.
+fn capacity_overflow() -> ! {
+    panic!("capacity overflow");
 }

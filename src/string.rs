@@ -80,7 +80,7 @@ use core::{
 #[cfg(feature = "std")]
 use std::borrow::Cow;
 
-use crate::{alloc::handle_alloc_error, clone::CloneIn};
+use crate::clone::CloneIn;
 pub use liballoc::string::{ParseError, ToString};
 
 /// A UTF-8 encoded, growable string.
@@ -580,10 +580,13 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
-        A: AllocRef,
+        A: AllocRef<Error = !>,
     {
-        Self {
-            vec: Vec::with_capacity_in(capacity, a),
+        match Self::try_with_capacity_in(capacity, a) {
+            Ok(vec) => vec,
+            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
+            #[allow(unreachable_patterns)] // TODO rustc bug?
+            Err(CollectionAllocErr::AllocError { inner: e, .. }) => e,
         }
     }
 
@@ -605,7 +608,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn from_str_in(s: &str, a: A) -> Self
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         let mut v = Self::with_capacity_in(s.len(), a);
         v.push_str(s);
@@ -705,12 +708,13 @@ impl<A: DeallocRef> String<A> {
     /// Panics if allocation fails.
     pub fn from_utf8_lossy_in(v: &[u8], a: A) -> Self
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         match Self::try_from_utf8_lossy_in(v, a) {
             Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
+            #[allow(unreachable_patterns)] // TODO rustc bug?
+            Err(CollectionAllocErr::AllocError { inner: e, .. }) => e,
         }
     }
 
@@ -753,7 +757,7 @@ impl<A: DeallocRef> String<A> {
     /// Like `from_utf16` but parameterized over the choice of allocator for the returned `String`.
     pub fn from_utf16_in(v: &[u16], a: A) -> Result<Self, FromUtf16Error>
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         // This isn't done via collect::<Result<_, _>>() for performance reasons.
         // FIXME: the function can be simplified again when #48994 is closed.
@@ -928,7 +932,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn push_str(&mut self, string: &str)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         self.vec.extend_from_slice(string.as_bytes())
     }
@@ -1012,7 +1016,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn reserve(&mut self, additional: usize)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         self.vec.reserve(additional)
     }
@@ -1251,12 +1255,13 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn push(&mut self, ch: char)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         match self.try_push(ch) {
             Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
+            #[allow(unreachable_patterns)] // TODO rustc bug?
+            Err(CollectionAllocErr::AllocError { inner: e, .. }) => e,
         }
     }
 
@@ -1503,12 +1508,13 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn insert(&mut self, idx: usize, ch: char)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         match self.try_insert(idx, ch) {
             Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
+            #[allow(unreachable_patterns)] // TODO rustc bug?
+            Err(CollectionAllocErr::AllocError { inner: e, .. }) => e,
         }
     }
 
@@ -1578,12 +1584,13 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn insert_str(&mut self, idx: usize, string: &str)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         match self.try_insert_str(idx, string) {
             Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
+            #[allow(unreachable_patterns)] // TODO rustc bug?
+            Err(CollectionAllocErr::AllocError { inner: e, .. }) => e,
         }
     }
 
@@ -1701,12 +1708,13 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn split_off(&mut self, at: usize) -> Self
     where
-        A: AllocRef,
+        A: AllocRef<Error = !>,
     {
         match self.try_split_off(at) {
             Ok(s) => s,
             Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
+            #[allow(unreachable_patterns)] // TODO rustc bug?
+            Err(CollectionAllocErr::AllocError { inner: e, .. }) => e,
         }
     }
 
@@ -1819,7 +1827,7 @@ impl<A: DeallocRef> String<A> {
     /// # Panics
     ///
     /// Panics if the starting point or end point do not lie on a [`char`]
-    /// boundary, or if they're out of bounds.
+    /// boundary, or if they're out of bounds, or if there is an allocation failure
     ///
     /// [`char`]: ../../std/primitive.char.html
     /// [`Vec::splice`]: ../../std/vec/struct.Vec.html#method.splice
@@ -1840,7 +1848,7 @@ impl<A: DeallocRef> String<A> {
     pub fn replace_range<R>(&mut self, range: R, replace_with: &str)
     where
         R: RangeBounds<usize>,
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         // Memory safety
         //
@@ -1885,7 +1893,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn into_boxed_str(self) -> Box<str, A>
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         let slice = self.vec.into_boxed_slice();
         unsafe { from_boxed_utf8_unchecked(slice) }
@@ -1991,7 +1999,7 @@ impl fmt::Display for FromUtf16Error {
     }
 }
 
-impl<A> Clone for String<A>
+impl<A: AllocRef<Error = !>> Clone for String<A>
 where
     A: AllocRef,
     A::BuildAlloc: Clone,
@@ -2015,7 +2023,10 @@ impl<A: AllocRef, B: AllocRef> CloneIn<B> for String<A> {
 
     #[inline]
     #[must_use = "Cloning is expected to be expensive"]
-    fn clone_in(&self, a: B) -> Self::Cloned {
+    fn clone_in(&self, a: B) -> Self::Cloned
+    where
+        B: AllocRef<Error = !>,
+    {
         String {
             vec: self.vec.clone_in(a),
         }
@@ -2091,7 +2102,7 @@ impl<'a> FromIterator<Cow<'a, str>> for String {
 
 impl<A> Extend<char> for String<A>
 where
-    A: ReallocRef,
+    A: ReallocRef<Error = !>,
 {
     fn extend<I: IntoIterator<Item = char>>(&mut self, iter: I) {
         let iterator = iter.into_iter();
@@ -2115,7 +2126,7 @@ impl<A: ReallocRef> TryExtend<char> for String<A> {
 
 impl<'a, A> Extend<&'a char> for String<A>
 where
-    A: ReallocRef,
+    A: ReallocRef<Error = !>,
 {
     fn extend<I: IntoIterator<Item = &'a char>>(&mut self, iter: I) {
         self.extend(iter.into_iter().cloned());
@@ -2132,7 +2143,7 @@ impl<'a, A: ReallocRef> TryExtend<&'a char> for String<A> {
 
 impl<'a, A> Extend<&'a str> for String<A>
 where
-    A: ReallocRef,
+    A: ReallocRef<Error = !>,
 {
     fn extend<I: IntoIterator<Item = &'a str>>(&mut self, iter: I) {
         iter.into_iter().for_each(move |s| self.push_str(s));
@@ -2149,7 +2160,7 @@ impl<'a, A: ReallocRef> TryExtend<&'a str> for String<A> {
 
 impl<A, B> Extend<String<B>> for String<A>
 where
-    A: ReallocRef,
+    A: ReallocRef<Error = !>,
     B: DeallocRef,
 {
     fn extend<I: IntoIterator<Item = String<B>>>(&mut self, iter: I) {
@@ -2169,7 +2180,7 @@ impl<A: ReallocRef, B: DeallocRef> TryExtend<String<B>> for String<A> {
 #[cfg(feature = "std")]
 impl<'a, A> Extend<Cow<'a, str>> for String<A>
 where
-    A: ReallocRef,
+    A: ReallocRef<Error = !>,
 {
     fn extend<I: IntoIterator<Item = Cow<'a, str>>>(&mut self, iter: I) {
         iter.into_iter().for_each(move |s| self.push_str(&s));
@@ -2305,7 +2316,7 @@ impl<A: DeallocRef> hash::Hash for String<A> {
 /// ```
 impl<A> Add<&str> for String<A>
 where
-    A: ReallocRef,
+    A: ReallocRef<Error = !>,
 {
     type Output = Self;
 
@@ -2321,7 +2332,7 @@ where
 /// This has the same behavior as the [`push_str`][`String::push_str`] method.
 impl<A> AddAssign<&str> for String<A>
 where
-    A: ReallocRef,
+    A: ReallocRef<Error = !>,
 {
     #[inline]
     fn add_assign(&mut self, other: &str) {
@@ -2497,7 +2508,7 @@ impl From<Box<str>> for String {
 
 impl<A> From<String<A>> for Box<str, A>
 where
-    A: ReallocRef,
+    A: ReallocRef<Error = !>,
 {
     /// Converts the given `String` to a boxed `str` slice that is owned.
     ///
