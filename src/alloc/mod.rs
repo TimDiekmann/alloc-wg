@@ -14,6 +14,7 @@ pub use liballoc::alloc::{handle_alloc_error, Layout};
 use std::alloc::System;
 
 mod panic_adaptor;
+pub use self::panic_adaptor::PanicAdapter;
 
 /// Allocate memory with the global allocator.
 ///

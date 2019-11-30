@@ -69,7 +69,15 @@
 //! [`vec!`]: ../macro.vec.html
 
 use crate::{
-    alloc::{handle_alloc_error, AllocRef, BuildAllocRef, DeallocRef, Global, ReallocRef},
+    alloc::{
+        handle_alloc_error,
+        AllocRef,
+        BuildAllocRef,
+        DeallocRef,
+        Global,
+        PanicAdapter,
+        ReallocRef,
+    },
     boxed::Box,
     clone::CloneIn,
     collections::CollectionAllocErr,
@@ -328,7 +336,7 @@ use core::{
 /// [`insert`]: Self::insert()
 /// [`reserve`]: Self::reserve
 /// [owned slice]: crate::boxed::Box
-pub struct Vec<T, A: DeallocRef = Global> {
+pub struct Vec<T, A: DeallocRef = PanicAdapter<Global>> {
     buf: RawVec<T, A>,
     len: usize,
 }
@@ -401,7 +409,7 @@ impl<T> Vec<T> {
     #[inline]
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity_in(capacity, Global)
+        Self::with_capacity_in(capacity, PanicAdapter(Global))
     }
 
     /// Creates a `Vec<T>` directly from the raw components of another vector.
@@ -664,7 +672,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// use alloc_wg::{alloc::Global, collections::CollectionAllocErr, vec::Vec};
+    /// use alloc_wg::{alloc::PanicAdapter<Global>, collections::CollectionAllocErr, vec::Vec};
     ///
     /// fn process_data(data: &[u32]) -> Result<Vec<u32>, CollectionAllocErr<Global>> {
     ///     let mut output = Vec::new();
@@ -2024,7 +2032,7 @@ impl<T: PartialEq, A: DeallocRef> Vec<T, A> {
 
 #[doc(hidden)]
 pub fn from_elem<T: Clone>(elem: T, n: usize) -> Vec<T> {
-    from_elem_in(elem, n, Global)
+    from_elem_in(elem, n, PanicAdapter(Global))
 }
 
 #[doc(hidden)]
@@ -2267,7 +2275,10 @@ impl<T> FromIterator<T> for Vec<T> {
     #[inline]
     #[must_use]
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        <Self as SpecExtend<T, I::IntoIter, Global>>::from_iter_in(iter.into_iter(), Global)
+        <Self as SpecExtend<T, I::IntoIter, PanicAdapter<Global>>>::from_iter_in(
+            iter.into_iter(),
+            PanicAdapter(Global),
+        )
     }
 }
 
@@ -2896,7 +2907,7 @@ impl From<&str> for Vec<u8> {
 ///
 /// [`Vec`]: struct.Vec.html
 /// [`IntoIterator`]: ../../std/iter/trait.IntoIterator.html
-pub struct IntoIter<T, A: DeallocRef = Global> {
+pub struct IntoIter<T, A: DeallocRef = PanicAdapter<Global>> {
     buf: RawVec<T, A>,
     ptr: *const T,
     end: *const T,
@@ -3042,7 +3053,7 @@ impl<T, A: DeallocRef> Drop for IntoIter<T, A> {
 ///
 /// [`drain`]: struct.Vec.html#method.drain
 /// [`Vec`]: struct.Vec.html
-pub struct Drain<'a, T, A: DeallocRef = Global> {
+pub struct Drain<'a, T, A: DeallocRef = PanicAdapter<Global>> {
     /// Index of tail to preserve
     tail_start: usize,
     /// Length of tail
@@ -3135,7 +3146,7 @@ impl<T, A: DeallocRef> FusedIterator for Drain<'_, T, A> {}
 /// [`splice()`]: struct.Vec.html#method.splice
 /// [`Vec`]: struct.Vec.html
 #[derive(Debug)]
-pub struct Splice<'a, I: Iterator + 'a, A = Global>
+pub struct Splice<'a, I: Iterator + 'a, A = PanicAdapter<Global>>
 where
     A: ReallocRef,
 {
@@ -3257,7 +3268,7 @@ where
 
 /// An iterator produced by calling `drain_filter` on Vec.
 // #[derive(Debug)]
-pub struct DrainFilter<'a, T, F, A: DeallocRef = Global>
+pub struct DrainFilter<'a, T, F, A: DeallocRef = PanicAdapter<Global>>
 where
     F: FnMut(&mut T) -> bool,
 {
@@ -3320,7 +3331,7 @@ where
     F: FnMut(&mut T) -> bool,
 {
     fn drop(&mut self) {
-        struct BackshiftOnDrop<'a, 'b, T, F, A: DeallocRef = Global>
+        struct BackshiftOnDrop<'a, 'b, T, F, A: DeallocRef = PanicAdapter<Global>>
         where
             F: FnMut(&mut T) -> bool,
         {
