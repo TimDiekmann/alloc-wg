@@ -17,25 +17,25 @@ use crate::alloc::*;
 ///
 /// See the [module-level documentation](../../std/abort_adapter/index.html) for more.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct PanicAdapter<Alloc>(pub Alloc);
+pub struct AbortAlloc<Alloc>(pub Alloc);
 
-impl<B: BuildAllocRef> BuildAllocRef for PanicAdapter<B> {
-    type Ref = PanicAdapter<B::Ref>;
+impl<B: BuildAllocRef> BuildAllocRef for AbortAlloc<B> {
+    type Ref = AbortAlloc<B::Ref>;
 
     unsafe fn build_alloc_ref(
         &mut self,
         ptr: NonNull<u8>,
         layout: Option<NonZeroLayout>,
     ) -> Self::Ref {
-        PanicAdapter(self.0.build_alloc_ref(ptr, layout))
+        AbortAlloc(self.0.build_alloc_ref(ptr, layout))
     }
 }
 
-impl<A: DeallocRef> DeallocRef for PanicAdapter<A> {
-    type BuildAlloc = PanicAdapter<A::BuildAlloc>;
+impl<A: DeallocRef> DeallocRef for AbortAlloc<A> {
+    type BuildAlloc = AbortAlloc<A::BuildAlloc>;
 
     fn get_build_alloc(&mut self) -> Self::BuildAlloc {
-        PanicAdapter(self.0.get_build_alloc())
+        AbortAlloc(self.0.get_build_alloc())
     }
 
     unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: NonZeroLayout) {
@@ -43,7 +43,7 @@ impl<A: DeallocRef> DeallocRef for PanicAdapter<A> {
     }
 }
 
-impl<A: AllocRef> AllocRef for PanicAdapter<A> {
+impl<A: AllocRef> AllocRef for AbortAlloc<A> {
     type Error = !;
 
     fn alloc(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
@@ -81,7 +81,7 @@ impl<A: AllocRef> AllocRef for PanicAdapter<A> {
     }
 }
 
-impl<A: ReallocRef> ReallocRef for PanicAdapter<A> {
+impl<A: ReallocRef> ReallocRef for AbortAlloc<A> {
     unsafe fn realloc(
         &mut self,
         ptr: NonNull<u8>,

@@ -52,7 +52,7 @@
 //! ```
 
 use crate::{
-    alloc::{AllocRef, DeallocRef, Global, PanicAdapter, ReallocRef},
+    alloc::{AllocRef, DeallocRef, Global, AbortAlloc, ReallocRef},
     boxed::Box,
     collections::CollectionAllocErr,
     iter::TryExtend,
@@ -312,7 +312,7 @@ pub use liballoc::string::{ParseError, ToString};
 /// [`Deref`]: ../../std/ops/trait.Deref.html
 /// [`as_str()`]: struct.String.html#method.as_str
 #[derive(PartialOrd, Eq, Ord)]
-pub struct String<A: DeallocRef = PanicAdapter<Global>> {
+pub struct String<A: DeallocRef = AbortAlloc<Global>> {
     vec: Vec<u8, A>,
 }
 
@@ -354,7 +354,7 @@ pub struct String<A: DeallocRef = PanicAdapter<Global>> {
 /// assert_eq!(vec![0, 159], value.unwrap_err().into_bytes());
 /// ```
 #[derive(Debug)]
-pub struct FromUtf8Error<A: DeallocRef = PanicAdapter<Global>> {
+pub struct FromUtf8Error<A: DeallocRef = AbortAlloc<Global>> {
     bytes: Vec<u8, A>,
     error: Utf8Error,
 }
@@ -451,7 +451,7 @@ impl String {
     #[inline]
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity_in(capacity, PanicAdapter(Global))
+        Self::with_capacity_in(capacity, AbortAlloc(Global))
     }
 
     /// Decode a UTF-16 encoded vector `v` into a `String`, returning [`Err`]
@@ -475,7 +475,7 @@ impl String {
     /// assert!(String::from_utf16(v).is_err());
     /// ```
     pub fn from_utf16(v: &[u16]) -> Result<Self, FromUtf16Error> {
-        Self::from_utf16_in(v, PanicAdapter(Global))
+        Self::from_utf16_in(v, AbortAlloc(Global))
     }
 
     /// Decode a UTF-16 encoded slice `v` into a `String`, replacing
@@ -560,7 +560,7 @@ impl String {
     /// ```
     #[inline]
     pub unsafe fn from_raw_parts(buf: *mut u8, length: usize, capacity: usize) -> Self {
-        Self::from_raw_parts_in(buf, length, capacity, PanicAdapter(Global))
+        Self::from_raw_parts_in(buf, length, capacity, AbortAlloc(Global))
     }
 }
 

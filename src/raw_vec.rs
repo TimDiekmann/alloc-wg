@@ -6,7 +6,7 @@ use crate::{
         DeallocRef,
         Global,
         NonZeroLayout,
-        PanicAdapter,
+        AbortAlloc,
         ReallocRef,
     },
     boxed::Box,
@@ -50,7 +50,7 @@ use core::{
 /// field. This allows zero-sized types to not be special-cased by consumers of
 /// this type.
 // Using `NonNull` + `PhantomData` instead of `Unique` to stay on stable as long as possible
-pub struct RawVec<T, A: DeallocRef = PanicAdapter<Global>> {
+pub struct RawVec<T, A: DeallocRef = AbortAlloc<Global>> {
     ptr: Unique<T>,
     capacity: usize,
     build_alloc: A::BuildAlloc,
@@ -88,7 +88,7 @@ impl<T> RawVec<T> {
             ptr: Unique::empty(),
             // FIXME(mark-i-m): use `cap` when ifs are allowed in const
             capacity: [0, !0][(mem::size_of::<T>() == 0) as usize],
-            build_alloc: PanicAdapter(Global),
+            build_alloc: AbortAlloc(Global),
         }
     }
 
@@ -109,7 +109,7 @@ impl<T> RawVec<T> {
     #[inline]
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity_in(capacity, PanicAdapter(Global))
+        Self::with_capacity_in(capacity, AbortAlloc(Global))
     }
 
     /// Like `with_capacity`, but guarantees the buffer is zeroed.
@@ -125,7 +125,7 @@ impl<T> RawVec<T> {
     #[inline]
     #[must_use]
     pub fn with_capacity_zeroed(capacity: usize) -> Self {
-        Self::with_capacity_zeroed_in(capacity, PanicAdapter(Global))
+        Self::with_capacity_zeroed_in(capacity, AbortAlloc(Global))
     }
 
     /// Reconstitutes a `RawVec` from a pointer, and capacity.
@@ -137,7 +137,7 @@ impl<T> RawVec<T> {
     /// If the ptr and capacity come from a `RawVec` created with `Global`, then this is guaranteed.
     #[inline]
     pub unsafe fn from_raw_parts(ptr: *mut T, capacity: usize) -> Self {
-        Self::from_raw_parts_in(ptr, capacity, PanicAdapter(Global))
+        Self::from_raw_parts_in(ptr, capacity, AbortAlloc(Global))
     }
 }
 

@@ -79,7 +79,7 @@
 //! [`NonZeroLayout::for_value(&*value)`]: crate::alloc::NonZeroLayout::for_value
 
 use crate::{
-    alloc::{AllocRef, BuildAllocRef, DeallocRef, Global, NonZeroLayout, PanicAdapter},
+    alloc::{AllocRef, BuildAllocRef, DeallocRef, Global, NonZeroLayout, AbortAlloc},
     clone::CloneIn,
     collections::CollectionAllocErr,
     raw_vec::RawVec,
@@ -104,7 +104,7 @@ use core::{
 /// A pointer type for heap allocation.
 ///
 /// See the [module-level documentation](index.html) for more.
-pub struct Box<T: ?Sized, A: DeallocRef = PanicAdapter<Global>> {
+pub struct Box<T: ?Sized, A: DeallocRef = AbortAlloc<Global>> {
     ptr: Unique<T>,
     build_alloc: A::BuildAlloc,
 }
@@ -130,7 +130,7 @@ impl<T> Box<T> {
     #[inline(always)]
     #[must_use]
     pub fn new(x: T) -> Self {
-        Self::new_in(x, PanicAdapter(Global))
+        Self::new_in(x, AbortAlloc(Global))
     }
 
     /// Constructs a new box with uninitialized contents.
@@ -155,7 +155,7 @@ impl<T> Box<T> {
     #[inline(always)]
     #[must_use]
     pub fn new_uninit() -> Box<mem::MaybeUninit<T>> {
-        Self::new_uninit_in(PanicAdapter(Global))
+        Self::new_uninit_in(AbortAlloc(Global))
     }
 
     /// Constructs a new `Pin<Box<T>>`. If `T` does not implement `Unpin`, then
@@ -320,7 +320,7 @@ impl<T> Box<[T]> {
     #[inline(always)]
     #[must_use]
     pub fn new_uninit_slice(len: usize) -> Box<[mem::MaybeUninit<T>]> {
-        Self::new_uninit_slice_in(len, PanicAdapter(Global))
+        Self::new_uninit_slice_in(len, AbortAlloc(Global))
     }
 }
 
@@ -522,7 +522,7 @@ impl<T: ?Sized> Box<T> {
     #[allow(clippy::inline_always)]
     #[inline(always)]
     pub unsafe fn from_raw(raw: *mut T) -> Self {
-        Self::from_raw_in(raw, PanicAdapter(Global))
+        Self::from_raw_in(raw, AbortAlloc(Global))
     }
 }
 
