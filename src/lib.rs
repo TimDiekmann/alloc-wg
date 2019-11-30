@@ -55,7 +55,6 @@
     dropck_eyepatch,
     coerce_unsized,
     core_intrinsics,
-    never_type,
     ptr_internals,
     str_internals,
     dispatch_from_dyn,
