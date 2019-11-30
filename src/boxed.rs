@@ -79,7 +79,7 @@
 //! [`NonZeroLayout::for_value(&*value)`]: crate::alloc::NonZeroLayout::for_value
 
 use crate::{
-    alloc::{AllocRef, BuildAllocRef, DeallocRef, Global, NonZeroLayout, AbortAlloc},
+    alloc::{AbortAlloc, AllocRef, BuildAllocRef, DeallocRef, Global, NonZeroLayout},
     clone::CloneIn,
     collections::CollectionAllocErr,
     raw_vec::RawVec,
@@ -176,10 +176,13 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::Global, boxed::Box};
+    /// use alloc_wg::{
+    ///     alloc::{AbortAlloc, Global},
+    ///     boxed::Box,
+    /// };
     ///
     /// # #[allow(unused_variables)]
-    /// let five = Box::new_in(5, Global);
+    /// let five = Box::new_in(5, AbortAlloc(Global));
     /// ```
     #[allow(clippy::inline_always)]
     #[inline(always)]
@@ -222,9 +225,12 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::Global, boxed::Box};
+    /// use alloc_wg::{
+    ///     alloc::{AbortAlloc, Global},
+    ///     boxed::Box,
+    /// };
     ///
-    /// let mut five = Box::<u32, _>::new_uninit_in(Global);
+    /// let mut five = Box::<u32, _>::new_uninit_in(AbortAlloc(Global));
     ///
     /// let five = unsafe {
     ///     // Deferred initialization:
@@ -331,9 +337,12 @@ impl<T, A: AllocRef<Error = !>> Box<[T], A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::Global, boxed::Box};
+    /// use alloc_wg::{
+    ///     alloc::{AbortAlloc, Global},
+    ///     boxed::Box,
+    /// };
     ///
-    /// let mut values = Box::<[u32], _>::new_uninit_slice_in(3, Global);
+    /// let mut values = Box::<[u32], AbortAlloc<Global>>::new_uninit_slice_in(3, AbortAlloc(Global));
     ///
     /// let values = unsafe {
     ///     // Deferred initialization:
@@ -777,7 +786,7 @@ where
 #[allow(clippy::use_self)]
 impl<T, A: AllocRef<Error = !>> Default for Box<[T], A>
 where
-    A: Default + AllocRef,
+    A: Default + AllocRef<Error = !>,
 {
     #[must_use]
     fn default() -> Self {
@@ -794,7 +803,7 @@ unsafe fn from_boxed_utf8_unchecked<A: DeallocRef>(v: Box<[u8], A>) -> Box<str, 
 #[allow(clippy::use_self)]
 impl<A: AllocRef<Error = !>> Default for Box<str, A>
 where
-    A: Default + AllocRef,
+    A: Default + AllocRef<Error = !>,
 {
     #[must_use]
     fn default() -> Self {
@@ -804,7 +813,7 @@ where
 
 impl<T: Clone, A: AllocRef<Error = !>> Clone for Box<T, A>
 where
-    A: AllocRef,
+    A: AllocRef<Error = !>,
     A::BuildAlloc: Clone,
 {
     /// Returns a new box with a `clone()` of this box's contents.
@@ -971,7 +980,7 @@ impl<T: ?Sized + Hasher, A: DeallocRef> Hasher for Box<T, A> {
 
 impl<T, A: AllocRef<Error = !>> From<T> for Box<T, A>
 where
-    A: Default + AllocRef,
+    A: Default + AllocRef<Error = !>,
 {
     /// Converts a generic type `T` into a `Box<T>`
     ///
@@ -1288,8 +1297,11 @@ macro_rules! impl_dispatch_from_dyn {
 }
 
 impl_dispatch_from_dyn!(Global);
+impl_dispatch_from_dyn!(AbortAlloc<Global>);
 #[cfg(feature = "std")]
 impl_dispatch_from_dyn!(std::alloc::System);
+#[cfg(feature = "std")]
+impl_dispatch_from_dyn!(AbortAlloc<std::alloc::System>);
 
 #[allow(clippy::items_after_statements)]
 impl<T: Clone, A: Clone> Clone for Box<[T], A>

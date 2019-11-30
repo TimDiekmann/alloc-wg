@@ -52,7 +52,7 @@
 //! ```
 
 use crate::{
-    alloc::{AllocRef, DeallocRef, Global, AbortAlloc, ReallocRef},
+    alloc::{AbortAlloc, AllocRef, DeallocRef, Global, ReallocRef},
     boxed::Box,
     collections::CollectionAllocErr,
     iter::TryExtend,
@@ -1069,7 +1069,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn reserve_exact(&mut self, additional: usize)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         self.vec.reserve_exact(additional)
     }
@@ -1088,9 +1088,13 @@ impl<A: DeallocRef> String<A> {
     /// # Examples
     ///
     /// ```
-    /// use alloc_wg::{alloc::Global, collections::CollectionAllocErr, string::String};
+    /// use alloc_wg::{
+    ///     alloc::{AbortAlloc, Global},
+    ///     collections::CollectionAllocErr,
+    ///     string::String,
+    /// };
     ///
-    /// fn process_data(data: &str) -> Result<String, CollectionAllocErr<Global>> {
+    /// fn process_data(data: &str) -> Result<String, CollectionAllocErr<AbortAlloc<Global>>> {
     ///     let mut output = String::new();
     ///
     ///     // Pre-reserve the memory, exiting if we can't
@@ -1127,9 +1131,13 @@ impl<A: DeallocRef> String<A> {
     /// # Examples
     ///
     /// ```
-    /// use alloc_wg::{alloc::Global, collections::CollectionAllocErr, string::String};
+    /// use alloc_wg::{
+    ///     alloc::{AbortAlloc, Global},
+    ///     collections::CollectionAllocErr,
+    ///     string::String,
+    /// };
     ///
-    /// fn process_data(data: &str) -> Result<String, CollectionAllocErr<Global>> {
+    /// fn process_data(data: &str) -> Result<String, CollectionAllocErr<AbortAlloc<Global>>> {
     ///     let mut output = String::new();
     ///
     ///     // Pre-reserve the memory, exiting if we can't
@@ -1172,7 +1180,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn shrink_to_fit(&mut self)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         self.vec.shrink_to_fit()
     }
@@ -1216,7 +1224,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn shrink_to(&mut self, min_capacity: usize)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         self.vec.shrink_to(min_capacity)
     }
@@ -1598,7 +1606,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn try_insert_str(&mut self, idx: usize, string: &str) -> Result<(), CollectionAllocErr<A>>
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         assert!(self.is_char_boundary(idx));
 

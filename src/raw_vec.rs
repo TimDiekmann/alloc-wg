@@ -1,12 +1,12 @@
 use crate::{
     alloc::{
+        AbortAlloc,
         AllocRef,
         BuildAllocRef,
         CapacityOverflow,
         DeallocRef,
         Global,
         NonZeroLayout,
-        AbortAlloc,
         ReallocRef,
     },
     boxed::Box,
@@ -634,7 +634,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn reserve_exact(&mut self, used_capacity: usize, needed_extra_capacity: usize)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         match self.try_reserve_exact(used_capacity, needed_extra_capacity) {
             Ok(_) => (),
@@ -736,7 +736,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// Panics if the given amount is *larger* than the current capacity.
     pub fn shrink_to_fit(&mut self, amount: usize)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         match self.try_shrink_to_fit(amount) {
             Ok(_) => (),

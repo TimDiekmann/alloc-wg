@@ -69,7 +69,7 @@
 //! [`vec!`]: ../macro.vec.html
 
 use crate::{
-    alloc::{AllocRef, BuildAllocRef, DeallocRef, Global, AbortAlloc, ReallocRef},
+    alloc::{AbortAlloc, AllocRef, BuildAllocRef, DeallocRef, Global, ReallocRef},
     boxed::Box,
     clone::CloneIn,
     collections::CollectionAllocErr,
@@ -645,7 +645,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// Panics if the reallocation fails.
     pub fn reserve_exact(&mut self, additional: usize)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         self.buf.reserve_exact(self.len, additional);
     }
@@ -664,9 +664,13 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// use alloc_wg::{alloc::AbortAlloc<Global>, collections::CollectionAllocErr, vec::Vec};
+    /// use alloc_wg::{
+    ///     alloc::{AbortAlloc, Global},
+    ///     collections::CollectionAllocErr,
+    ///     vec::Vec,
+    /// };
     ///
-    /// fn process_data(data: &[u32]) -> Result<Vec<u32>, CollectionAllocErr<Global>> {
+    /// fn process_data(data: &[u32]) -> Result<Vec<u32>, CollectionAllocErr<AbortAlloc<Global>>> {
     ///     let mut output = Vec::new();
     ///
     ///     // Pre-reserve the memory, exiting if we can't
@@ -705,9 +709,13 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// # Examples
     ///
     /// ```
-    /// use alloc_wg::{alloc::Global, collections::CollectionAllocErr, vec::Vec};
+    /// use alloc_wg::{
+    ///     alloc::{AbortAlloc, Global},
+    ///     collections::CollectionAllocErr,
+    ///     vec::Vec,
+    /// };
     ///
-    /// fn process_data(data: &[u32]) -> Result<Vec<u32>, CollectionAllocErr<Global>> {
+    /// fn process_data(data: &[u32]) -> Result<Vec<u32>, CollectionAllocErr<AbortAlloc<Global>>> {
     ///     let mut output = Vec::new();
     ///
     ///     // Pre-reserve the memory, exiting if we can't
@@ -751,7 +759,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// Panics if the reallocation fails.
     pub fn shrink_to_fit(&mut self)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         if self.capacity() != self.len {
             self.buf.shrink_to_fit(self.len);
@@ -797,7 +805,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// * Panics if the reallocation fails.
     pub fn shrink_to(&mut self, min_capacity: usize)
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         self.buf.shrink_to_fit(cmp::max(self.len, min_capacity));
     }
@@ -1296,7 +1304,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     pub fn retain<F>(&mut self, mut f: F)
     where
         F: FnMut(&T) -> bool,
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
     {
         self.drain_filter(|x| !f(x));
     }
@@ -1826,7 +1834,7 @@ impl<T: Clone, A: ReallocRef> Vec<T, A> {
     /// Panics if the reallocation fails.
     pub fn resize(&mut self, new_len: usize, value: T)
     where
-        A: AllocRef<Error = !>,
+        A: ReallocRef<Error = !>,
     {
         match self.try_resize(new_len, value) {
             Ok(_) => (),
@@ -1874,9 +1882,9 @@ impl<T: Clone, A: ReallocRef> Vec<T, A> {
     /// Panics if the reallocation fails.
     pub fn extend_from_slice(&mut self, other: &[T])
     where
-        A: AllocRef<Error = !>,
+        A: ReallocRef<Error = !>,
     {
-        self.spec_extend(other.iter())
+        self.spec_extend(other.iter().cloned())
     }
 
     /// Same as `extend_from_slice` but returns errors instead of panicking
@@ -2676,7 +2684,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// ```
     pub fn drain_filter<F>(&mut self, filter: F) -> DrainFilter<'_, T, F, A>
     where
-        A: ReallocRef,
+        A: ReallocRef<Error = !>,
         F: FnMut(&mut T) -> bool,
     {
         let old_len = self.len();
