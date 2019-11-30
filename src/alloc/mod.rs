@@ -1,6 +1,10 @@
+mod abort;
 mod layout;
 
-pub use self::layout::{LayoutErr, NonZeroLayout};
+pub use self::{
+    abort::AbortAlloc,
+    layout::{LayoutErr, NonZeroLayout},
+};
 pub use core::alloc::GlobalAlloc;
 use core::{
     cmp,
