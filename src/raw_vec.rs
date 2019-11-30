@@ -1,6 +1,6 @@
 use crate::{
     alloc::{
-        handle_alloc_error,
+        Abort,
         AllocRef,
         BuildAllocRef,
         CapacityOverflow,
@@ -10,7 +10,7 @@ use crate::{
         ReallocRef,
     },
     boxed::Box,
-    collections::CollectionAllocErr,
+    collections::{handle_collection_error_audited, CollectionAllocErr},
 };
 use core::{
     alloc::Layout,
@@ -163,13 +163,9 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
-        A: AllocRef,
+        A: AllocRef + Abort,
     {
-        match Self::try_with_capacity_in(capacity, a) {
-            Ok(vec) => vec,
-            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
-        }
+        handle_collection_error_audited(Self::try_with_capacity_in(capacity, a))
     }
 
     #[inline]
@@ -198,13 +194,9 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn with_capacity_zeroed_in(capacity: usize, a: A) -> Self
     where
-        A: AllocRef,
+        A: AllocRef + Abort,
     {
-        match Self::try_with_capacity_zeroed_in(capacity, a) {
-            Ok(vec) => vec,
-            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
-        }
+        handle_collection_error_audited(Self::try_with_capacity_zeroed_in(capacity, a))
     }
 
     #[inline]
@@ -418,13 +410,9 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// ```
     pub fn double(&mut self)
     where
-        A: ReallocRef,
+        A: ReallocRef + Abort,
     {
-        match self.try_double() {
-            Ok(_) => (),
-            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
-        }
+        handle_collection_error_audited(self.try_double())
     }
 
     /// The same as `double`, but returns on errors instead of panicking.
@@ -588,13 +576,9 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// ```
     pub fn reserve(&mut self, used_capacity: usize, needed_extra_capacity: usize)
     where
-        A: ReallocRef,
+        A: ReallocRef + Abort,
     {
-        match self.try_reserve(used_capacity, needed_extra_capacity) {
-            Ok(vec) => vec,
-            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { layout, .. }) => handle_alloc_error(layout.into()),
-        }
+        handle_collection_error_audited(self.try_reserve(used_capacity, needed_extra_capacity))
     }
 
     /// The same as `reserve`, but returns on errors instead of panicking.
@@ -631,13 +615,11 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn reserve_exact(&mut self, used_capacity: usize, needed_extra_capacity: usize)
     where
-        A: ReallocRef,
+        A: ReallocRef + Abort,
     {
-        match self.try_reserve_exact(used_capacity, needed_extra_capacity) {
-            Ok(_) => (),
-            Err(CollectionAllocErr::CapacityOverflow) => capacity_overflow(),
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!(),
-        }
+        handle_collection_error_audited(
+            self.try_reserve_exact(used_capacity, needed_extra_capacity),
+        )
     }
 
     /// The same as `reserve_exact`, but returns on errors instead of panicking.

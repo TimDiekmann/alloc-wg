@@ -1,6 +1,13 @@
 //! Collection types.
 
-use crate::alloc::{AllocRef, CapacityOverflow, LayoutErr, NonZeroLayout};
+use crate::alloc::{
+    handle_alloc_error_audited,
+    Abort,
+    AllocRef,
+    CapacityOverflow,
+    LayoutErr,
+    NonZeroLayout,
+};
 pub use liballoc::collections::{binary_heap, btree_map, btree_set, linked_list, vec_deque};
 
 #[doc(no_inline)]
@@ -42,5 +49,21 @@ impl<A: AllocRef> From<LayoutErr> for CollectionAllocErr<A> {
     #[must_use]
     fn from(_: LayoutErr) -> Self {
         Self::CapacityOverflow
+    }
+}
+
+// One central function responsible for reporting capacity overflows. This'll
+// ensure that the code generation related to these panics is minimal as there's
+// only one location which panics rather than a bunch throughout the module.
+//
+// It also ensures the allocator was whitelisted with the `Abort` trait.
+pub fn handle_collection_error_audited<T, A: Abort>(error: Result<T, CollectionAllocErr<A>>) -> T {
+    match error {
+        Ok(t) => t,
+        Err(CollectionAllocErr::CapacityOverflow) => panic!("capacity overflow"),
+        Err(CollectionAllocErr::AllocError { layout, inner }) => {
+            let v: Result<!, A::Error> = Err(inner);
+            handle_alloc_error_audited::<!, A>(layout, v)
+        }
     }
 }
