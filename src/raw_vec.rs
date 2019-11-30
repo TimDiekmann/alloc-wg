@@ -7,6 +7,7 @@ use crate::{
         DeallocRef,
         Global,
         NonZeroLayout,
+        Panic,
         ReallocRef,
     },
     boxed::Box,
@@ -162,7 +163,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef<Error = Panic>,
     {
         match Self::try_with_capacity_in(capacity, a) {
             Ok(vec) => vec,
@@ -198,7 +199,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn with_capacity_zeroed_in(capacity: usize, a: A) -> Self
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef<Error = Panic>,
     {
         match Self::try_with_capacity_zeroed_in(capacity, a) {
             Ok(vec) => vec,
@@ -419,7 +420,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// ```
     pub fn double(&mut self)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match self.try_double() {
             Ok(_) => (),
@@ -590,7 +591,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// ```
     pub fn reserve(&mut self, used_capacity: usize, needed_extra_capacity: usize)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match self.try_reserve(used_capacity, needed_extra_capacity) {
             Ok(vec) => vec,
@@ -634,7 +635,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.
     pub fn reserve_exact(&mut self, used_capacity: usize, needed_extra_capacity: usize)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match self.try_reserve_exact(used_capacity, needed_extra_capacity) {
             Ok(_) => (),
@@ -736,7 +737,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// Panics if the given amount is *larger* than the current capacity.
     pub fn shrink_to_fit(&mut self, amount: usize)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match self.try_shrink_to_fit(amount) {
             Ok(_) => (),

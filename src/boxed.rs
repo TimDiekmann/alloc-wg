@@ -79,7 +79,7 @@
 //! [`NonZeroLayout::for_value(&*value)`]: crate::alloc::NonZeroLayout::for_value
 
 use crate::{
-    alloc::{AbortAlloc, AllocRef, BuildAllocRef, DeallocRef, Global, NonZeroLayout},
+    alloc::{AbortAlloc, AllocRef, BuildAllocRef, DeallocRef, Global, NonZeroLayout, Panic},
     clone::CloneIn,
     collections::CollectionAllocErr,
     raw_vec::RawVec,
@@ -188,7 +188,7 @@ impl<T, A: AllocRef> Box<T, A> {
     #[inline(always)]
     pub fn new_in(x: T, a: A) -> Self
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef<Error = Panic>,
     {
         let Ok(b) = Self::try_new_in(x, a);
         b
@@ -245,7 +245,7 @@ impl<T, A: AllocRef> Box<T, A> {
     #[inline(always)]
     pub fn new_uninit_in(a: A) -> Box<mem::MaybeUninit<T>, A>
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef<Error = Panic>,
     {
         let Ok(b) = Self::try_new_uninit_in(a);
         b
@@ -286,7 +286,7 @@ impl<T, A: AllocRef> Box<T, A> {
     #[inline(always)]
     pub fn pin_in(x: T, a: A) -> Pin<Self>
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef<Error = Panic>,
     {
         let Ok(b) = Self::try_pin_in(x, a);
         b
@@ -331,7 +331,7 @@ impl<T> Box<[T]> {
 }
 
 #[allow(clippy::use_self)]
-impl<T, A: AllocRef<Error = !>> Box<[T], A> {
+impl<T, A: AllocRef<Error = Panic>> Box<[T], A> {
     /// Construct a new boxed slice with uninitialized contents with the spoecified allocator.
     ///
     /// # Example
@@ -775,7 +775,7 @@ unsafe impl<#[may_dangle] T: ?Sized, A: DeallocRef> Drop for Box<T, A> {
 impl<T, A> Default for Box<T, A>
 where
     T: Default,
-    A: Default + AllocRef<Error = !>,
+    A: Default + AllocRef<Error = Panic>,
 {
     #[must_use]
     fn default() -> Self {
@@ -784,9 +784,9 @@ where
 }
 
 #[allow(clippy::use_self)]
-impl<T, A: AllocRef<Error = !>> Default for Box<[T], A>
+impl<T, A: AllocRef<Error = Panic>> Default for Box<[T], A>
 where
-    A: Default + AllocRef<Error = !>,
+    A: Default + AllocRef<Error = Panic>,
 {
     #[must_use]
     fn default() -> Self {
@@ -801,9 +801,9 @@ unsafe fn from_boxed_utf8_unchecked<A: DeallocRef>(v: Box<[u8], A>) -> Box<str, 
 }
 
 #[allow(clippy::use_self)]
-impl<A: AllocRef<Error = !>> Default for Box<str, A>
+impl<A: AllocRef<Error = Panic>> Default for Box<str, A>
 where
-    A: Default + AllocRef<Error = !>,
+    A: Default + AllocRef<Error = Panic>,
 {
     #[must_use]
     fn default() -> Self {
@@ -811,9 +811,9 @@ where
     }
 }
 
-impl<T: Clone, A: AllocRef<Error = !>> Clone for Box<T, A>
+impl<T: Clone, A: AllocRef<Error = Panic>> Clone for Box<T, A>
 where
-    A: AllocRef<Error = !>,
+    A: AllocRef<Error = Panic>,
     A::BuildAlloc: Clone,
 {
     /// Returns a new box with a `clone()` of this box's contents.
@@ -876,7 +876,7 @@ impl<T: Clone, A: AllocRef, B: AllocRef> CloneIn<B> for Box<T, A> {
 
     fn clone_in(&self, a: B) -> Self::Cloned
     where
-        B: AllocRef<Error = !>,
+        B: AllocRef<Error = Panic>,
     {
         Box::new_in(self.as_ref().clone(), a)
     }
@@ -978,9 +978,9 @@ impl<T: ?Sized + Hasher, A: DeallocRef> Hasher for Box<T, A> {
     }
 }
 
-impl<T, A: AllocRef<Error = !>> From<T> for Box<T, A>
+impl<T, A: AllocRef<Error = Panic>> From<T> for Box<T, A>
 where
-    A: Default + AllocRef<Error = !>,
+    A: Default + AllocRef<Error = Panic>,
 {
     /// Converts a generic type `T` into a `Box<T>`
     ///
@@ -1014,7 +1014,7 @@ impl<T: ?Sized, A: DeallocRef> From<Box<T, A>> for Pin<Box<T, A>> {
 #[allow(clippy::use_self)]
 impl<T: Copy, A> From<&[T]> for Box<[T], A>
 where
-    A: Default + AllocRef<Error = !>,
+    A: Default + AllocRef<Error = Panic>,
 {
     /// Converts a `&[T]` into a `Box<[T], B>`
     ///
@@ -1043,7 +1043,7 @@ where
 #[allow(clippy::use_self)]
 impl<A> From<&str> for Box<str, A>
 where
-    A: Default + AllocRef<Error = !>,
+    A: Default + AllocRef<Error = Panic>,
 {
     /// Converts a `&str` into a `Box<str>`
     ///
@@ -1306,7 +1306,7 @@ impl_dispatch_from_dyn!(AbortAlloc<std::alloc::System>);
 #[allow(clippy::items_after_statements)]
 impl<T: Clone, A: Clone> Clone for Box<[T], A>
 where
-    A: AllocRef<Error = !>,
+    A: AllocRef<Error = Panic>,
     A::BuildAlloc: Clone,
 {
     fn clone(&self) -> Self {

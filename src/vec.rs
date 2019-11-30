@@ -69,7 +69,7 @@
 //! [`vec!`]: ../macro.vec.html
 
 use crate::{
-    alloc::{AbortAlloc, AllocRef, BuildAllocRef, DeallocRef, Global, ReallocRef},
+    alloc::{AbortAlloc, AllocRef, BuildAllocRef, DeallocRef, Global, Panic, ReallocRef},
     boxed::Box,
     clone::CloneIn,
     collections::CollectionAllocErr,
@@ -490,7 +490,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     #[inline]
     pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef<Error = Panic>,
     {
         Self {
             buf: RawVec::with_capacity_in(capacity, a),
@@ -612,7 +612,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// Panics if the reallocation fails.
     pub fn reserve(&mut self, additional: usize)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         self.buf.reserve(self.len, additional);
     }
@@ -645,7 +645,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// Panics if the reallocation fails.
     pub fn reserve_exact(&mut self, additional: usize)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         self.buf.reserve_exact(self.len, additional);
     }
@@ -759,7 +759,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// Panics if the reallocation fails.
     pub fn shrink_to_fit(&mut self)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         if self.capacity() != self.len {
             self.buf.shrink_to_fit(self.len);
@@ -805,7 +805,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// * Panics if the reallocation fails.
     pub fn shrink_to(&mut self, min_capacity: usize)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         self.buf.shrink_to_fit(cmp::max(self.len, min_capacity));
     }
@@ -852,7 +852,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// Panics if the reallocation fails.
     pub fn into_boxed_slice(self) -> Box<[T], A>
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match self.try_into_boxed_slice() {
             Ok(vec) => vec,
@@ -1197,7 +1197,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// ```
     pub fn insert(&mut self, index: usize, element: T)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match self.try_insert(index, element) {
             Ok(vec) => vec,
@@ -1304,7 +1304,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     pub fn retain<F>(&mut self, mut f: F)
     where
         F: FnMut(&T) -> bool,
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         self.drain_filter(|x| !f(x));
     }
@@ -1387,7 +1387,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     #[inline]
     pub fn push(&mut self, value: T)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match self.try_push(value) {
             Ok(vec) => vec,
@@ -1473,7 +1473,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     #[inline]
     pub fn append(&mut self, other: &mut Self)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match self.try_append(other) {
             Ok(vec) => vec,
@@ -1659,7 +1659,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     #[inline]
     pub fn split_off(&mut self, at: usize) -> Self
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef<Error = Panic>,
     {
         match self.try_split_off(at) {
             Ok(vec) => vec,
@@ -1730,7 +1730,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     pub fn resize_with<F>(&mut self, new_len: usize, f: F)
     where
         F: FnMut() -> T,
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match self.try_resize_with(new_len, f) {
             Ok(vec) => vec,
@@ -1785,7 +1785,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     pub fn leak<'a>(vec: Self) -> &'a mut [T]
     where
         T: 'a, // Technically not needed, but kept to be explicit.
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         Box::leak(vec.into_boxed_slice())
     }
@@ -1834,7 +1834,7 @@ impl<T: Clone, A: ReallocRef> Vec<T, A> {
     /// Panics if the reallocation fails.
     pub fn resize(&mut self, new_len: usize, value: T)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match self.try_resize(new_len, value) {
             Ok(_) => (),
@@ -1882,7 +1882,7 @@ impl<T: Clone, A: ReallocRef> Vec<T, A> {
     /// Panics if the reallocation fails.
     pub fn extend_from_slice(&mut self, other: &[T])
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         self.spec_extend(other.iter().cloned())
     }
@@ -2051,7 +2051,7 @@ pub fn from_elem<T: Clone>(elem: T, n: usize) -> Vec<T> {
 #[doc(hidden)]
 pub fn from_elem_in<T: Clone, A>(elem: T, n: usize, a: A) -> Vec<T, A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     match try_from_elem_in(elem, n, a) {
         Ok(vec) => vec,
@@ -2199,7 +2199,7 @@ unsafe impl<T: ?Sized> IsZero for Option<Box<T>> {
 // Common trait implementations for Vec
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<T: Clone, A: AllocRef<Error = !>> Clone for Vec<T, A>
+impl<T: Clone, A: AllocRef<Error = Panic>> Clone for Vec<T, A>
 where
     A: AllocRef,
     A::BuildAlloc: Clone,
@@ -2224,7 +2224,7 @@ impl<T: Clone, A: AllocRef, B: AllocRef> CloneIn<B> for Vec<T, A> {
 
     fn clone_in(&self, a: B) -> Self::Cloned
     where
-        B: AllocRef<Error = !>,
+        B: AllocRef<Error = Panic>,
     {
         let Ok(v) = self.try_clone_in(a);
         v
@@ -2300,7 +2300,7 @@ impl<T, A: ReallocRef> FromIteratorIn<T, A> for Vec<T, A> {
     #[must_use]
     fn from_iter_in<I: IntoIterator<Item = T>>(iter: I, a: A) -> Self
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef<Error = Panic>,
     {
         <Self as SpecExtend<T, I::IntoIter, A>>::from_iter_in(iter.into_iter(), a)
     }
@@ -2376,7 +2376,7 @@ impl<'a, T, A: DeallocRef> IntoIterator for &'a mut Vec<T, A> {
 
 impl<T, A> Extend<T> for Vec<T, A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     #[inline]
     fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
@@ -2397,7 +2397,7 @@ trait SpecExtend<T, I, A: AllocRef>: Sized {
     #[inline]
     fn from_iter_in(iter: I, a: A) -> Self
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef<Error = Panic>,
     {
         match Self::try_from_iter_in(iter, a) {
             Ok(v) => v,
@@ -2412,7 +2412,7 @@ trait SpecExtend<T, I, A: AllocRef>: Sized {
     #[inline]
     fn spec_extend(&mut self, iter: I)
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef<Error = Panic>,
     {
         match self.try_spec_extend(iter) {
             Ok(_) => (),
@@ -2625,7 +2625,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     #[inline]
     pub fn splice<R, I>(&mut self, range: R, replace_with: I) -> Splice<'_, I::IntoIter, A>
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
         R: RangeBounds<usize>,
         I: IntoIterator<Item = T>,
     {
@@ -2684,7 +2684,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// ```
     pub fn drain_filter<F>(&mut self, filter: F) -> DrainFilter<'_, T, F, A>
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
         F: FnMut(&mut T) -> bool,
     {
         let old_len = self.len();
@@ -2713,7 +2713,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
 /// [`copy_from_slice`]: ../../std/primitive.slice.html#method.copy_from_slice
 impl<'a, T: 'a + Copy, A> Extend<&'a T> for Vec<T, A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     fn extend<I: IntoIterator<Item = &'a T>>(&mut self, iter: I) {
         self.extend(iter.into_iter().cloned())
@@ -3172,7 +3172,7 @@ impl<T, A: DeallocRef> FusedIterator for Drain<'_, T, A> {}
 #[derive(Debug)]
 pub struct Splice<'a, I: Iterator + 'a, A = AbortAlloc<Global>>
 where
-    A: ReallocRef<Error = !>, // Because Drop can allocate
+    A: ReallocRef<Error = Panic>, // Because Drop can allocate
 {
     drain: Drain<'a, I::Item, A>,
     replace_with: I,
@@ -3180,7 +3180,7 @@ where
 
 impl<I: Iterator, A> Iterator for Splice<'_, I, A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     type Item = I::Item;
 
@@ -3195,18 +3195,18 @@ where
 
 impl<I: Iterator, A> DoubleEndedIterator for Splice<'_, I, A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.drain.next_back()
     }
 }
 
-impl<I: Iterator, A> ExactSizeIterator for Splice<'_, I, A> where A: ReallocRef<Error = !> {}
+impl<I: Iterator, A> ExactSizeIterator for Splice<'_, I, A> where A: ReallocRef<Error = Panic> {}
 
 impl<I: Iterator, A> Drop for Splice<'_, I, A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     fn drop(&mut self) {
         self.drain.by_ref().for_each(drop);
@@ -3252,7 +3252,7 @@ where
 /// Private helper methods for `Splice::drop`
 impl<T, A: DeallocRef> Drain<'_, T, A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     /// The range from `self.vec.len` to `self.tail_start` contains elements
     /// that have been moved out.

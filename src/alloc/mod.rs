@@ -2,7 +2,7 @@ mod abort;
 mod layout;
 
 pub use self::{
-    abort::AbortAlloc,
+    abort::{AbortAlloc, Panic},
     layout::{LayoutErr, NonZeroLayout},
 };
 pub use core::alloc::GlobalAlloc;

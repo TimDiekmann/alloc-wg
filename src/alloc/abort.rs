@@ -24,6 +24,12 @@ use core::ptr::NonNull;
 #[derive(Copy, Clone, Debug, Default)]
 pub struct AbortAlloc<Alloc>(pub Alloc);
 
+/// A synonym used to indicate the impossible case will be a panic instead.
+///
+/// `!` in rust really does mean "never" / "impossible", but nothing in the type
+/// system tracks panicking.
+pub type Panic = !;
+
 impl<A: BuildAllocRef> BuildAllocRef for AbortAlloc<A> {
     type Ref = AbortAlloc<A::Ref>;
 
@@ -49,7 +55,7 @@ impl<A: DeallocRef> DeallocRef for AbortAlloc<A> {
 }
 
 impl<A: AllocRef> AllocRef for AbortAlloc<A> {
-    type Error = !;
+    type Error = Panic;
 
     fn alloc(&mut self, layout: NonZeroLayout) -> Result<NonNull<u8>, Self::Error> {
         self.0

@@ -52,7 +52,7 @@
 //! ```
 
 use crate::{
-    alloc::{AbortAlloc, AllocRef, DeallocRef, Global, ReallocRef},
+    alloc::{AbortAlloc, AllocRef, DeallocRef, Global, Panic, ReallocRef},
     boxed::Box,
     collections::CollectionAllocErr,
     iter::TryExtend,
@@ -580,7 +580,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn with_capacity_in(capacity: usize, a: A) -> Self
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef<Error = Panic>,
     {
         match Self::try_with_capacity_in(capacity, a) {
             Ok(vec) => vec,
@@ -608,7 +608,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn from_str_in(s: &str, a: A) -> Self
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         let mut v = Self::with_capacity_in(s.len(), a);
         v.push_str(s);
@@ -708,7 +708,7 @@ impl<A: DeallocRef> String<A> {
     /// Panics if allocation fails.
     pub fn from_utf8_lossy_in(v: &[u8], a: A) -> Self
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match Self::try_from_utf8_lossy_in(v, a) {
             Ok(s) => s,
@@ -757,7 +757,7 @@ impl<A: DeallocRef> String<A> {
     /// Like `from_utf16` but parameterized over the choice of allocator for the returned `String`.
     pub fn from_utf16_in(v: &[u16], a: A) -> Result<Self, FromUtf16Error>
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         // This isn't done via collect::<Result<_, _>>() for performance reasons.
         // FIXME: the function can be simplified again when #48994 is closed.
@@ -932,7 +932,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn push_str(&mut self, string: &str)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         self.vec.extend_from_slice(string.as_bytes())
     }
@@ -1016,7 +1016,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn reserve(&mut self, additional: usize)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         self.vec.reserve(additional)
     }
@@ -1069,7 +1069,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn reserve_exact(&mut self, additional: usize)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         self.vec.reserve_exact(additional)
     }
@@ -1180,7 +1180,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn shrink_to_fit(&mut self)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         self.vec.shrink_to_fit()
     }
@@ -1224,7 +1224,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn shrink_to(&mut self, min_capacity: usize)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         self.vec.shrink_to(min_capacity)
     }
@@ -1263,7 +1263,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn push(&mut self, ch: char)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match self.try_push(ch) {
             Ok(s) => s,
@@ -1516,7 +1516,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn insert(&mut self, idx: usize, ch: char)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match self.try_insert(idx, ch) {
             Ok(s) => s,
@@ -1592,7 +1592,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn insert_str(&mut self, idx: usize, string: &str)
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         match self.try_insert_str(idx, string) {
             Ok(s) => s,
@@ -1606,7 +1606,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn try_insert_str(&mut self, idx: usize, string: &str) -> Result<(), CollectionAllocErr<A>>
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         assert!(self.is_char_boundary(idx));
 
@@ -1716,7 +1716,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn split_off(&mut self, at: usize) -> Self
     where
-        A: AllocRef<Error = !>,
+        A: AllocRef<Error = Panic>,
     {
         match self.try_split_off(at) {
             Ok(s) => s,
@@ -1856,7 +1856,7 @@ impl<A: DeallocRef> String<A> {
     pub fn replace_range<R>(&mut self, range: R, replace_with: &str)
     where
         R: RangeBounds<usize>,
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         // Memory safety
         //
@@ -1901,7 +1901,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn into_boxed_str(self) -> Box<str, A>
     where
-        A: ReallocRef<Error = !>,
+        A: ReallocRef<Error = Panic>,
     {
         let slice = self.vec.into_boxed_slice();
         unsafe { from_boxed_utf8_unchecked(slice) }
@@ -2007,7 +2007,7 @@ impl fmt::Display for FromUtf16Error {
     }
 }
 
-impl<A: AllocRef<Error = !>> Clone for String<A>
+impl<A: AllocRef<Error = Panic>> Clone for String<A>
 where
     A: AllocRef,
     A::BuildAlloc: Clone,
@@ -2033,7 +2033,7 @@ impl<A: AllocRef, B: AllocRef> CloneIn<B> for String<A> {
     #[must_use = "Cloning is expected to be expensive"]
     fn clone_in(&self, a: B) -> Self::Cloned
     where
-        B: AllocRef<Error = !>,
+        B: AllocRef<Error = Panic>,
     {
         String {
             vec: self.vec.clone_in(a),
@@ -2110,7 +2110,7 @@ impl<'a> FromIterator<Cow<'a, str>> for String {
 
 impl<A> Extend<char> for String<A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     fn extend<I: IntoIterator<Item = char>>(&mut self, iter: I) {
         let iterator = iter.into_iter();
@@ -2134,7 +2134,7 @@ impl<A: ReallocRef> TryExtend<char> for String<A> {
 
 impl<'a, A> Extend<&'a char> for String<A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     fn extend<I: IntoIterator<Item = &'a char>>(&mut self, iter: I) {
         self.extend(iter.into_iter().cloned());
@@ -2151,7 +2151,7 @@ impl<'a, A: ReallocRef> TryExtend<&'a char> for String<A> {
 
 impl<'a, A> Extend<&'a str> for String<A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     fn extend<I: IntoIterator<Item = &'a str>>(&mut self, iter: I) {
         iter.into_iter().for_each(move |s| self.push_str(s));
@@ -2168,7 +2168,7 @@ impl<'a, A: ReallocRef> TryExtend<&'a str> for String<A> {
 
 impl<A, B> Extend<String<B>> for String<A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
     B: DeallocRef,
 {
     fn extend<I: IntoIterator<Item = String<B>>>(&mut self, iter: I) {
@@ -2188,7 +2188,7 @@ impl<A: ReallocRef, B: DeallocRef> TryExtend<String<B>> for String<A> {
 #[cfg(feature = "std")]
 impl<'a, A> Extend<Cow<'a, str>> for String<A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     fn extend<I: IntoIterator<Item = Cow<'a, str>>>(&mut self, iter: I) {
         iter.into_iter().for_each(move |s| self.push_str(&s));
@@ -2324,7 +2324,7 @@ impl<A: DeallocRef> hash::Hash for String<A> {
 /// ```
 impl<A> Add<&str> for String<A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     type Output = Self;
 
@@ -2340,7 +2340,7 @@ where
 /// This has the same behavior as the [`push_str`][`String::push_str`] method.
 impl<A> AddAssign<&str> for String<A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     #[inline]
     fn add_assign(&mut self, other: &str) {
@@ -2516,7 +2516,7 @@ impl From<Box<str>> for String {
 
 impl<A> From<String<A>> for Box<str, A>
 where
-    A: ReallocRef<Error = !>,
+    A: ReallocRef<Error = Panic>,
 {
     /// Converts the given `String` to a boxed `str` slice that is owned.
     ///
