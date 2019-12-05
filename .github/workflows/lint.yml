@@ -10,7 +10,7 @@ jobs:
       - name: Install Rust
         run: |
           rustup set profile minimal
-          rustup default nightly-2019-11-17
+          rustup default nightly-2019-12-04
           rustup component add clippy rustfmt
 
       - name: Checkout source code
