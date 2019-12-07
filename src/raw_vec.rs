@@ -1,5 +1,7 @@
 use crate::{
     alloc::{
+        capacity_overflow,
+        handle_collection_alloc_error_audited,
         Abort,
         AllocRef,
         BuildAllocRef,
@@ -10,7 +12,7 @@ use crate::{
         ReallocRef,
     },
     boxed::Box,
-    collections::{handle_collection_error_audited, CollectionAllocErr},
+    collections::CollectionAllocErr,
 };
 use core::{
     alloc::Layout,
@@ -165,7 +167,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     where
         A: AllocRef + Abort,
     {
-        handle_collection_error_audited(Self::try_with_capacity_in(capacity, a))
+        handle_collection_alloc_error_audited(Self::try_with_capacity_in(capacity, a))
     }
 
     #[inline]
@@ -181,7 +183,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     where
         A: AllocRef,
     {
-        Self::allocate_in(capacity, false, a)
+        Self::try_allocate_in(capacity, false, a)
     }
 
     #[inline]
@@ -196,7 +198,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     where
         A: AllocRef + Abort,
     {
-        handle_collection_error_audited(Self::try_with_capacity_zeroed_in(capacity, a))
+        handle_collection_alloc_error_audited(Self::try_with_capacity_zeroed_in(capacity, a))
     }
 
     #[inline]
@@ -212,10 +214,10 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     where
         A: AllocRef,
     {
-        Self::allocate_in(capacity, true, a)
+        Self::try_allocate_in(capacity, true, a)
     }
 
-    fn allocate_in(
+    fn try_allocate_in(
         capacity: usize,
         zeroed: bool,
         mut alloc: A,
@@ -412,7 +414,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     where
         A: ReallocRef + Abort,
     {
-        handle_collection_error_audited(self.try_double())
+        handle_collection_alloc_error_audited(self.try_double())
     }
 
     /// The same as `double`, but returns on errors instead of panicking.
@@ -578,7 +580,9 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     where
         A: ReallocRef + Abort,
     {
-        handle_collection_error_audited(self.try_reserve(used_capacity, needed_extra_capacity))
+        handle_collection_alloc_error_audited(
+            self.try_reserve(used_capacity, needed_extra_capacity),
+        )
     }
 
     /// The same as `reserve`, but returns on errors instead of panicking.
@@ -590,7 +594,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     where
         A: ReallocRef,
     {
-        self.reserve_internal(
+        self.try_reserve_internal(
             used_capacity,
             needed_extra_capacity,
             ReserveStrategy::Amortized,
@@ -617,7 +621,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     where
         A: ReallocRef + Abort,
     {
-        handle_collection_error_audited(
+        handle_collection_alloc_error_audited(
             self.try_reserve_exact(used_capacity, needed_extra_capacity),
         )
     }
@@ -631,7 +635,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     where
         A: ReallocRef,
     {
-        self.reserve_internal(used_capacity, needed_extra_capacity, ReserveStrategy::Exact)
+        self.try_reserve_internal(used_capacity, needed_extra_capacity, ReserveStrategy::Exact)
     }
 
     /// Attempts to ensure that the buffer contains at least enough space to hold
@@ -653,7 +657,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     ///   `isize::MAX` bytes.
     pub fn reserve_in_place(&mut self, used_capacity: usize, needed_extra_capacity: usize) -> bool
     where
-        A: AllocRef,
+        A: AllocRef + Abort,
     {
         if let Ok(success) = self.try_reserve_in_place(used_capacity, needed_extra_capacity) {
             success
@@ -715,15 +719,9 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     /// Panics if the given amount is *larger* than the current capacity.
     pub fn shrink_to_fit(&mut self, amount: usize)
     where
-        A: ReallocRef,
+        A: ReallocRef + Abort,
     {
-        match self.try_shrink_to_fit(amount) {
-            Ok(_) => (),
-            Err(CollectionAllocErr::CapacityOverflow) => {
-                panic!("Tried to shrink to a larger capacity")
-            }
-            Err(CollectionAllocErr::AllocError { .. }) => unreachable!(),
-        }
+        handle_collection_alloc_error_audited(self.try_shrink_to_fit(amount))
     }
 
     /// The same as `shrink_to_fit`, but returns on errors instead of panicking.
@@ -791,7 +789,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
         Ok(())
     }
 
-    fn reserve_internal(
+    fn try_reserve_internal(
         &mut self,
         used_capacity: usize,
         needed_extra_capacity: usize,
@@ -906,11 +904,4 @@ fn alloc_guard(alloc_size: usize, align: usize) -> Result<NonZeroLayout, Capacit
             ))
         }
     }
-}
-
-// One central function responsible for reporting capacity overflows. This'll
-// ensure that the code generation related to these panics is minimal as there's
-// only one location which panics rather than a bunch throughout the module.
-fn capacity_overflow() -> ! {
-    panic!("capacity overflow");
 }

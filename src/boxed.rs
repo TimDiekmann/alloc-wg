@@ -79,9 +79,19 @@
 //! [`NonZeroLayout::for_value(&*value)`]: crate::alloc::NonZeroLayout::for_value
 
 use crate::{
-    alloc::{Abort, AbortAlloc, AllocRef, BuildAllocRef, DeallocRef, Global, NonZeroLayout},
+    alloc::{
+        handle_alloc_error,
+        handle_collection_alloc_error_audited,
+        Abort,
+        AllocRef,
+        BuildAllocRef,
+        DeallocRef,
+        Global,
+        Layout,
+        NonZeroLayout,
+    },
     clone::CloneIn,
-    collections::{handle_collection_error_audited, CollectionAllocErr},
+    collections::CollectionAllocErr,
     raw_vec::RawVec,
 };
 use core::{
@@ -163,18 +173,7 @@ impl<T> Box<T> {
     #[allow(clippy::inline_always)]
     #[inline(always)]
     pub fn pin(x: T) -> Pin<Self> {
-        Self::new(x).into()
-    }
-}
-
-#[allow(clippy::use_self)]
-impl<T: ?Sized, A: AllocRef> Box<T, AbortAlloc<A>> {
-    fn cast_away_abort_alloc(self) -> Box<T, A> {
-        let (p, b) = Self::into_raw_non_null_alloc(self);
-        Box {
-            ptr: unsafe { Unique::new_unchecked(p.as_ptr()) },
-            build_alloc: b.0,
-        }
+        Self::pin_in(x, Global)
     }
 }
 
@@ -198,8 +197,10 @@ impl<T, A: AllocRef> Box<T, A> {
     where
         A: Abort,
     {
-        let Ok(b) = Box::<T, AbortAlloc<A>>::try_new_in(x, AbortAlloc::new_audited(a));
-        b.cast_away_abort_alloc()
+        match Self::try_new_in(x, a) {
+            Err(_) => handle_alloc_error(Layout::new::<T>()),
+            Ok(b) => b,
+        }
     }
 
     /// Tries to allocate memory with the given allocator and then places `x` into it.
@@ -252,8 +253,10 @@ impl<T, A: AllocRef> Box<T, A> {
     where
         A: Abort,
     {
-        let Ok(b) = Box::<T, AbortAlloc<A>>::try_new_uninit_in(AbortAlloc::new_audited(a));
-        b.cast_away_abort_alloc()
+        match Self::try_new_uninit_in(a) {
+            Err(_) => handle_alloc_error(Layout::new::<T>()),
+            Ok(b) => b,
+        }
     }
 
     /// Tries to construct a new box with uninitialized contents in a specified allocator.
@@ -362,7 +365,7 @@ impl<T, A: AllocRef> Box<[T], A> {
     where
         A: Abort,
     {
-        handle_collection_error_audited(Self::try_new_uninit_slice_in(len, a))
+        handle_collection_alloc_error_audited(Self::try_new_uninit_slice_in(len, a))
     }
 
     /// Tries to construct a new boxed slice with uninitialized contents with the spoecified
@@ -780,9 +783,9 @@ where
 }
 
 #[allow(clippy::use_self)]
-impl<T, A> Default for Box<[T], A>
+impl<T, A: AllocRef> Default for Box<[T], A>
 where
-    A: Default + AllocRef + Abort,
+    A: Default + Abort,
 {
     #[must_use]
     fn default() -> Self {
@@ -807,7 +810,7 @@ where
     }
 }
 
-impl<T: Clone, A> Clone for Box<T, A>
+impl<T: Clone, A: AllocRef> Clone for Box<T, A>
 where
     A: Abort,
     A::BuildAlloc: Clone,
@@ -1008,7 +1011,7 @@ impl<T: ?Sized, A: DeallocRef> From<Box<T, A>> for Pin<Box<T, A>> {
 }
 
 #[allow(clippy::use_self)]
-impl<T: Copy, A> From<&[T]> for Box<[T], A>
+impl<T: Copy, A: AllocRef> From<&[T]> for Box<[T], A>
 where
     A: Default + Abort,
 {
@@ -1037,7 +1040,7 @@ where
 }
 
 #[allow(clippy::use_self)]
-impl<A> From<&str> for Box<str, A>
+impl<A: AllocRef> From<&str> for Box<str, A>
 where
     A: Default + Abort,
 {
@@ -1227,6 +1230,7 @@ impl<I: Iterator + ?Sized, A: DeallocRef> BoxIter for Box<I, A> {
 
     fn last(self) -> Option<I::Item> {
         #[inline]
+        #[allow(clippy::missing_const_for_fn)]
         fn some<T>(_: Option<T>, x: T) -> Option<T> {
             Some(x)
         }

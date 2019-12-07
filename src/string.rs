@@ -54,7 +54,7 @@
 use crate::{
     alloc::{Abort, AllocRef, DeallocRef, Global, ReallocRef},
     boxed::Box,
-    collections::{handle_collection_error_audited, CollectionAllocErr},
+    collections::CollectionAllocErr,
     iter::TryExtend,
     str::from_boxed_utf8_unchecked,
     vec::Vec,
@@ -80,7 +80,7 @@ use core::{
 #[cfg(feature = "std")]
 use std::borrow::Cow;
 
-use crate::clone::CloneIn;
+use crate::{alloc::handle_collection_alloc_error, clone::CloneIn};
 pub use liballoc::string::{ParseError, ToString};
 
 /// A UTF-8 encoded, growable string.
@@ -707,7 +707,10 @@ impl<A: DeallocRef> String<A> {
     where
         A: ReallocRef + Abort,
     {
-        handle_collection_error_audited(Self::try_from_utf8_lossy_in(v, a))
+        match Self::try_from_utf8_lossy_in(v, a) {
+            Err(e) => handle_collection_alloc_error(e),
+            Ok(s) => s,
+        }
     }
 
     /// Like `from_utf8_lossy_in` but returns errors instead of panicking.
@@ -1164,7 +1167,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn shrink_to_fit(&mut self)
     where
-        A: ReallocRef,
+        A: ReallocRef + Abort,
     {
         self.vec.shrink_to_fit()
     }
@@ -1208,7 +1211,7 @@ impl<A: DeallocRef> String<A> {
     #[inline]
     pub fn shrink_to(&mut self, min_capacity: usize)
     where
-        A: ReallocRef,
+        A: ReallocRef + Abort,
     {
         self.vec.shrink_to(min_capacity)
     }
@@ -1249,7 +1252,9 @@ impl<A: DeallocRef> String<A> {
     where
         A: ReallocRef + Abort,
     {
-        handle_collection_error_audited(self.try_push(ch))
+        if let Err(e) = self.try_push(ch) {
+            handle_collection_alloc_error(e)
+        }
     }
 
     /// Like `push` but returns errors instead of panicking.
@@ -1497,7 +1502,9 @@ impl<A: DeallocRef> String<A> {
     where
         A: ReallocRef + Abort,
     {
-        handle_collection_error_audited(self.try_insert(idx, ch))
+        if let Err(e) = self.try_insert(idx, ch) {
+            handle_collection_alloc_error(e)
+        }
     }
 
     /// Like `insert` but returns errors instead of panicking.
@@ -1568,7 +1575,9 @@ impl<A: DeallocRef> String<A> {
     where
         A: ReallocRef + Abort,
     {
-        handle_collection_error_audited(self.try_insert_str(idx, string))
+        if let Err(e) = self.try_insert_str(idx, string) {
+            handle_collection_alloc_error(e)
+        }
     }
 
     /// Like `insert_str` but returns errors instead of panicking.
@@ -1687,7 +1696,10 @@ impl<A: DeallocRef> String<A> {
     where
         A: AllocRef + Abort,
     {
-        handle_collection_error_audited(self.try_split_off(at))
+        match self.try_split_off(at) {
+            Err(e) => handle_collection_alloc_error(e),
+            Ok(s) => s,
+        }
     }
 
     /// Like `split_off` but returns errors instead of panicking.

@@ -69,10 +69,18 @@
 //! [`vec!`]: ../macro.vec.html
 
 use crate::{
-    alloc::{Abort, AllocRef, BuildAllocRef, DeallocRef, Global, ReallocRef},
+    alloc::{
+        handle_collection_alloc_error_audited,
+        Abort,
+        AllocRef,
+        BuildAllocRef,
+        DeallocRef,
+        Global,
+        ReallocRef,
+    },
     boxed::Box,
     clone::CloneIn,
-    collections::{handle_collection_error_audited, CollectionAllocErr},
+    collections::CollectionAllocErr,
     iter::{FromIteratorIn, TryExtend},
     raw_vec::RawVec,
 };
@@ -751,7 +759,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// Panics if the reallocation fails.
     pub fn shrink_to_fit(&mut self)
     where
-        A: ReallocRef,
+        A: ReallocRef + Abort,
     {
         if self.capacity() != self.len {
             self.buf.shrink_to_fit(self.len);
@@ -797,7 +805,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// * Panics if the reallocation fails.
     pub fn shrink_to(&mut self, min_capacity: usize)
     where
-        A: ReallocRef,
+        A: ReallocRef + Abort,
     {
         self.buf.shrink_to_fit(cmp::max(self.len, min_capacity));
     }
@@ -846,7 +854,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     where
         A: ReallocRef + Abort,
     {
-        handle_collection_error_audited(self.try_into_boxed_slice())
+        handle_collection_alloc_error_audited(self.try_into_boxed_slice())
     }
 
     /// Same as `into_boxed_slice` but returns errors instead of panicking.
@@ -996,7 +1004,6 @@ impl<T, A: DeallocRef> Vec<T, A> {
     ///
     /// [`as_mut_ptr`]: Vec::as_mut_ptr()
     #[inline]
-    #[allow(clippy::let_and_return)]
     pub fn as_ptr(&self) -> *const T {
         // We shadow the slice method of the same name to avoid going through
         // `deref`, which creates an intermediate reference.
@@ -1032,7 +1039,6 @@ impl<T, A: DeallocRef> Vec<T, A> {
     /// assert_eq!(&*x, &[0, 1, 2, 3]);
     /// ```
     #[inline]
-    #[allow(clippy::let_and_return)]
     pub fn as_mut_ptr(&mut self) -> *mut T {
         // We shadow the slice method of the same name to avoid going through
         // `deref_mut`, which creates an intermediate reference.
@@ -1186,7 +1192,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     where
         A: ReallocRef + Abort,
     {
-        handle_collection_error_audited(self.try_insert(index, element))
+        handle_collection_alloc_error_audited(self.try_insert(index, element))
     }
 
     /// Same as `insert` but returns errors instead of panicking
@@ -1371,7 +1377,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     where
         A: ReallocRef + Abort,
     {
-        handle_collection_error_audited(self.try_push(value))
+        handle_collection_alloc_error_audited(self.try_push(value))
     }
 
     unsafe fn push_unchecked(&mut self, value: T)
@@ -1452,7 +1458,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     where
         A: ReallocRef + Abort,
     {
-        handle_collection_error_audited(self.try_append(other))
+        handle_collection_alloc_error_audited(self.try_append(other))
     }
 
     /// Same as `append` but returns errors instead of panicking.
@@ -1633,7 +1639,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
     where
         A: AllocRef + Abort,
     {
-        handle_collection_error_audited(self.try_split_off(at))
+        handle_collection_alloc_error_audited(self.try_split_off(at))
     }
 
     /// Same as `split_off` but returns errors instead of panicking.
@@ -1699,7 +1705,7 @@ impl<T, A: DeallocRef> Vec<T, A> {
         F: FnMut() -> T,
         A: ReallocRef + Abort,
     {
-        handle_collection_error_audited(self.try_resize_with(new_len, f))
+        handle_collection_alloc_error_audited(self.try_resize_with(new_len, f))
     }
 
     /// Same as `resize_with` but returns errors instead of panicking.
@@ -1798,7 +1804,7 @@ impl<T: Clone, A: ReallocRef> Vec<T, A> {
     where
         A: Abort,
     {
-        handle_collection_error_audited(self.try_resize(new_len, value))
+        handle_collection_alloc_error_audited(self.try_resize(new_len, value))
     }
 
     /// Same as `resize` but returns errors instead of panicking
@@ -2010,7 +2016,7 @@ pub fn from_elem_in<T: Clone, A>(elem: T, n: usize, a: A) -> Vec<T, A>
 where
     A: ReallocRef + Abort,
 {
-    handle_collection_error_audited(try_from_elem_in(elem, n, a))
+    handle_collection_alloc_error_audited(try_from_elem_in(elem, n, a))
 }
 
 #[doc(hidden)]
@@ -2352,7 +2358,7 @@ trait SpecExtend<T, I, A: AllocRef>: Sized {
     where
         A: Abort,
     {
-        handle_collection_error_audited(Self::try_from_iter_in(iter, a))
+        handle_collection_alloc_error_audited(Self::try_from_iter_in(iter, a))
     }
 
     fn try_from_iter_in(iter: I, a: A) -> Result<Self, CollectionAllocErr<A>>;
@@ -2362,7 +2368,7 @@ trait SpecExtend<T, I, A: AllocRef>: Sized {
     where
         A: Abort,
     {
-        handle_collection_error_audited(self.try_spec_extend(iter))
+        handle_collection_alloc_error_audited(self.try_spec_extend(iter))
     }
 
     fn try_spec_extend(&mut self, iter: I) -> Result<(), CollectionAllocErr<A>>;

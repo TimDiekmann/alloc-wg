@@ -54,6 +54,7 @@
 #![feature(
     dropck_eyepatch,
     coerce_unsized,
+    const_if_match,
     core_intrinsics,
     ptr_internals,
     str_internals,

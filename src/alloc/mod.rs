@@ -1,7 +1,7 @@
-mod abort;
 mod layout;
 
-pub use self::layout::{LayoutErr, NonZeroLayout};
+pub use self::layout::{Layout, LayoutErr, NonZeroLayout};
+use crate::collections::CollectionAllocErr;
 pub use core::alloc::GlobalAlloc;
 use core::{
     cmp,
@@ -10,11 +10,34 @@ use core::{
     num::NonZeroUsize,
     ptr::{self, NonNull},
 };
-use liballoc::alloc::Layout;
+pub use liballoc::alloc::handle_alloc_error;
 #[cfg(feature = "std")]
 use std::alloc::System;
 
-pub use self::abort::*;
+/// Abort on memory allocation error or failure and panics on capacity overflow.
+///
+/// Callers of memory allocation APIs wishing to abort computation
+/// in response to an allocation error are encouraged to call this function,
+/// rather than directly invoking `panic!` or similar.
+#[allow(clippy::needless_pass_by_value)]
+pub fn handle_collection_alloc_error<A: AllocRef>(error: CollectionAllocErr<A>) -> !
+where
+    A: Abort,
+{
+    match error {
+        CollectionAllocErr::CapacityOverflow => capacity_overflow(),
+        CollectionAllocErr::AllocError { layout, .. } => handle_alloc_error(layout.into()),
+    }
+}
+
+pub(in crate) fn handle_collection_alloc_error_audited<T, A: AllocRef + Abort>(
+    error: Result<T, CollectionAllocErr<A>>,
+) -> T {
+    match error {
+        Ok(t) => t,
+        Err(e) => handle_collection_alloc_error(e),
+    }
+}
 
 /// Allocate memory with the global allocator.
 ///
@@ -433,4 +456,20 @@ unsafe fn alloc_copy_dealloc<A: ReallocRef>(
     );
     alloc.dealloc(ptr, old_layout);
     Ok(new_ptr)
+}
+
+/// Marker trait to indicate that the allocator is allowed to abort on OOM.
+pub trait Abort {}
+
+impl Abort for Global {}
+#[cfg(feature = "std")]
+impl Abort for System {}
+
+impl<T> Abort for T where T: AllocRef<Error = !> {}
+
+// One central function responsible for reporting capacity overflows. This'll
+// ensure that the code generation related to these panics is minimal as there's
+// only one location which panics rather than a bunch throughout the module.
+pub(in crate) fn capacity_overflow() -> ! {
+    panic!("capacity overflow");
 }
