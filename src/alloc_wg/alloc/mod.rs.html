@@ -431,10 +431,53 @@
 <span id="431">431</span>
 <span id="432">432</span>
 <span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">mod</span> <span class="ident">layout</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">layout</span>::{<span class="ident">LayoutErr</span>, <span class="ident">NonZeroLayout</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">layout</span>::{<span class="ident">Layout</span>, <span class="ident">LayoutErr</span>, <span class="ident">NonZeroLayout</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">collections</span>::<span class="ident">CollectionAllocErr</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">alloc</span>::<span class="ident">GlobalAlloc</span>;
 <span class="kw">use</span> <span class="ident">core</span>::{
     <span class="ident">cmp</span>,
@@ -443,9 +486,34 @@
     <span class="ident">num</span>::<span class="ident">NonZeroUsize</span>,
     <span class="ident">ptr</span>::{<span class="self">self</span>, <span class="ident">NonNull</span>},
 };
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">liballoc</span>::<span class="ident">alloc</span>::{<span class="ident">handle_alloc_error</span>, <span class="ident">Layout</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">liballoc</span>::<span class="ident">alloc</span>::<span class="ident">handle_alloc_error</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">alloc</span>::<span class="ident">System</span>;
+
+<span class="doccomment">/// Abort on memory allocation error or failure and panics on capacity overflow.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Callers of memory allocation APIs wishing to abort computation</span>
+<span class="doccomment">/// in response to an allocation error are encouraged to call this function,</span>
+<span class="doccomment">/// rather than directly invoking `panic!` or similar.</span>
+<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">needless_pass_by_value</span>)]</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">handle_collection_alloc_error</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">AllocRef</span><span class="op">&gt;</span>(<span class="ident">error</span>: <span class="ident">CollectionAllocErr</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="op">!</span>
+<span class="kw">where</span>
+    <span class="ident">A</span>: <span class="ident">Abort</span>,
+{
+    <span class="kw">match</span> <span class="ident">error</span> {
+        <span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
+        <span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
+    }
+}
+
+<span class="kw">pub</span>(<span class="kw">in</span> <span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">handle_collection_alloc_error_audited</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">A</span>: <span class="ident">AllocRef</span> <span class="op">+</span> <span class="ident">Abort</span><span class="op">&gt;</span>(
+    <span class="ident">error</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">CollectionAllocErr</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span> {
+    <span class="kw">match</span> <span class="ident">error</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">t</span>,
+        <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_collection_alloc_error</span>(<span class="ident">e</span>),
+    }
+}
 
 <span class="doccomment">/// Allocate memory with the global allocator.</span>
 <span class="doccomment">///</span>
@@ -864,6 +932,22 @@
     );
     <span class="ident">alloc</span>.<span class="ident">dealloc</span>(<span class="ident">ptr</span>, <span class="ident">old_layout</span>);
     <span class="prelude-val">Ok</span>(<span class="ident">new_ptr</span>)
+}
+
+<span class="doccomment">/// Marker trait to indicate that the allocator is allowed to abort on OOM.</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Abort</span> {}
+
+<span class="kw">impl</span> <span class="ident">Abort</span> <span class="kw">for</span> <span class="ident">Global</span> {}
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
+<span class="kw">impl</span> <span class="ident">Abort</span> <span class="kw">for</span> <span class="ident">System</span> {}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Abort</span> <span class="kw">for</span> <span class="ident">T</span> <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">AllocRef</span><span class="op">&lt;</span><span class="ident">Error</span> <span class="op">=</span> <span class="op">!</span><span class="op">&gt;</span> {}
+
+<span class="comment">// One central function responsible for reporting capacity overflows. This&#39;ll</span>
+<span class="comment">// ensure that the code generation related to these panics is minimal as there&#39;s</span>
+<span class="comment">// only one location which panics rather than a bunch throughout the module.</span>
+<span class="kw">pub</span>(<span class="kw">in</span> <span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">capacity_overflow</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="op">!</span> {
+    <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;capacity overflow&quot;</span>);
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "alloc_wg";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

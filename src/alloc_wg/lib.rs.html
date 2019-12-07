@@ -238,6 +238,7 @@
 <span class="attribute">#![<span class="ident">feature</span>(
     <span class="ident">dropck_eyepatch</span>,
     <span class="ident">coerce_unsized</span>,
+    <span class="ident">const_if_match</span>,
     <span class="ident">core_intrinsics</span>,
     <span class="ident">ptr_internals</span>,
     <span class="ident">str_internals</span>,
@@ -251,7 +252,8 @@
     <span class="ident">specialization</span>,
     <span class="ident">trusted_len</span>,
     <span class="ident">unsized_locals</span>,
-    <span class="ident">fn_traits</span>
+    <span class="ident">fn_traits</span>,
+    <span class="ident">exhaustive_patterns</span>
 )]</span>
 <span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>), <span class="ident">no_std</span>)]</span>
 <span class="attribute">#![<span class="ident">doc</span>(<span class="ident">test</span>(<span class="ident">attr</span>(
@@ -299,8 +301,6 @@
 
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">alloc</span> <span class="kw">as</span> <span class="ident">liballoc</span>;
 
-<span class="kw">mod</span> <span class="ident">unchecked_unwrap</span>;
-<span class="kw">use</span> <span class="self">self</span>::<span class="ident">unchecked_unwrap</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">liballoc</span>::{<span class="ident">borrow</span>, <span class="ident">fmt</span>, <span class="ident">rc</span>, <span class="ident">slice</span>, <span class="ident">sync</span>};
 
 <span class="attribute">#[<span class="ident">macro_export</span>]</span>

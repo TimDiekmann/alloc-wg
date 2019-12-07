@@ -2632,18 +2632,6 @@
 <span id="2632">2632</span>
 <span id="2633">2633</span>
 <span id="2634">2634</span>
-<span id="2635">2635</span>
-<span id="2636">2636</span>
-<span id="2637">2637</span>
-<span id="2638">2638</span>
-<span id="2639">2639</span>
-<span id="2640">2640</span>
-<span id="2641">2641</span>
-<span id="2642">2642</span>
-<span id="2643">2643</span>
-<span id="2644">2644</span>
-<span id="2645">2645</span>
-<span id="2646">2646</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! A UTF-8 encoded, growable string.</span>
 <span class="doccomment">//!</span>
@@ -2699,7 +2687,7 @@
 <span class="doccomment">//! ```</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">alloc</span>::{<span class="ident">AllocRef</span>, <span class="ident">DeallocRef</span>, <span class="ident">Global</span>, <span class="ident">ReallocRef</span>},
+    <span class="ident">alloc</span>::{<span class="ident">Abort</span>, <span class="ident">AllocRef</span>, <span class="ident">DeallocRef</span>, <span class="ident">Global</span>, <span class="ident">ReallocRef</span>},
     <span class="ident">boxed</span>::<span class="ident">Box</span>,
     <span class="ident">collections</span>::<span class="ident">CollectionAllocErr</span>,
     <span class="ident">iter</span>::<span class="ident">TryExtend</span>,
@@ -2727,7 +2715,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">borrow</span>::<span class="ident">Cow</span>;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">alloc</span>::<span class="ident">handle_alloc_error</span>, <span class="ident">clone</span>::<span class="ident">CloneIn</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">alloc</span>::<span class="ident">handle_collection_alloc_error</span>, <span class="ident">clone</span>::<span class="ident">CloneIn</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">liballoc</span>::<span class="ident">string</span>::{<span class="ident">ParseError</span>, <span class="ident">ToString</span>};
 
 <span class="doccomment">/// A UTF-8 encoded, growable string.</span>
@@ -3227,7 +3215,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity_in</span>(<span class="ident">capacity</span>: <span class="ident">usize</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
         <span class="self">Self</span> {
             <span class="ident">vec</span>: <span class="ident">Vec</span>::<span class="ident">with_capacity_in</span>(<span class="ident">capacity</span>, <span class="ident">a</span>),
@@ -3252,7 +3240,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_str_in</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">with_capacity_in</span>(<span class="ident">s</span>.<span class="ident">len</span>(), <span class="ident">a</span>);
         <span class="ident">v</span>.<span class="ident">push_str</span>(<span class="ident">s</span>);
@@ -3352,12 +3340,11 @@
     <span class="doccomment">/// Panics if allocation fails.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_utf8_lossy_in</span>(<span class="ident">v</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
         <span class="kw">match</span> <span class="self">Self</span>::<span class="ident">try_from_utf8_lossy_in</span>(<span class="ident">v</span>, <span class="ident">a</span>) {
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_collection_alloc_error</span>(<span class="ident">e</span>),
             <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
         }
     }
 
@@ -3400,7 +3387,7 @@
     <span class="doccomment">/// Like `from_utf16` but parameterized over the choice of allocator for the returned `String`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_utf16_in</span>(<span class="ident">v</span>: <span class="kw-2">&amp;</span>[<span class="ident">u16</span>], <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">FromUtf16Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
         <span class="comment">// This isn&#39;t done via collect::&lt;Result&lt;_, _&gt;&gt;() for performance reasons.</span>
         <span class="comment">// FIXME: the function can be simplified again when #48994 is closed.</span>
@@ -3575,7 +3562,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">string</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
         <span class="self">self</span>.<span class="ident">vec</span>.<span class="ident">extend_from_slice</span>(<span class="ident">string</span>.<span class="ident">as_bytes</span>())
     }
@@ -3659,7 +3646,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reserve</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">additional</span>: <span class="ident">usize</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
         <span class="self">self</span>.<span class="ident">vec</span>.<span class="ident">reserve</span>(<span class="ident">additional</span>)
     }
@@ -3712,7 +3699,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reserve_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">additional</span>: <span class="ident">usize</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
         <span class="self">self</span>.<span class="ident">vec</span>.<span class="ident">reserve_exact</span>(<span class="ident">additional</span>)
     }
@@ -3815,7 +3802,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">shrink_to_fit</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
         <span class="self">self</span>.<span class="ident">vec</span>.<span class="ident">shrink_to_fit</span>()
     }
@@ -3859,7 +3846,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">shrink_to</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">min_capacity</span>: <span class="ident">usize</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
         <span class="self">self</span>.<span class="ident">vec</span>.<span class="ident">shrink_to</span>(<span class="ident">min_capacity</span>)
     }
@@ -3898,12 +3885,10 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">push</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">ch</span>: <span class="ident">char</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_push</span>(<span class="ident">ch</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">try_push</span>(<span class="ident">ch</span>) {
+            <span class="ident">handle_collection_alloc_error</span>(<span class="ident">e</span>)
         }
     }
 
@@ -4150,12 +4135,10 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">idx</span>: <span class="ident">usize</span>, <span class="ident">ch</span>: <span class="ident">char</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_insert</span>(<span class="ident">idx</span>, <span class="ident">ch</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">try_insert</span>(<span class="ident">idx</span>, <span class="ident">ch</span>) {
+            <span class="ident">handle_collection_alloc_error</span>(<span class="ident">e</span>)
         }
     }
 
@@ -4225,12 +4208,10 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_str</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">idx</span>: <span class="ident">usize</span>, <span class="ident">string</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_insert_str</span>(<span class="ident">idx</span>, <span class="ident">string</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">try_insert_str</span>(<span class="ident">idx</span>, <span class="ident">string</span>) {
+            <span class="ident">handle_collection_alloc_error</span>(<span class="ident">e</span>)
         }
     }
 
@@ -4348,12 +4329,11 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">split_off</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">at</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_split_off</span>(<span class="ident">at</span>) {
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_collection_alloc_error</span>(<span class="ident">e</span>),
             <span class="prelude-val">Ok</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">s</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
         }
     }
 
@@ -4487,7 +4467,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">replace_range</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">range</span>: <span class="ident">R</span>, <span class="ident">replace_with</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>)
     <span class="kw">where</span>
         <span class="ident">R</span>: <span class="ident">RangeBounds</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
         <span class="comment">// Memory safety</span>
         <span class="comment">//</span>
@@ -4532,7 +4512,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_boxed_str</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">str</span>, <span class="ident">A</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
         <span class="kw">let</span> <span class="ident">slice</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">vec</span>.<span class="ident">into_boxed_slice</span>();
         <span class="kw">unsafe</span> { <span class="ident">from_boxed_utf8_unchecked</span>(<span class="ident">slice</span>) }
@@ -4640,7 +4620,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">String</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">AllocRef</span>,
+    <span class="ident">A</span>: <span class="ident">AllocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     <span class="ident">A</span>::<span class="ident">BuildAlloc</span>: <span class="ident">Clone</span>,
 {
     <span class="attribute">#[<span class="ident">inline</span>]</span>
@@ -4662,7 +4642,10 @@
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;Cloning is expected to be expensive&quot;</span>]</span>
-    <span class="kw">fn</span> <span class="ident">clone_in</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">a</span>: <span class="ident">B</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Cloned</span> {
+    <span class="kw">fn</span> <span class="ident">clone_in</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">a</span>: <span class="ident">B</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Cloned</span>
+    <span class="kw">where</span>
+        <span class="ident">B</span>: <span class="ident">Abort</span>,
+    {
         <span class="ident">String</span> {
             <span class="ident">vec</span>: <span class="self">self</span>.<span class="ident">vec</span>.<span class="ident">clone_in</span>(<span class="ident">a</span>),
         }
@@ -4738,7 +4721,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="ident">char</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">String</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
 {
     <span class="kw">fn</span> <span class="ident">extend</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">char</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) {
         <span class="kw">let</span> <span class="ident">iterator</span> <span class="op">=</span> <span class="ident">iter</span>.<span class="ident">into_iter</span>();
@@ -4762,7 +4745,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">char</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">String</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
 {
     <span class="kw">fn</span> <span class="ident">extend</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">char</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) {
         <span class="self">self</span>.<span class="ident">extend</span>(<span class="ident">iter</span>.<span class="ident">into_iter</span>().<span class="ident">cloned</span>());
@@ -4779,7 +4762,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">String</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
 {
     <span class="kw">fn</span> <span class="ident">extend</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) {
         <span class="ident">iter</span>.<span class="ident">into_iter</span>().<span class="ident">for_each</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">push_str</span>(<span class="ident">s</span>));
@@ -4796,7 +4779,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">String</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     <span class="ident">B</span>: <span class="ident">DeallocRef</span>,
 {
     <span class="kw">fn</span> <span class="ident">extend</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">String</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) {
@@ -4816,7 +4799,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Extend</span><span class="op">&lt;</span><span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">String</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
 {
     <span class="kw">fn</span> <span class="ident">extend</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">Cow</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">iter</span>: <span class="ident">I</span>) {
         <span class="ident">iter</span>.<span class="ident">into_iter</span>().<span class="ident">for_each</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="ident">s</span>));
@@ -4952,7 +4935,7 @@
 <span class="doccomment">/// ```</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">String</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
 {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span>;
 
@@ -4968,7 +4951,7 @@
 <span class="doccomment">/// This has the same behavior as the [`push_str`][`String::push_str`] method.</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> <span class="ident">AddAssign</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">String</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
 {
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">add_assign</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
@@ -5144,7 +5127,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">str</span>, <span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+    <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
 {
     <span class="doccomment">/// Converts the given `String` to a boxed `str` slice that is owned.</span>
     <span class="doccomment">///</span>
@@ -5284,12 +5267,5 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">DeallocRef</span><span class="op">&gt;</span> <span class="ident">FusedIterator</span> <span class="kw">for</span> <span class="ident">Drain</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">A</span><span class="op">&gt;</span> {}
-
-<span class="comment">// One central function responsible for reporting capacity overflows. This&#39;ll</span>
-<span class="comment">// ensure that the code generation related to these panics is minimal as there&#39;s</span>
-<span class="comment">// only one location which panics rather than a bunch throughout the module.</span>
-<span class="kw">fn</span> <span class="ident">capacity_overflow</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="op">!</span> {
-    <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;capacity overflow&quot;</span>);
-}
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "alloc_wg";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

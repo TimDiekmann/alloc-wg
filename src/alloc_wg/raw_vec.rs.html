@@ -905,37 +905,12 @@
 <span id="905">905</span>
 <span id="906">906</span>
 <span id="907">907</span>
-<span id="908">908</span>
-<span id="909">909</span>
-<span id="910">910</span>
-<span id="911">911</span>
-<span id="912">912</span>
-<span id="913">913</span>
-<span id="914">914</span>
-<span id="915">915</span>
-<span id="916">916</span>
-<span id="917">917</span>
-<span id="918">918</span>
-<span id="919">919</span>
-<span id="920">920</span>
-<span id="921">921</span>
-<span id="922">922</span>
-<span id="923">923</span>
-<span id="924">924</span>
-<span id="925">925</span>
-<span id="926">926</span>
-<span id="927">927</span>
-<span id="928">928</span>
-<span id="929">929</span>
-<span id="930">930</span>
-<span id="931">931</span>
-<span id="932">932</span>
-<span id="933">933</span>
-<span id="934">934</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">alloc</span>::{
-        <span class="ident">handle_alloc_error</span>,
+        <span class="ident">capacity_overflow</span>,
+        <span class="ident">handle_collection_alloc_error_audited</span>,
+        <span class="ident">Abort</span>,
         <span class="ident">AllocRef</span>,
         <span class="ident">BuildAllocRef</span>,
         <span class="ident">CapacityOverflow</span>,
@@ -1098,13 +1073,9 @@
     <span class="doccomment">/// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity_in</span>(<span class="ident">capacity</span>: <span class="ident">usize</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
-        <span class="kw">match</span> <span class="self">Self</span>::<span class="ident">try_with_capacity_in</span>(<span class="ident">capacity</span>, <span class="ident">a</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
-        }
+        <span class="ident">handle_collection_alloc_error_audited</span>(<span class="self">Self</span>::<span class="ident">try_with_capacity_in</span>(<span class="ident">capacity</span>, <span class="ident">a</span>))
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
@@ -1120,7 +1091,7 @@
     <span class="kw">where</span>
         <span class="ident">A</span>: <span class="ident">AllocRef</span>,
     {
-        <span class="self">Self</span>::<span class="ident">allocate_in</span>(<span class="ident">capacity</span>, <span class="bool-val">false</span>, <span class="ident">a</span>)
+        <span class="self">Self</span>::<span class="ident">try_allocate_in</span>(<span class="ident">capacity</span>, <span class="bool-val">false</span>, <span class="ident">a</span>)
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
@@ -1133,13 +1104,9 @@
     <span class="doccomment">/// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_capacity_zeroed_in</span>(<span class="ident">capacity</span>: <span class="ident">usize</span>, <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
-        <span class="kw">match</span> <span class="self">Self</span>::<span class="ident">try_with_capacity_zeroed_in</span>(<span class="ident">capacity</span>, <span class="ident">a</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
-        }
+        <span class="ident">handle_collection_alloc_error_audited</span>(<span class="self">Self</span>::<span class="ident">try_with_capacity_zeroed_in</span>(<span class="ident">capacity</span>, <span class="ident">a</span>))
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
@@ -1155,10 +1122,10 @@
     <span class="kw">where</span>
         <span class="ident">A</span>: <span class="ident">AllocRef</span>,
     {
-        <span class="self">Self</span>::<span class="ident">allocate_in</span>(<span class="ident">capacity</span>, <span class="bool-val">true</span>, <span class="ident">a</span>)
+        <span class="self">Self</span>::<span class="ident">try_allocate_in</span>(<span class="ident">capacity</span>, <span class="bool-val">true</span>, <span class="ident">a</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">allocate_in</span>(
+    <span class="kw">fn</span> <span class="ident">try_allocate_in</span>(
         <span class="ident">capacity</span>: <span class="ident">usize</span>,
         <span class="ident">zeroed</span>: <span class="ident">bool</span>,
         <span class="kw-2">mut</span> <span class="ident">alloc</span>: <span class="ident">A</span>,
@@ -1353,13 +1320,9 @@
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">double</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_double</span>() {
-            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
-        }
+        <span class="ident">handle_collection_alloc_error_audited</span>(<span class="self">self</span>.<span class="ident">try_double</span>())
     }
 
     <span class="doccomment">/// The same as `double`, but returns on errors instead of panicking.</span>
@@ -1523,13 +1486,11 @@
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reserve</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">used_capacity</span>: <span class="ident">usize</span>, <span class="ident">needed_extra_capacity</span>: <span class="ident">usize</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_reserve</span>(<span class="ident">used_capacity</span>, <span class="ident">needed_extra_capacity</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">vec</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">vec</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span>, .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>.<span class="ident">into</span>()),
-        }
+        <span class="ident">handle_collection_alloc_error_audited</span>(
+            <span class="self">self</span>.<span class="ident">try_reserve</span>(<span class="ident">used_capacity</span>, <span class="ident">needed_extra_capacity</span>),
+        )
     }
 
     <span class="doccomment">/// The same as `reserve`, but returns on errors instead of panicking.</span>
@@ -1541,7 +1502,7 @@
     <span class="kw">where</span>
         <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
     {
-        <span class="self">self</span>.<span class="ident">reserve_internal</span>(
+        <span class="self">self</span>.<span class="ident">try_reserve_internal</span>(
             <span class="ident">used_capacity</span>,
             <span class="ident">needed_extra_capacity</span>,
             <span class="ident">ReserveStrategy</span>::<span class="ident">Amortized</span>,
@@ -1566,13 +1527,11 @@
     <span class="doccomment">/// * on 32-bit platforms if the requested capacity exceeds `isize::MAX` bytes.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reserve_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">used_capacity</span>: <span class="ident">usize</span>, <span class="ident">needed_extra_capacity</span>: <span class="ident">usize</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_reserve_exact</span>(<span class="ident">used_capacity</span>, <span class="ident">needed_extra_capacity</span>) {
-            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
-        }
+        <span class="ident">handle_collection_alloc_error_audited</span>(
+            <span class="self">self</span>.<span class="ident">try_reserve_exact</span>(<span class="ident">used_capacity</span>, <span class="ident">needed_extra_capacity</span>),
+        )
     }
 
     <span class="doccomment">/// The same as `reserve_exact`, but returns on errors instead of panicking.</span>
@@ -1584,7 +1543,7 @@
     <span class="kw">where</span>
         <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
     {
-        <span class="self">self</span>.<span class="ident">reserve_internal</span>(<span class="ident">used_capacity</span>, <span class="ident">needed_extra_capacity</span>, <span class="ident">ReserveStrategy</span>::<span class="ident">Exact</span>)
+        <span class="self">self</span>.<span class="ident">try_reserve_internal</span>(<span class="ident">used_capacity</span>, <span class="ident">needed_extra_capacity</span>, <span class="ident">ReserveStrategy</span>::<span class="ident">Exact</span>)
     }
 
     <span class="doccomment">/// Attempts to ensure that the buffer contains at least enough space to hold</span>
@@ -1606,7 +1565,7 @@
     <span class="doccomment">///   `isize::MAX` bytes.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reserve_in_place</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">used_capacity</span>: <span class="ident">usize</span>, <span class="ident">needed_extra_capacity</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">success</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">try_reserve_in_place</span>(<span class="ident">used_capacity</span>, <span class="ident">needed_extra_capacity</span>) {
             <span class="ident">success</span>
@@ -1668,15 +1627,9 @@
     <span class="doccomment">/// Panics if the given amount is *larger* than the current capacity.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">shrink_to_fit</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">amount</span>: <span class="ident">usize</span>)
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">ReallocRef</span>,
+        <span class="ident">A</span>: <span class="ident">ReallocRef</span> <span class="op">+</span> <span class="ident">Abort</span>,
     {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_shrink_to_fit</span>(<span class="ident">amount</span>) {
-            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Tried to shrink to a larger capacity&quot;</span>)
-            }
-            <span class="prelude-val">Err</span>(<span class="ident">CollectionAllocErr</span>::<span class="ident">AllocError</span> { .. }) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
-        }
+        <span class="ident">handle_collection_alloc_error_audited</span>(<span class="self">self</span>.<span class="ident">try_shrink_to_fit</span>(<span class="ident">amount</span>))
     }
 
     <span class="doccomment">/// The same as `shrink_to_fit`, but returns on errors instead of panicking.</span>
@@ -1744,7 +1697,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">reserve_internal</span>(
+    <span class="kw">fn</span> <span class="ident">try_reserve_internal</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">used_capacity</span>: <span class="ident">usize</span>,
         <span class="ident">needed_extra_capacity</span>: <span class="ident">usize</span>,
@@ -1859,13 +1812,6 @@
             ))
         }
     }
-}
-
-<span class="comment">// One central function responsible for reporting capacity overflows. This&#39;ll</span>
-<span class="comment">// ensure that the code generation related to these panics is minimal as there&#39;s</span>
-<span class="comment">// only one location which panics rather than a bunch throughout the module.</span>
-<span class="kw">fn</span> <span class="ident">capacity_overflow</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="op">!</span> {
-    <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;capacity overflow&quot;</span>);
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "alloc_wg";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
