@@ -921,6 +921,7 @@
     },
     <span class="ident">boxed</span>::<span class="ident">Box</span>,
     <span class="ident">collections</span>::<span class="ident">CollectionAllocErr</span>,
+    <span class="ident">ptr</span>::<span class="ident">Unique</span>,
 };
 <span class="kw">use</span> <span class="ident">core</span>::{
     <span class="ident">alloc</span>::<span class="ident">Layout</span>,
@@ -928,8 +929,7 @@
     <span class="ident">convert</span>::{<span class="ident">TryFrom</span>, <span class="ident">TryInto</span>},
     <span class="ident">mem</span>,
     <span class="ident">num</span>::<span class="ident">NonZeroUsize</span>,
-    <span class="ident">ptr</span>,
-    <span class="ident">ptr</span>::{<span class="ident">NonNull</span>, <span class="ident">Unique</span>},
+    <span class="ident">ptr</span>::{<span class="self">self</span>, <span class="ident">NonNull</span>},
     <span class="ident">slice</span>,
 };
 
@@ -996,7 +996,7 @@
 
         <span class="comment">// `Unique::empty()` doubles as &quot;unallocated&quot; and &quot;zero-sized allocation&quot;.</span>
         <span class="self">Self</span> {
-            <span class="ident">ptr</span>: <span class="ident">Unique</span>::<span class="ident">empty</span>(),
+            <span class="ident">ptr</span>: <span class="ident">Unique</span>::<span class="ident">dangling</span>(),
             <span class="comment">// FIXME(mark-i-m): use `cap` when ifs are allowed in const</span>
             <span class="ident">capacity</span>: [<span class="number">0</span>, <span class="op">!</span><span class="number">0</span>][(<span class="ident">mem</span>::<span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="op">=</span><span class="op">=</span> <span class="number">0</span>) <span class="kw">as</span> <span class="ident">usize</span>],
             <span class="ident">build_alloc</span>: <span class="ident">Global</span>,
@@ -1057,7 +1057,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_in</span>(<span class="kw-2">mut</span> <span class="ident">a</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">capacity</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">mem</span>::<span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="op">=</span><span class="op">=</span> <span class="number">0</span> { <span class="op">!</span><span class="number">0</span> } <span class="kw">else</span> { <span class="number">0</span> };
         <span class="self">Self</span> {
-            <span class="ident">ptr</span>: <span class="ident">Unique</span>::<span class="ident">empty</span>(),
+            <span class="ident">ptr</span>: <span class="ident">Unique</span>::<span class="ident">dangling</span>(),
             <span class="ident">capacity</span>,
             <span class="ident">build_alloc</span>: <span class="ident">a</span>.<span class="ident">get_build_alloc</span>(),
         }

@@ -1414,6 +1414,7 @@
 <span id="1414">1414</span>
 <span id="1415">1415</span>
 <span id="1416">1416</span>
+<span id="1417">1417</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! A pointer type for heap allocation.</span>
 <span class="doccomment">//!</span>
@@ -1509,6 +1510,7 @@
     },
     <span class="ident">clone</span>::<span class="ident">CloneIn</span>,
     <span class="ident">collections</span>::<span class="ident">CollectionAllocErr</span>,
+    <span class="ident">ptr</span>::<span class="ident">Unique</span>,
     <span class="ident">raw_vec</span>::<span class="ident">RawVec</span>,
 };
 <span class="kw">use</span> <span class="ident">core</span>::{
@@ -1523,7 +1525,7 @@
     <span class="ident">num</span>::<span class="ident">NonZeroUsize</span>,
     <span class="ident">ops</span>::{<span class="ident">Deref</span>, <span class="ident">DerefMut</span>},
     <span class="ident">pin</span>::<span class="ident">Pin</span>,
-    <span class="ident">ptr</span>::{<span class="self">self</span>, <span class="ident">NonNull</span>, <span class="ident">Unique</span>},
+    <span class="ident">ptr</span>::{<span class="self">self</span>, <span class="ident">NonNull</span>},
     <span class="ident">slice</span>,
     <span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>},
 };
