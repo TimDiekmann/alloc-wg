@@ -56,7 +56,6 @@
     coerce_unsized,
     const_if_match,
     core_intrinsics,
-    ptr_internals,
     str_internals,
     dispatch_from_dyn,
     unsize,
@@ -110,6 +109,7 @@ pub mod boxed;
 pub mod clone;
 pub mod collections;
 pub mod iter;
+mod ptr;
 pub mod raw_vec;
 pub mod str;
 pub mod string;

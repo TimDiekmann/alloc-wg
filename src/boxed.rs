@@ -92,6 +92,7 @@ use crate::{
     },
     clone::CloneIn,
     collections::CollectionAllocErr,
+    ptr::Unique,
     raw_vec::RawVec,
 };
 use core::{
@@ -106,7 +107,7 @@ use core::{
     num::NonZeroUsize,
     ops::{Deref, DerefMut},
     pin::Pin,
-    ptr::{self, NonNull, Unique},
+    ptr::{self, NonNull},
     slice,
     task::{Context, Poll},
 };

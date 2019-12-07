@@ -13,6 +13,7 @@ use crate::{
     },
     boxed::Box,
     collections::CollectionAllocErr,
+    ptr::Unique,
 };
 use core::{
     alloc::Layout,
@@ -20,8 +21,7 @@ use core::{
     convert::{TryFrom, TryInto},
     mem,
     num::NonZeroUsize,
-    ptr,
-    ptr::{NonNull, Unique},
+    ptr::{self, NonNull},
     slice,
 };
 
@@ -88,7 +88,7 @@ impl<T> RawVec<T> {
 
         // `Unique::empty()` doubles as "unallocated" and "zero-sized allocation".
         Self {
-            ptr: Unique::empty(),
+            ptr: Unique::dangling(),
             // FIXME(mark-i-m): use `cap` when ifs are allowed in const
             capacity: [0, !0][(mem::size_of::<T>() == 0) as usize],
             build_alloc: Global,
@@ -149,7 +149,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
     pub fn new_in(mut a: A) -> Self {
         let capacity = if mem::size_of::<T>() == 0 { !0 } else { 0 };
         Self {
-            ptr: Unique::empty(),
+            ptr: Unique::dangling(),
             capacity,
             build_alloc: a.get_build_alloc(),
         }
