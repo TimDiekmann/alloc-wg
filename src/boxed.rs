@@ -79,11 +79,10 @@
 //! [`NonZeroLayout::for_value(&*value)`]: crate::alloc::NonZeroLayout::for_value
 
 use crate::{
-    alloc::{AllocRef, BuildAllocRef, DeallocRef, Global, NonZeroLayout},
+    alloc::{Abort, AbortAlloc, AllocRef, BuildAllocRef, DeallocRef, Global, NonZeroLayout},
     clone::CloneIn,
-    collections::CollectionAllocErr,
+    collections::{handle_collection_error_audited, CollectionAllocErr},
     raw_vec::RawVec,
-    UncheckedResultExt,
 };
 use core::{
     any::Any,
@@ -169,6 +168,17 @@ impl<T> Box<T> {
 }
 
 #[allow(clippy::use_self)]
+impl<T: ?Sized, A: AllocRef> Box<T, AbortAlloc<A>> {
+    fn cast_away_abort_alloc(self) -> Box<T, A> {
+        let (p, b) = Self::into_raw_non_null_alloc(self);
+        Box {
+            ptr: unsafe { Unique::new_unchecked(p.as_ptr()) },
+            build_alloc: b.0,
+        }
+    }
+}
+
+#[allow(clippy::use_self)]
 impl<T, A: AllocRef> Box<T, A> {
     /// Allocates memory with the given allocator and then places `x` into it.
     ///
@@ -184,8 +194,12 @@ impl<T, A: AllocRef> Box<T, A> {
     /// ```
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn new_in(x: T, a: A) -> Self {
-        unsafe { Self::try_new_in(x, a).unwrap_unchecked() }
+    pub fn new_in(x: T, a: A) -> Self
+    where
+        A: Abort,
+    {
+        let Ok(b) = Box::<T, AbortAlloc<A>>::try_new_in(x, AbortAlloc::new_audited(a));
+        b.cast_away_abort_alloc()
     }
 
     /// Tries to allocate memory with the given allocator and then places `x` into it.
@@ -234,8 +248,12 @@ impl<T, A: AllocRef> Box<T, A> {
     /// ```
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn new_uninit_in(a: A) -> Box<mem::MaybeUninit<T>, A> {
-        unsafe { Self::try_new_uninit_in(a).unwrap_unchecked() }
+    pub fn new_uninit_in(a: A) -> Box<mem::MaybeUninit<T>, A>
+    where
+        A: Abort,
+    {
+        let Ok(b) = Box::<T, AbortAlloc<A>>::try_new_uninit_in(AbortAlloc::new_audited(a));
+        b.cast_away_abort_alloc()
     }
 
     /// Tries to construct a new box with uninitialized contents in a specified allocator.
@@ -271,8 +289,11 @@ impl<T, A: AllocRef> Box<T, A> {
     /// `Unpin`, then `x` will be pinned in memory and unable to be moved.
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn pin_in(x: T, a: A) -> Pin<Self> {
-        unsafe { Self::try_pin_in(x, a).unwrap_unchecked() }
+    pub fn pin_in(x: T, a: A) -> Pin<Self>
+    where
+        A: Abort,
+    {
+        Pin::from(Self::new_in(x, a))
     }
 
     /// Constructs a new `Pin<Box<T, A>>` with the specified allocator. If `T` does not implement
@@ -337,8 +358,11 @@ impl<T, A: AllocRef> Box<[T], A> {
     /// ```
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn new_uninit_slice_in(len: usize, a: A) -> Box<[mem::MaybeUninit<T>], A> {
-        unsafe { Self::try_new_uninit_slice_in(len, a).unwrap_unchecked() }
+    pub fn new_uninit_slice_in(len: usize, a: A) -> Box<[mem::MaybeUninit<T>], A>
+    where
+        A: Abort,
+    {
+        handle_collection_error_audited(Self::try_new_uninit_slice_in(len, a))
     }
 
     /// Tries to construct a new boxed slice with uninitialized contents with the spoecified
@@ -747,7 +771,7 @@ unsafe impl<#[may_dangle] T: ?Sized, A: DeallocRef> Drop for Box<T, A> {
 impl<T, A> Default for Box<T, A>
 where
     T: Default,
-    A: Default + AllocRef,
+    A: Default + AllocRef + Abort,
 {
     #[must_use]
     fn default() -> Self {
@@ -758,7 +782,7 @@ where
 #[allow(clippy::use_self)]
 impl<T, A> Default for Box<[T], A>
 where
-    A: Default + AllocRef,
+    A: Default + AllocRef + Abort,
 {
     #[must_use]
     fn default() -> Self {
@@ -775,7 +799,7 @@ unsafe fn from_boxed_utf8_unchecked<A: DeallocRef>(v: Box<[u8], A>) -> Box<str, 
 #[allow(clippy::use_self)]
 impl<A> Default for Box<str, A>
 where
-    A: Default + AllocRef,
+    A: Default + AllocRef + Abort,
 {
     #[must_use]
     fn default() -> Self {
@@ -785,7 +809,7 @@ where
 
 impl<T: Clone, A> Clone for Box<T, A>
 where
-    A: AllocRef,
+    A: Abort,
     A::BuildAlloc: Clone,
 {
     /// Returns a new box with a `clone()` of this box's contents.
@@ -846,7 +870,10 @@ where
 impl<T: Clone, A: AllocRef, B: AllocRef> CloneIn<B> for Box<T, A> {
     type Cloned = Box<T, B>;
 
-    fn clone_in(&self, a: B) -> Self::Cloned {
+    fn clone_in(&self, a: B) -> Self::Cloned
+    where
+        B: Abort,
+    {
         Box::new_in(self.as_ref().clone(), a)
     }
 
@@ -949,7 +976,7 @@ impl<T: ?Sized + Hasher, A: DeallocRef> Hasher for Box<T, A> {
 
 impl<T, A> From<T> for Box<T, A>
 where
-    A: Default + AllocRef,
+    A: Default + AllocRef + Abort,
 {
     /// Converts a generic type `T` into a `Box<T>`
     ///
@@ -983,7 +1010,7 @@ impl<T: ?Sized, A: DeallocRef> From<Box<T, A>> for Pin<Box<T, A>> {
 #[allow(clippy::use_self)]
 impl<T: Copy, A> From<&[T]> for Box<[T], A>
 where
-    A: Default + AllocRef,
+    A: Default + Abort,
 {
     /// Converts a `&[T]` into a `Box<[T], B>`
     ///
@@ -1012,7 +1039,7 @@ where
 #[allow(clippy::use_self)]
 impl<A> From<&str> for Box<str, A>
 where
-    A: Default + AllocRef,
+    A: Default + Abort,
 {
     /// Converts a `&str` into a `Box<str>`
     ///
@@ -1272,7 +1299,7 @@ impl_dispatch_from_dyn!(std::alloc::System);
 #[allow(clippy::items_after_statements)]
 impl<T: Clone, A: Clone> Clone for Box<[T], A>
 where
-    A: AllocRef,
+    A: AllocRef + Abort,
     A::BuildAlloc: Clone,
 {
     fn clone(&self) -> Self {

@@ -1,4 +1,7 @@
-use crate::{alloc::AllocRef, collections::CollectionAllocErr};
+use crate::{
+    alloc::{Abort, AllocRef},
+    collections::CollectionAllocErr,
+};
 
 /// Extend a collection "fallibly" with the contents of an iterator.
 pub trait TryExtend<A> {
@@ -25,7 +28,9 @@ pub trait TryExtend<A> {
 }
 
 pub trait FromIteratorIn<T, A: AllocRef> {
-    fn from_iter_in<I: IntoIterator<Item = T>>(iter: I, allocator: A) -> Self;
+    fn from_iter_in<I: IntoIterator<Item = T>>(iter: I, allocator: A) -> Self
+    where
+        A: Abort;
 
     fn try_from_iter_in<I: IntoIterator<Item = T>>(
         iter: I,
@@ -38,7 +43,10 @@ pub trait FromIteratorIn<T, A: AllocRef> {
 pub trait IteratorExt: Iterator + Sized {
     #[inline]
     #[must_use = "if you really need to exhaust the iterator, consider `.for_each(drop)` instead"]
-    fn collect_in<T: FromIteratorIn<Self::Item, A>, A: AllocRef>(self, allocator: A) -> T {
+    fn collect_in<T: FromIteratorIn<Self::Item, A>, A: AllocRef>(self, allocator: A) -> T
+    where
+        A: Abort,
+    {
         FromIteratorIn::from_iter_in(self, allocator)
     }
 

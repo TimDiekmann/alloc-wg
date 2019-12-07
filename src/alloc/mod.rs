@@ -1,3 +1,4 @@
+mod abort;
 mod layout;
 
 pub use self::layout::{LayoutErr, NonZeroLayout};
@@ -9,9 +10,11 @@ use core::{
     num::NonZeroUsize,
     ptr::{self, NonNull},
 };
-pub use liballoc::alloc::{handle_alloc_error, Layout};
+use liballoc::alloc::Layout;
 #[cfg(feature = "std")]
 use std::alloc::System;
+
+pub use self::abort::*;
 
 /// Allocate memory with the global allocator.
 ///
