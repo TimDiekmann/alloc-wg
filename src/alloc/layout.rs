@@ -44,7 +44,7 @@ pub struct NonZeroLayout {
     //
     // (However, we do not analogously require `align >= sizeof(void*)`,
     //  even though that is *also* a requirement of `posix_memalign`.)
-    align: NonZeroUsize,
+    align: usize,
 }
 
 impl NonZeroLayout {
@@ -71,7 +71,10 @@ impl NonZeroLayout {
     #[inline]
     #[must_use]
     pub const unsafe fn from_size_align_unchecked(size: NonZeroUsize, align: NonZeroUsize) -> Self {
-        Self { size, align }
+        Self {
+            size,
+            align: align.get(),
+        }
     }
 
     /// The minimum size in bytes for a memory block of this layout.
@@ -85,7 +88,7 @@ impl NonZeroLayout {
     #[inline]
     #[must_use]
     pub const fn align(&self) -> NonZeroUsize {
-        self.align
+        unsafe { NonZeroUsize::new_unchecked(self.align) }
     }
 
     /// Constructs a `NonZeroLayout` suitable for holding a value of type `T`.
