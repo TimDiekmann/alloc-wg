@@ -218,13 +218,10 @@ impl NonZeroLayout {
     }
 }
 
-impl Into<Layout> for NonZeroLayout {
+impl From<NonZeroLayout> for Layout {
     #[must_use]
-    fn into(self) -> Layout {
-        let size = self.size().get();
-        let align = self.align().get();
-        debug_assert!(Layout::from_size_align(size, align).is_ok());
-        unsafe { Layout::from_size_align_unchecked(size, align) }
+    fn from(layout: NonZeroLayout) -> Self {
+        unsafe { Self::from_size_align_unchecked(layout.size().get(), layout.align().get()) }
     }
 }
 
