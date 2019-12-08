@@ -238,12 +238,6 @@
 <span id="238">238</span>
 <span id="239">239</span>
 <span id="240">240</span>
-<span id="241">241</span>
-<span id="242">242</span>
-<span id="243">243</span>
-<span id="244">244</span>
-<span id="245">245</span>
-<span id="246">246</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">alloc</span>::<span class="ident">Layout</span>;
 <span class="kw">use</span> <span class="ident">core</span>::{
@@ -291,7 +285,7 @@
     <span class="comment">//</span>
     <span class="comment">// (However, we do not analogously require `align &gt;= sizeof(void*)`,</span>
     <span class="comment">//  even though that is *also* a requirement of `posix_memalign`.)</span>
-    <span class="ident">align</span>: <span class="ident">usize</span>,
+    <span class="ident">align</span>: <span class="ident">NonZeroUsize</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">NonZeroLayout</span> {
@@ -318,10 +312,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">from_size_align_unchecked</span>(<span class="ident">size</span>: <span class="ident">NonZeroUsize</span>, <span class="ident">align</span>: <span class="ident">NonZeroUsize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">size</span>,
-            <span class="ident">align</span>: <span class="ident">align</span>.<span class="ident">get</span>(),
-        }
+        <span class="self">Self</span> { <span class="ident">size</span>, <span class="ident">align</span> }
     }
 
     <span class="doccomment">/// The minimum size in bytes for a memory block of this layout.</span>
@@ -335,7 +326,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
     <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">align</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NonZeroUsize</span> {
-        <span class="kw">unsafe</span> { <span class="ident">NonZeroUsize</span>::<span class="ident">new_unchecked</span>(<span class="self">self</span>.<span class="ident">align</span>) }
+        <span class="self">self</span>.<span class="ident">align</span>
     }
 
     <span class="doccomment">/// Constructs a `NonZeroLayout` suitable for holding a value of type `T`.</span>
@@ -468,13 +459,10 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Layout</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">NonZeroLayout</span> {
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">NonZeroLayout</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Layout</span> {
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
-    <span class="kw">fn</span> <span class="ident">into</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Layout</span> {
-        <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">size</span>().<span class="ident">get</span>();
-        <span class="kw">let</span> <span class="ident">align</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">align</span>().<span class="ident">get</span>();
-        <span class="macro">debug_assert</span><span class="macro">!</span>(<span class="ident">Layout</span>::<span class="ident">from_size_align</span>(<span class="ident">size</span>, <span class="ident">align</span>).<span class="ident">is_ok</span>());
-        <span class="kw">unsafe</span> { <span class="ident">Layout</span>::<span class="ident">from_size_align_unchecked</span>(<span class="ident">size</span>, <span class="ident">align</span>) }
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">layout</span>: <span class="ident">NonZeroLayout</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">unsafe</span> { <span class="self">Self</span>::<span class="ident">from_size_align_unchecked</span>(<span class="ident">layout</span>.<span class="ident">size</span>().<span class="ident">get</span>(), <span class="ident">layout</span>.<span class="ident">align</span>().<span class="ident">get</span>()) }
     }
 }
 
