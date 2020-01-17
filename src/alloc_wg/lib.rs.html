@@ -181,6 +181,7 @@
 <span id="181">181</span>
 <span id="182">182</span>
 <span id="183">183</span>
+<span id="184">184</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! An attempt to collect several proposals of [rust-lang/wg-allocators](https://github.com/rust-lang/wg-allocators) into a</span>
 <span class="doccomment">//! MVP.</span>
@@ -252,7 +253,8 @@
     <span class="ident">trusted_len</span>,
     <span class="ident">unsized_locals</span>,
     <span class="ident">fn_traits</span>,
-    <span class="ident">exhaustive_patterns</span>
+    <span class="ident">exhaustive_patterns</span>,
+    <span class="ident">never_type</span>
 )]</span>
 <span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>), <span class="ident">no_std</span>)]</span>
 <span class="attribute">#![<span class="ident">doc</span>(<span class="ident">test</span>(<span class="ident">attr</span>(
