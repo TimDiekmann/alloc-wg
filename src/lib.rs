@@ -68,7 +68,8 @@
     trusted_len,
     unsized_locals,
     fn_traits,
-    exhaustive_patterns
+    exhaustive_patterns,
+    never_type
 )]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![doc(test(attr(
