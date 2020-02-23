@@ -76,6 +76,7 @@ use crate::{
         BuildAllocRef,
         DeallocRef,
         Global,
+        NonZeroLayout,
         ReallocRef,
     },
     boxed::Box,
@@ -1766,6 +1767,26 @@ impl<T, A: DeallocRef> Vec<T, A> {
         A: ReallocRef,
     {
         Ok(Box::leak(vec.try_into_boxed_slice()?))
+    }
+
+    /// Returns a shared reference to the allocator builder backing this `Vec`.
+    pub fn build_alloc(&self) -> &A::BuildAlloc {
+        self.buf.build_alloc()
+    }
+
+    /// Returns a mutable reference to the allocator builder backing this `Vec`.
+    pub fn build_alloc_mut(&mut self) -> &mut A::BuildAlloc {
+        self.buf.build_alloc_mut()
+    }
+
+    /// Returns the allocator used by this `Vec` and the used layout, if any.
+    /// The layout is `None` if the capacity of this `Vec` is `0` or if `T` is a zero sized type.
+    pub fn alloc_ref(&mut self) -> (A, Option<NonZeroLayout>) {
+        self.buf.alloc_ref()
+    }
+
+    pub fn current_layout(&self) -> Option<NonZeroLayout> {
+        self.buf.current_layout()
     }
 }
 
