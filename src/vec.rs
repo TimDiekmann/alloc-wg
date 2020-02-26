@@ -2468,7 +2468,7 @@ where
 }
 
 impl<T, A: ReallocRef> SpecExtend<T, IntoIter<T, A>, A> for Vec<T, A> {
-    fn try_from_iter_in(iter: IntoIter<T, A>, mut a: A) -> Result<Self, CollectionAllocErr<A>> {
+    fn try_from_iter_in(iter: IntoIter<T, A>, a: A) -> Result<Self, CollectionAllocErr<A>> {
         // A common case is passing a vector into a function which immediately
         // re-collects into a vector. We can short circuit this if the IntoIter
         // has not been advanced at all.
@@ -2479,7 +2479,7 @@ impl<T, A: ReallocRef> SpecExtend<T, IntoIter<T, A>, A> for Vec<T, A> {
                     iter.buf.ptr(),
                     iter.len(),
                     iter.buf.capacity(),
-                    a.get_build_alloc(),
+                    a.into_build_alloc(),
                 );
                 mem::forget(iter);
                 Ok(vec)

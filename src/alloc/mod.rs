@@ -184,7 +184,7 @@ pub trait BuildAllocRef: Sized {
 pub trait DeallocRef: Sized {
     type BuildAlloc: BuildAllocRef<Ref = Self>;
 
-    fn get_build_alloc(&mut self) -> Self::BuildAlloc;
+    fn into_build_alloc(self) -> Self::BuildAlloc;
 
     /// # Safety
     ///
@@ -340,7 +340,7 @@ impl_buildalloc_alloc_zst!(System);
 impl DeallocRef for Global {
     type BuildAlloc = Self;
 
-    fn get_build_alloc(&mut self) -> Self::BuildAlloc {
+    fn into_build_alloc(self) -> Self::BuildAlloc {
         Self
     }
 
@@ -395,7 +395,7 @@ impl ReallocRef for Global {
 impl DeallocRef for System {
     type BuildAlloc = Self;
 
-    fn get_build_alloc(&mut self) -> Self::BuildAlloc {
+    fn into_build_alloc(self) -> Self::BuildAlloc {
         Self
     }
 

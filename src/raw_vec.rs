@@ -146,12 +146,12 @@ impl<T> RawVec<T> {
 
 impl<T, A: DeallocRef> RawVec<T, A> {
     /// Like `new` but parameterized over the choice of allocator for the returned `RawVec`.
-    pub fn new_in(mut a: A) -> Self {
+    pub fn new_in(a: A) -> Self {
         let capacity = if mem::size_of::<T>() == 0 { !0 } else { 0 };
         Self {
             ptr: Unique::dangling(),
             capacity,
-            build_alloc: a.get_build_alloc(),
+            build_alloc: a.into_build_alloc(),
         }
     }
 
@@ -249,7 +249,7 @@ impl<T, A: DeallocRef> RawVec<T, A> {
         Ok(Self {
             ptr: ptr.into(),
             capacity,
-            build_alloc: alloc.get_build_alloc(),
+            build_alloc: alloc.into_build_alloc(),
         })
     }
 

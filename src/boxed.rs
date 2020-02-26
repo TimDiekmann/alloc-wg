@@ -227,7 +227,7 @@ impl<T, A: AllocRef> Box<T, A> {
         } else {
             NonNull::dangling()
         };
-        unsafe { Ok(Self::from_raw_in(ptr.as_ptr(), a.get_build_alloc())) }
+        unsafe { Ok(Self::from_raw_in(ptr.as_ptr(), a.into_build_alloc())) }
     }
 
     /// Constructs a new box with uninitialized contents in a specified allocator.
@@ -286,7 +286,7 @@ impl<T, A: AllocRef> Box<T, A> {
         } else {
             NonNull::dangling()
         };
-        unsafe { Ok(Box::from_raw_in(ptr.as_ptr(), a.get_build_alloc())) }
+        unsafe { Ok(Box::from_raw_in(ptr.as_ptr(), a.into_build_alloc())) }
     }
 
     /// Constructs a new `Pin<Box<T, A>>` with the specified allocator. If `T` does not implement
@@ -408,7 +408,7 @@ impl<T, A: AllocRef> Box<[T], A> {
             let slice = slice::from_raw_parts_mut(ptr.as_ptr(), len);
             Ok(Box::from_raw_in(
                 NonNull::from(slice).as_ptr(),
-                a.get_build_alloc(),
+                a.into_build_alloc(),
             ))
         }
     }
