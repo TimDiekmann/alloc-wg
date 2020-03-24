@@ -73,7 +73,7 @@ use crate::{
     boxed::Box,
     capacity_overflow,
     clone::CloneIn,
-    collections::TryReserveError::{self, *},
+    collections::TryReserveError::{self, AllocError, CapacityOverflow},
     iter::{FromIteratorIn, TryExtend},
     raw_vec::RawVec,
 };

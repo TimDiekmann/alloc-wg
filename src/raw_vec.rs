@@ -13,27 +13,27 @@ use crate::{
     alloc::{
         handle_alloc_error,
         AllocErr,
-        AllocInit::{self, *},
+        AllocInit::{self, Uninitialized, Zeroed},
         AllocRef,
         Global,
         Layout,
         MemoryBlock,
-        ReallocPlacement::{self, *},
+        ReallocPlacement::{self, InPlace, MayMove},
     },
     boxed::Box,
-    collections::TryReserveError::{self, *},
+    collections::TryReserveError::{self, AllocError, CapacityOverflow},
 };
 
 /// A low-level utility for more ergonomically allocating, reallocating, and deallocating
 /// a buffer of memory on the heap without having to worry about all the corner cases
-/// involved. This type is excellent for building your own data structures like Vec and VecDeque.
-/// In particular:
+/// involved. This type is excellent for building your own data structures like `Vec` and
+/// `VecDeque`. In particular:
 ///
 /// * Produces `Unique::empty()` on zero-sized types.
 /// * Produces `Unique::empty()` on zero-length allocations.
 /// * Avoids freeing `Unique::empty()`.
 /// * Catches all overflows in capacity computations (promotes them to "capacity overflow" panics).
-/// * Guards against 32-bit systems allocating more than isize::MAX bytes.
+/// * Guards against 32-bit systems allocating more than `isize::MAX` bytes.
 /// * Guards against overflowing your length.
 /// * Calls `handle_alloc_error` for fallible allocations.
 /// * Contains a `ptr::Unique` and thus endows the user with all related benefits.
@@ -119,7 +119,7 @@ impl<T> RawVec<T, Global> {
     /// Converts a `Box<[T]>` into a `RawVec<T>`.
     pub fn from_box(mut slice: Box<[T]>) -> Self {
         unsafe {
-            let result = RawVec::from_raw_parts(slice.as_mut_ptr(), slice.len());
+            let result = Self::from_raw_parts(slice.as_mut_ptr(), slice.len());
             mem::forget(slice);
             result
         }
@@ -213,6 +213,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
     ///
     /// This will always be `usize::MAX` if `T` is zero-sized.
     #[inline(always)]
+    #[allow(clippy::inline_always)]
     pub fn capacity(&self) -> usize {
         if mem::size_of::<T>() == 0 {
             usize::MAX
@@ -517,7 +518,7 @@ enum Strategy {
         needed_extra_capacity: usize,
     },
 }
-use Strategy::*;
+use Strategy::{Amortized, Double, Exact};
 
 impl<T, A: AllocRef> RawVec<T, A> {
     /// Returns if the buffer needs to grow to fulfill the needed extra capacity.
@@ -681,7 +682,7 @@ unsafe impl<#[may_dangle] T, A: AllocRef> Drop for RawVec<T, A> {
 
 #[inline]
 fn alloc_guard(alloc_size: usize) -> Result<(), TryReserveError> {
-    if mem::size_of::<usize>() < 8 && alloc_size > core::isize::MAX as usize {
+    if mem::size_of::<usize>() < 8 && alloc_size > isize::MAX as usize {
         Err(CapacityOverflow)
     } else {
         Ok(())

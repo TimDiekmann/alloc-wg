@@ -55,7 +55,7 @@ use crate::{
     alloc::{AllocRef, Global},
     boxed::Box,
     capacity_overflow,
-    collections::TryReserveError::{self, *},
+    collections::TryReserveError::{self, AllocError, CapacityOverflow},
     iter::TryExtend,
     str::from_boxed_utf8_unchecked,
     vec::Vec,

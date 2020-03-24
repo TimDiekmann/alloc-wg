@@ -90,7 +90,7 @@ use crate::{
         MemoryBlock,
     },
     clone::CloneIn,
-    collections::TryReserveError::{self, *},
+    collections::TryReserveError::{self, AllocError},
     ptr::Unique,
     raw_vec::RawVec,
 };
