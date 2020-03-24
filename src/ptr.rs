@@ -1,5 +1,6 @@
 use core::{
     convert::From,
+    fmt,
     marker::{PhantomData, Unsize},
     ops::{CoerceUnsized, DispatchFromDyn},
     ptr::NonNull,
@@ -36,6 +37,12 @@ pub struct Unique<T: ?Sized> {
     // For details, see:
     // https://github.com/rust-lang/rfcs/blob/master/text/0769-sound-generic-drop.md#phantom-data
     _marker: PhantomData<T>,
+}
+
+impl<T: ?Sized> fmt::Debug for Unique<T> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.pointer.as_ptr(), fmt)
+    }
 }
 
 /// `Unique` pointers are `Send` if `T` is `Send` because the data they

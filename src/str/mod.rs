@@ -28,7 +28,7 @@
 
 // pub use core::str::pattern;
 use crate::{
-    alloc::DeallocRef,
+    alloc::AllocRef,
     borrow::{Borrow, BorrowMut},
     boxed::Box,
     string::String,
@@ -65,14 +65,14 @@ pub use liballoc::str::{
     Utf8Error,
 };
 
-impl<D: DeallocRef> Borrow<str> for String<D> {
+impl<D: AllocRef> Borrow<str> for String<D> {
     #[inline]
     fn borrow(&self) -> &str {
         &self[..]
     }
 }
 
-impl<D: DeallocRef> BorrowMut<str> for String<D> {
+impl<D: AllocRef> BorrowMut<str> for String<D> {
     #[inline]
     fn borrow_mut(&mut self) -> &mut str {
         &mut self[..]
@@ -96,7 +96,7 @@ impl<D: DeallocRef> BorrowMut<str> for String<D> {
 /// ```
 #[allow(clippy::missing_safety_doc)]
 #[inline]
-pub unsafe fn from_boxed_utf8_unchecked<A: DeallocRef>(v: Box<[u8], A>) -> Box<str, A> {
+pub unsafe fn from_boxed_utf8_unchecked<A: AllocRef>(v: Box<[u8], A>) -> Box<str, A> {
     let a = core::ptr::read(v.build_alloc());
     Box::from_raw_in(Box::into_raw(v) as *mut str, a)
 }

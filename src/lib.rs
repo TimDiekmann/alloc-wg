@@ -1,44 +1,6 @@
 //! An attempt to collect several proposals of [rust-lang/wg-allocators](https://github.com/rust-lang/wg-allocators) into a
 //! MVP.
 //!
-//! Changes regarding the current `Alloc` trait
-//! -------------------------------------------
-//!
-//! - The first thing to notice is, that [`Alloc`] was renamed to [`AllocRef`] in order to show that they are typically
-//!   implemented for a reference or smart pointer or ZST, not directly for the type that actually holds the allocator’s
-//!   state.
-//!
-//!   Issue on WG repository: [rust-lang/wg-allocators#8](https://github.com/rust-lang/wg-allocators/issues/8)
-//!
-//! - [`AllocRef`] was split up into [`AllocRef`], [`DeallocRef`], and [`ReallocRef`] to make more flexible allocators
-//!   possible.
-//!
-//!   Issue: [rust-lang/wg-allocators#9](https://github.com/rust-lang/wg-allocators/issues/9)
-//!
-//! - The allocators has to be associated with [`BuildAllocRef`]. It is related to the allocator traits similar how
-//!   [`BuildHasher`] is related to [`Hasher`]. Although the signatures are different, it makes an even more flexible
-//!   allocator design possible.
-//!
-//!   Issue: [rust-lang/wg-allocators#12](https://github.com/rust-lang/wg-allocators/issues/12)
-//!
-//! - Added an associative error type to [`AllocRef`]. Besides adding the possibility of returning additional information on
-//!   allocation failure, it's also possible to split the usage of the [`AllocRef`] into a fallible and an infallible case.
-//!   Personally I think this is a pretty big deal, as kernel programmer can rely on allocation, which will never fail.
-//!
-//!   Issue: [rust-lang/wg-allocators#23](https://github.com/rust-lang/wg-allocators/issues/23)
-//!
-//! - The new layout type [`NonZeroLayout`] was introduced. Currently, implementors of [`Alloc`] can chose to allow
-//!   zero-sized allocation so in a generic context it's impossible to rely on this, so banning zero-sized allocation is a
-//!   possible step to prevent this. This also removes `unsafe` from [`AllocRef::alloc`] and [`AllocRef::alloc_zeroed`], and
-//!   unlocks the possibility to move the extension API like `alloc_array` into a separate trait.
-//!
-//!   Issue: [rust-lang/wg-allocators#16](https://github.com/rust-lang/wg-allocators/issues/16)
-//!
-//! - Support reallocating to a different alignment.
-//!
-//!   Issue: [rust-lang/wg-allocators#5](https://github.com/rust-lang/wg-allocators/issues/5)
-//!
-//!
 //! [`Alloc`]: https://doc.rust-lang.org/1.38.0/alloc/alloc/trait.Alloc.html
 //! [`AllocRef`]: crate::alloc::AllocRef
 //! [`AllocRef::alloc`]: crate::alloc::AllocRef::alloc
@@ -52,15 +14,25 @@
 //! [`NonZeroLayout`]: crate::alloc::NonZeroLayout
 
 #![feature(
+    alloc_layout_extra,
+    alloc_error_hook,
     dropck_eyepatch,
     coerce_unsized,
+    const_fn,
     const_if_match,
+    const_panic,
+    const_nonzero_int_methods,
+    const_saturating_int_methods,
+    const_alloc_layout,
+    const_raw_ptr_to_usize_cast,
     core_intrinsics,
     str_internals,
     dispatch_from_dyn,
     unsize,
     exact_size_is_empty,
     receiver_trait,
+    maybe_uninit_extra,
+    ptr_internals,
     const_generics,
     const_generic_impls_guard,
     unboxed_closures,
@@ -69,7 +41,8 @@
     unsized_locals,
     fn_traits,
     exhaustive_patterns,
-    never_type
+    never_type,
+    structural_match
 )]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![doc(test(attr(
@@ -103,7 +76,11 @@
     unused_lifetimes,
     unused_qualifications
 )]
-#![allow(clippy::module_name_repetitions, incomplete_features)]
+#![allow(
+    clippy::module_name_repetitions,
+    clippy::must_use_candidate,
+    incomplete_features
+)]
 
 pub mod alloc;
 pub mod boxed;
@@ -119,6 +96,13 @@ pub mod vec;
 extern crate alloc as liballoc;
 
 pub use liballoc::{borrow, fmt, rc, slice, sync};
+
+// One central function responsible for reporting capacity overflows. This'll
+// ensure that the code generation related to these panics is minimal as there's
+// only one location which panics rather than a bunch throughout the module.
+pub(in crate) fn capacity_overflow() -> ! {
+    panic!("capacity overflow");
+}
 
 #[macro_export]
 macro_rules! vec {

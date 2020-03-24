@@ -81,17 +81,16 @@
 use crate::{
     alloc::{
         handle_alloc_error,
-        handle_collection_alloc_error_audited,
-        Abort,
+        handle_reserve_error,
+        AllocErr,
+        AllocInit,
         AllocRef,
-        BuildAllocRef,
-        DeallocRef,
         Global,
         Layout,
-        NonZeroLayout,
+        MemoryBlock,
     },
     clone::CloneIn,
-    collections::CollectionAllocErr,
+    collections::TryReserveError::{self, *},
     ptr::Unique,
     raw_vec::RawVec,
 };
@@ -104,24 +103,20 @@ use core::{
     hash::{Hash, Hasher},
     iter::FusedIterator,
     mem,
-    num::NonZeroUsize,
     ops::{Deref, DerefMut},
     pin::Pin,
     ptr::{self, NonNull},
-    slice,
     task::{Context, Poll},
 };
+use std::mem::MaybeUninit;
 
 /// A pointer type for heap allocation.
 ///
 /// See the [module-level documentation](index.html) for more.
-pub struct Box<T: ?Sized, A: DeallocRef = Global> {
+pub struct Box<T: ?Sized, A: AllocRef = Global> {
     ptr: Unique<T>,
-    build_alloc: A::BuildAlloc,
+    alloc: A,
 }
-// TODO: Remove when using ptr::Unique
-unsafe impl<T: ?Sized, A: DeallocRef + Send> Send for Box<T, A> {}
-unsafe impl<T: ?Sized, A: DeallocRef + Sync> Sync for Box<T, A> {}
 
 #[allow(clippy::use_self)]
 impl<T> Box<T> {
@@ -165,7 +160,7 @@ impl<T> Box<T> {
     #[allow(clippy::inline_always)]
     #[inline(always)]
     #[must_use]
-    pub fn new_uninit() -> Box<mem::MaybeUninit<T>> {
+    pub fn new_uninit() -> Box<MaybeUninit<T>> {
         Self::new_uninit_in(Global)
     }
 
@@ -187,17 +182,14 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::Global, boxed::Box};
+    /// use alloc_wg::{alloc::System, boxed::Box};
     ///
     /// # #[allow(unused_variables)]
-    /// let five = Box::new_in(5, Global);
+    /// let five = Box::new_in(5, System);
     /// ```
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn new_in(x: T, a: A) -> Self
-    where
-        A: Abort,
-    {
+    pub fn new_in(x: T, a: A) -> Self {
         match Self::try_new_in(x, a) {
             Err(_) => handle_alloc_error(Layout::new::<T>()),
             Ok(b) => b,
@@ -211,23 +203,18 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::Global, boxed::Box};
+    /// use alloc_wg::{alloc::System, boxed::Box};
     ///
     /// # #[allow(unused_variables)]
-    /// let five = Box::try_new_in(5, Global)?;
+    /// let five = Box::try_new_in(5, System)?;
     /// # Ok::<_, alloc_wg::alloc::AllocErr>(())
     /// ```
-    pub fn try_new_in(x: T, mut a: A) -> Result<Self, A::Error> {
-        let ptr = if let Ok(layout) = NonZeroLayout::new::<T>() {
-            let ptr = a.alloc(layout)?.cast::<T>();
-            unsafe {
-                ptr.as_ptr().write(x);
-            }
-            ptr
-        } else {
-            NonNull::dangling()
-        };
-        unsafe { Ok(Self::from_raw_in(ptr.as_ptr(), a.get_build_alloc())) }
+    pub fn try_new_in(x: T, alloc: A) -> Result<Self, AllocErr> {
+        let mut boxed = Self::try_new_uninit_in(alloc)?;
+        unsafe {
+            boxed.ptr.as_mut().write(x);
+            Ok(boxed.assume_init())
+        }
     }
 
     /// Constructs a new box with uninitialized contents in a specified allocator.
@@ -235,9 +222,9 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::Global, boxed::Box};
+    /// use alloc_wg::{alloc::System, boxed::Box};
     ///
-    /// let mut five = Box::<u32, _>::new_uninit_in(Global);
+    /// let mut five = Box::<u32, _>::new_uninit_in(System);
     ///
     /// let five = unsafe {
     ///     // Deferred initialization:
@@ -250,13 +237,10 @@ impl<T, A: AllocRef> Box<T, A> {
     /// ```
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn new_uninit_in(a: A) -> Box<mem::MaybeUninit<T>, A>
-    where
-        A: Abort,
-    {
+    pub fn new_uninit_in(a: A) -> Box<MaybeUninit<T>, A> {
         match Self::try_new_uninit_in(a) {
-            Err(_) => handle_alloc_error(Layout::new::<T>()),
             Ok(b) => b,
+            Err(_) => handle_alloc_error(Layout::new::<T>()),
         }
     }
 
@@ -265,9 +249,9 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::Global, boxed::Box};
+    /// use alloc_wg::{alloc::System, boxed::Box};
     ///
-    /// let mut five = Box::<u32, Global>::try_new_uninit_in(Global)?;
+    /// let mut five = Box::<u32, System>::try_new_uninit_in(System)?;
     ///
     /// let five = unsafe {
     ///     // Deferred initialization:
@@ -279,31 +263,24 @@ impl<T, A: AllocRef> Box<T, A> {
     /// assert_eq!(*five, 5);
     /// # Ok::<_, alloc_wg::alloc::AllocErr>(())
     /// ```
-    pub fn try_new_uninit_in(mut a: A) -> Result<Box<mem::MaybeUninit<T>, A>, A::Error> {
-        let ptr = if let Ok(layout) = NonZeroLayout::new::<T>() {
-            let ptr: NonNull<mem::MaybeUninit<T>> = a.alloc(layout)?.cast();
-            ptr
-        } else {
-            NonNull::dangling()
-        };
-        unsafe { Ok(Box::from_raw_in(ptr.as_ptr(), a.get_build_alloc())) }
+    pub fn try_new_uninit_in(alloc: A) -> Result<Box<MaybeUninit<T>, A>, AllocErr> {
+        let memory = alloc.alloc(Layout::new::<MaybeUninit<T>>(), AllocInit::Uninitialized)?;
+        let ptr = memory.ptr();
+        unsafe { Ok(Box::from_raw_in(ptr.cast().as_ptr(), alloc)) }
     }
 
     /// Constructs a new `Pin<Box<T, A>>` with the specified allocator. If `T` does not implement
     /// `Unpin`, then `x` will be pinned in memory and unable to be moved.
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn pin_in(x: T, a: A) -> Pin<Self>
-    where
-        A: Abort,
-    {
+    pub fn pin_in(x: T, a: A) -> Pin<Self> {
         Pin::from(Self::new_in(x, a))
     }
 
     /// Constructs a new `Pin<Box<T, A>>` with the specified allocator. If `T` does not implement
     /// `Unpin`, then `x` will be pinned in memory and unable to be moved.
     #[inline]
-    pub fn try_pin_in(x: T, a: A) -> Result<Pin<Self>, A::Error> {
+    pub fn try_pin_in(x: T, a: A) -> Result<Pin<Self>, AllocErr> {
         Self::try_new_in(x, a).map(Pin::from)
     }
 }
@@ -333,7 +310,7 @@ impl<T> Box<[T]> {
     #[allow(clippy::inline_always)]
     #[inline(always)]
     #[must_use]
-    pub fn new_uninit_slice(len: usize) -> Box<[mem::MaybeUninit<T>]> {
+    pub fn new_uninit_slice(len: usize) -> Box<[MaybeUninit<T>]> {
         Self::new_uninit_slice_in(len, Global)
     }
 }
@@ -345,9 +322,9 @@ impl<T, A: AllocRef> Box<[T], A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::Global, boxed::Box};
+    /// use alloc_wg::{alloc::System, boxed::Box};
     ///
-    /// let mut values = Box::<[u32], _>::new_uninit_slice_in(3, Global);
+    /// let mut values = Box::<[u32], _>::new_uninit_slice_in(3, System);
     ///
     /// let values = unsafe {
     ///     // Deferred initialization:
@@ -362,11 +339,8 @@ impl<T, A: AllocRef> Box<[T], A> {
     /// ```
     #[allow(clippy::inline_always)]
     #[inline(always)]
-    pub fn new_uninit_slice_in(len: usize, a: A) -> Box<[mem::MaybeUninit<T>], A>
-    where
-        A: Abort,
-    {
-        handle_collection_alloc_error_audited(Self::try_new_uninit_slice_in(len, a))
+    pub fn new_uninit_slice_in(len: usize, a: A) -> Box<[MaybeUninit<T>], A> {
+        handle_reserve_error(Self::try_new_uninit_slice_in(len, a))
     }
 
     /// Tries to construct a new boxed slice with uninitialized contents with the spoecified
@@ -375,9 +349,9 @@ impl<T, A: AllocRef> Box<[T], A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::Global, boxed::Box};
+    /// use alloc_wg::{alloc::System, boxed::Box};
     ///
-    /// let mut values = Box::<[u32], Global>::try_new_uninit_slice_in(3, Global)?;
+    /// let mut values = Box::<[u32], System>::try_new_uninit_slice_in(3, System)?;
     ///
     /// let values = unsafe {
     ///     // Deferred initialization:
@@ -389,33 +363,18 @@ impl<T, A: AllocRef> Box<[T], A> {
     /// };
     ///
     /// assert_eq!(*values, [1, 2, 3]);
-    /// # Ok::<_, alloc_wg::collections::CollectionAllocErr<Global>>(())
+    /// # Ok::<_, alloc_wg::collections::TryReserveError>(())
     /// ```
     pub fn try_new_uninit_slice_in(
         len: usize,
-        mut a: A,
-    ) -> Result<Box<[mem::MaybeUninit<T>], A>, CollectionAllocErr<A>> {
-        let ptr = if mem::size_of::<T>() == 0 || len == 0 {
-            NonNull::dangling()
-        } else {
-            let len = unsafe { NonZeroUsize::new_unchecked(len) };
-            let layout = NonZeroLayout::array::<mem::MaybeUninit<T>>(len)?;
-            a.alloc(layout)
-                .map_err(|inner| CollectionAllocErr::AllocError { layout, inner })?
-                .cast()
-        };
-        unsafe {
-            let slice = slice::from_raw_parts_mut(ptr.as_ptr(), len);
-            Ok(Box::from_raw_in(
-                NonNull::from(slice).as_ptr(),
-                a.get_build_alloc(),
-            ))
-        }
+        a: A,
+    ) -> Result<Box<[MaybeUninit<T>], A>, TryReserveError> {
+        unsafe { Ok(RawVec::try_with_capacity_in(len, a)?.into_box(len)) }
     }
 }
 
 #[allow(clippy::use_self)]
-impl<T, A: DeallocRef> Box<mem::MaybeUninit<T>, A> {
+impl<T, A: AllocRef> Box<MaybeUninit<T>, A> {
     /// Converts to `Box<T, A>`.
     ///
     /// # Safety
@@ -446,13 +405,13 @@ impl<T, A: DeallocRef> Box<mem::MaybeUninit<T>, A> {
     /// ```
     #[inline]
     pub unsafe fn assume_init(self) -> Box<T, A> {
-        let (ptr, b) = Self::into_raw_alloc(self);
-        Box::from_raw_in((*ptr).as_mut_ptr(), b)
+        let (ptr, alloc) = Self::into_raw_alloc(self);
+        Box::from_raw_in((*ptr).as_mut_ptr(), alloc)
     }
 }
 
 #[allow(clippy::use_self)]
-impl<T, A: DeallocRef> Box<[mem::MaybeUninit<T>], A> {
+impl<T, A: AllocRef> Box<[MaybeUninit<T>], A> {
     /// Converts to `Box<[T], B>`.
     ///
     /// # Safety
@@ -535,7 +494,7 @@ impl<T: ?Sized> Box<T> {
     }
 }
 
-impl<T: ?Sized, A: DeallocRef> Box<T, A> {
+impl<T: ?Sized, A: AllocRef> Box<T, A> {
     /// Constructs a box from a raw pointer.
     ///
     /// After calling this function, the raw pointer is owned by the resulting `Box`. Specifically,
@@ -566,29 +525,26 @@ impl<T: ?Sized, A: DeallocRef> Box<T, A> {
     /// }
     /// ```
     #[inline]
-    pub unsafe fn from_raw_in(raw: *mut T, builder: A::BuildAlloc) -> Self {
+    pub unsafe fn from_raw_in(raw: *mut T, alloc: A) -> Self {
         Self {
             ptr: Unique::new_unchecked(raw),
-            build_alloc: builder,
+            alloc,
         }
     }
 
     /// Returns a shared reference to the associated `BuildAlloc`
-    pub fn build_alloc(&self) -> &A::BuildAlloc {
-        &self.build_alloc
+    pub fn build_alloc(&self) -> &A {
+        &self.alloc
     }
 
     /// Returns a mutable reference to the associated `BuildAlloc`
-    pub fn build_alloc_mut(&mut self) -> &mut A::BuildAlloc {
-        &mut self.build_alloc
+    pub fn build_alloc_mut(&mut self) -> &mut A {
+        &mut self.alloc
     }
 
     /// Returns the allocator and it's currently used layout. If `T` is a ZST, no layout is returned.
-    pub fn alloc_ref(&mut self) -> (A, Option<NonZeroLayout>) {
-        let layout = NonZeroLayout::for_value(self.as_ref());
-        let ptr = self.ptr.cast();
-        let alloc = unsafe { self.build_alloc_mut().build_alloc_ref(ptr.into(), layout) };
-        (alloc, layout)
+    pub fn alloc_ref(&self) -> A {
+        self.alloc
     }
 
     /// Consumes the `Box`, returning a wrapped raw pointer.
@@ -636,7 +592,7 @@ impl<T: ?Sized, A: DeallocRef> Box<T, A> {
     }
 
     #[inline]
-    pub fn into_raw_alloc(b: Self) -> (*mut T, A::BuildAlloc) {
+    pub fn into_raw_alloc(b: Self) -> (*mut T, A) {
         let (p, b) = Self::into_raw_non_null_alloc(b);
         (p.as_ptr(), b)
     }
@@ -672,14 +628,9 @@ impl<T: ?Sized, A: DeallocRef> Box<T, A> {
     }
 
     #[inline]
-    pub fn into_raw_non_null_alloc(b: Self) -> (NonNull<T>, A::BuildAlloc) {
-        // TODO: Replace with `Self::into_unique_alloc(b).into()`
-        let mut ptr = b.ptr;
-        unsafe {
-            let alloc = ptr::read(b.build_alloc());
-            mem::forget(b);
-            (NonNull::new_unchecked(ptr.as_mut()), alloc)
-        }
+    pub fn into_raw_non_null_alloc(b: Self) -> (NonNull<T>, A) {
+        let (unique, alloc) = Self::into_unique_alloc(b);
+        (unique.into(), alloc)
     }
 
     #[inline]
@@ -690,20 +641,18 @@ impl<T: ?Sized, A: DeallocRef> Box<T, A> {
 
     #[inline]
     #[doc(hidden)]
-    pub fn into_unique_alloc(b: Self) -> (Unique<T>, A::BuildAlloc) {
+    pub fn into_unique_alloc(b: Self) -> (Unique<T>, A) {
         let ptr = b.ptr;
-        unsafe {
-            let alloc = ptr::read(b.build_alloc());
-            mem::forget(b);
+        let alloc = b.alloc;
+        mem::forget(b);
 
-            // Box is kind-of a library type, but recognized as a "unique pointer" by
-            // Stacked Borrows.  This function here corresponds to "reborrowing to
-            // a raw pointer", but there is no actual reborrow here -- so
-            // without some care, the pointer we are returning here still carries
-            // the tag of `b`, with `Unique` permission.
-            // We round-trip through a mutable reference to avoid that.
-            (ptr, alloc)
-        }
+        // Box is kind-of a library type, but recognized as a "unique pointer" by
+        // Stacked Borrows.  This function here corresponds to "reborrowing to
+        // a raw pointer", but there is no actual reborrow here -- so
+        // without some care, the pointer we are returning here still carries
+        // the tag of `b`, with `Unique` permission.
+        // We round-trip through a mutable reference to avoid that.
+        (ptr, alloc)
     }
 
     /// Consumes and leaks the `Box`, returning a mutable reference,
@@ -756,17 +705,18 @@ impl<T: ?Sized, A: DeallocRef> Box<T, A> {
     }
 }
 
-fn drop_box<T: ?Sized, A: DeallocRef>(boxed: &mut Box<T, A>) {
+fn drop_box<T: ?Sized, A: AllocRef>(boxed: &mut Box<T, A>) {
     unsafe {
+        let layout = Layout::for_value(boxed.as_ref());
         let ptr = boxed.ptr;
         ptr::drop_in_place(ptr.as_ptr());
-        if let (mut alloc, Some(layout)) = boxed.alloc_ref() {
-            alloc.dealloc(ptr.cast().into(), layout)
-        }
+        boxed
+            .alloc
+            .dealloc(MemoryBlock::new(ptr.cast().into(), layout));
     }
 }
 
-unsafe impl<#[may_dangle] T: ?Sized, A: DeallocRef> Drop for Box<T, A> {
+unsafe impl<#[may_dangle] T: ?Sized, A: AllocRef> Drop for Box<T, A> {
     fn drop(&mut self) {
         drop_box(self);
     }
@@ -775,7 +725,7 @@ unsafe impl<#[may_dangle] T: ?Sized, A: DeallocRef> Drop for Box<T, A> {
 impl<T, A> Default for Box<T, A>
 where
     T: Default,
-    A: Default + AllocRef + Abort,
+    A: Default + AllocRef,
 {
     #[must_use]
     fn default() -> Self {
@@ -786,7 +736,7 @@ where
 #[allow(clippy::use_self)]
 impl<T, A: AllocRef> Default for Box<[T], A>
 where
-    A: Default + Abort,
+    A: Default,
 {
     #[must_use]
     fn default() -> Self {
@@ -795,7 +745,7 @@ where
 }
 
 #[inline]
-unsafe fn from_boxed_utf8_unchecked<A: DeallocRef>(v: Box<[u8], A>) -> Box<str, A> {
+unsafe fn from_boxed_utf8_unchecked<A: AllocRef>(v: Box<[u8], A>) -> Box<str, A> {
     let (ptr, b) = Box::into_raw_alloc(v);
     Box::from_raw_in(ptr as *mut str, b)
 }
@@ -803,7 +753,7 @@ unsafe fn from_boxed_utf8_unchecked<A: DeallocRef>(v: Box<[u8], A>) -> Box<str, 
 #[allow(clippy::use_self)]
 impl<A> Default for Box<str, A>
 where
-    A: Default + AllocRef + Abort,
+    A: Default + AllocRef,
 {
     #[must_use]
     fn default() -> Self {
@@ -811,11 +761,7 @@ where
     }
 }
 
-impl<T: Clone, A: AllocRef> Clone for Box<T, A>
-where
-    A: Abort,
-    A::BuildAlloc: Clone,
-{
+impl<T: Clone, A: AllocRef> Clone for Box<T, A> {
     /// Returns a new box with a `clone()` of this box's contents.
     ///
     /// # Examples
@@ -835,14 +781,7 @@ where
     /// ```
     #[inline]
     fn clone(&self) -> Self {
-        let mut b = self.build_alloc().clone();
-        let old_ptr = self.ptr.cast();
-        let old_layout = NonZeroLayout::for_value(self.as_ref());
-
-        unsafe {
-            let a = b.build_alloc_ref(old_ptr.into(), old_layout);
-            self.clone_in(a)
-        }
+        self.clone_in(self.alloc)
     }
 
     /// Copies `source`'s contents into `self` without creating a new allocation.
@@ -874,19 +813,18 @@ where
 impl<T: Clone, A: AllocRef, B: AllocRef> CloneIn<B> for Box<T, A> {
     type Cloned = Box<T, B>;
 
-    fn clone_in(&self, a: B) -> Self::Cloned
-    where
-        B: Abort,
-    {
+    fn clone_in(&self, a: B) -> Self::Cloned {
         Box::new_in(self.as_ref().clone(), a)
     }
 
-    fn try_clone_in(&self, a: B) -> Result<Self::Cloned, B::Error> {
-        Box::try_new_in(self.as_ref().clone(), a)
+    fn try_clone_in(&self, a: B) -> Result<Self::Cloned, TryReserveError> {
+        Box::try_new_in(self.as_ref().clone(), a).map_err(|_| AllocError {
+            layout: Layout::new::<T>(),
+        })
     }
 }
 
-impl<T: ?Sized + PartialEq, A: DeallocRef> PartialEq for Box<T, A> {
+impl<T: ?Sized + PartialEq, A: AllocRef> PartialEq for Box<T, A> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         PartialEq::eq(&**self, &**other)
@@ -897,7 +835,7 @@ impl<T: ?Sized + PartialEq, A: DeallocRef> PartialEq for Box<T, A> {
         PartialEq::ne(&**self, &**other)
     }
 }
-impl<T: ?Sized + PartialOrd, A: DeallocRef> PartialOrd for Box<T, A> {
+impl<T: ?Sized + PartialOrd, A: AllocRef> PartialOrd for Box<T, A> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         PartialOrd::partial_cmp(&**self, &**other)
@@ -919,21 +857,21 @@ impl<T: ?Sized + PartialOrd, A: DeallocRef> PartialOrd for Box<T, A> {
         PartialOrd::ge(&**self, &**other)
     }
 }
-impl<T: ?Sized + Ord, A: DeallocRef> Ord for Box<T, A> {
+impl<T: ?Sized + Ord, A: AllocRef> Ord for Box<T, A> {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(&**self, &**other)
     }
 }
-impl<T: ?Sized + Eq, A: DeallocRef> Eq for Box<T, A> {}
+impl<T: ?Sized + Eq, A: AllocRef> Eq for Box<T, A> {}
 
-impl<T: ?Sized + Hash, A: DeallocRef> Hash for Box<T, A> {
+impl<T: ?Sized + Hash, A: AllocRef> Hash for Box<T, A> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (**self).hash(state);
     }
 }
 
-impl<T: ?Sized + Hasher, A: DeallocRef> Hasher for Box<T, A> {
+impl<T: ?Sized + Hasher, A: AllocRef> Hasher for Box<T, A> {
     fn finish(&self) -> u64 {
         (**self).finish()
     }
@@ -980,7 +918,7 @@ impl<T: ?Sized + Hasher, A: DeallocRef> Hasher for Box<T, A> {
 
 impl<T, A> From<T> for Box<T, A>
 where
-    A: Default + AllocRef + Abort,
+    A: Default + AllocRef,
 {
     /// Converts a generic type `T` into a `Box<T>`
     ///
@@ -1002,7 +940,7 @@ where
     }
 }
 
-impl<T: ?Sized, A: DeallocRef> From<Box<T, A>> for Pin<Box<T, A>> {
+impl<T: ?Sized, A: AllocRef> From<Box<T, A>> for Pin<Box<T, A>> {
     /// Converts a `Box<T, A>` into a `Pin<Box<T, A>>`
     ///
     /// This conversion does not allocate on the heap and happens in place.
@@ -1014,7 +952,7 @@ impl<T: ?Sized, A: DeallocRef> From<Box<T, A>> for Pin<Box<T, A>> {
 #[allow(clippy::use_self)]
 impl<T: Copy, A: AllocRef> From<&[T]> for Box<[T], A>
 where
-    A: Default + Abort,
+    A: Default,
 {
     /// Converts a `&[T]` into a `Box<[T], B>`
     ///
@@ -1035,7 +973,7 @@ where
         let buf = RawVec::with_capacity_in(len, A::default());
         unsafe {
             ptr::copy_nonoverlapping(slice.as_ptr(), buf.ptr(), len);
-            buf.into_box().assume_init()
+            buf.into_box(slice.len()).assume_init()
         }
     }
 }
@@ -1043,7 +981,7 @@ where
 #[allow(clippy::use_self)]
 impl<A: AllocRef> From<&str> for Box<str, A>
 where
-    A: Default + Abort,
+    A: Default,
 {
     /// Converts a `&str` into a `Box<str>`
     ///
@@ -1065,7 +1003,7 @@ where
 }
 
 #[allow(clippy::use_self)]
-impl<A: DeallocRef> From<Box<str, A>> for Box<[u8], A> {
+impl<A: AllocRef> From<Box<str, A>> for Box<[u8], A> {
     /// Converts a `Box<str>>` into a `Box<[u8]>`
     ///
     /// This conversion does not allocate on the heap and happens in place.
@@ -1106,7 +1044,7 @@ where
 }
 
 #[allow(clippy::use_self)]
-impl<A: DeallocRef> Box<dyn Any, A> {
+impl<A: AllocRef> Box<dyn Any, A> {
     #[inline]
     /// Attempt to downcast the box to a concrete type.
     ///
@@ -1138,7 +1076,7 @@ impl<A: DeallocRef> Box<dyn Any, A> {
 }
 
 #[allow(clippy::use_self)]
-impl<A: DeallocRef> Box<dyn Any + Send, A> {
+impl<A: AllocRef> Box<dyn Any + Send, A> {
     #[inline]
     /// Attempt to downcast the box to a concrete type.
     ///
@@ -1169,19 +1107,19 @@ impl<A: DeallocRef> Box<dyn Any + Send, A> {
     }
 }
 
-impl<T: fmt::Display + ?Sized, A: DeallocRef> fmt::Display for Box<T, A> {
+impl<T: fmt::Display + ?Sized, A: AllocRef> fmt::Display for Box<T, A> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&**self, f)
     }
 }
 
-impl<T: fmt::Debug + ?Sized, A: DeallocRef> fmt::Debug for Box<T, A> {
+impl<T: fmt::Debug + ?Sized, A: AllocRef> fmt::Debug for Box<T, A> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&**self, f)
     }
 }
 
-impl<T: ?Sized, A: DeallocRef> fmt::Pointer for Box<T, A> {
+impl<T: ?Sized, A: AllocRef> fmt::Pointer for Box<T, A> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // It's not possible to extract the inner Uniq directly from the Box,
         // instead we cast it to a *const which aliases the Unique
@@ -1190,22 +1128,22 @@ impl<T: ?Sized, A: DeallocRef> fmt::Pointer for Box<T, A> {
     }
 }
 
-impl<T: ?Sized, A: DeallocRef> Deref for Box<T, A> {
+impl<T: ?Sized, A: AllocRef> Deref for Box<T, A> {
     type Target = T;
 
     fn deref(&self) -> &T {
         unsafe { self.ptr.as_ref() }
     }
 }
-impl<T: ?Sized, A: DeallocRef> DerefMut for Box<T, A> {
+impl<T: ?Sized, A: AllocRef> DerefMut for Box<T, A> {
     fn deref_mut(&mut self) -> &mut T {
         unsafe { self.ptr.as_mut() }
     }
 }
 
-impl<T: ?Sized, A: DeallocRef> core::ops::Receiver for Box<T, A> {}
+impl<T: ?Sized, A: AllocRef> core::ops::Receiver for Box<T, A> {}
 
-impl<I: Iterator + ?Sized, A: DeallocRef> Iterator for Box<I, A> {
+impl<I: Iterator + ?Sized, A: AllocRef> Iterator for Box<I, A> {
     type Item = I::Item;
     fn next(&mut self) -> Option<I::Item> {
         (**self).next()
@@ -1226,7 +1164,7 @@ trait BoxIter {
     fn last(self) -> Option<Self::Item>;
 }
 
-impl<I: Iterator + ?Sized, A: DeallocRef> BoxIter for Box<I, A> {
+impl<I: Iterator + ?Sized, A: AllocRef> BoxIter for Box<I, A> {
     type Item = I::Item;
 
     fn last(self) -> Option<I::Item> {
@@ -1240,7 +1178,7 @@ impl<I: Iterator + ?Sized, A: DeallocRef> BoxIter for Box<I, A> {
     }
 }
 
-impl<I: DoubleEndedIterator + ?Sized, A: DeallocRef> DoubleEndedIterator for Box<I, A> {
+impl<I: DoubleEndedIterator + ?Sized, A: AllocRef> DoubleEndedIterator for Box<I, A> {
     fn next_back(&mut self) -> Option<I::Item> {
         (**self).next_back()
     }
@@ -1249,7 +1187,7 @@ impl<I: DoubleEndedIterator + ?Sized, A: DeallocRef> DoubleEndedIterator for Box
     }
 }
 
-impl<I: ExactSizeIterator + ?Sized, A: DeallocRef> ExactSizeIterator for Box<I, A> {
+impl<I: ExactSizeIterator + ?Sized, A: AllocRef> ExactSizeIterator for Box<I, A> {
     fn len(&self) -> usize {
         (**self).len()
     }
@@ -1259,9 +1197,9 @@ impl<I: ExactSizeIterator + ?Sized, A: DeallocRef> ExactSizeIterator for Box<I, 
     }
 }
 
-impl<I: FusedIterator + ?Sized, A: DeallocRef> FusedIterator for Box<I, A> {}
+impl<I: FusedIterator + ?Sized, A: AllocRef> FusedIterator for Box<I, A> {}
 
-impl<Args, F: FnOnce<Args> + Copy + ?Sized, A: DeallocRef> FnOnce<Args> for Box<F, A> {
+impl<Args, F: FnOnce<Args> + Copy + ?Sized, A: AllocRef> FnOnce<Args> for Box<F, A> {
     type Output = <F as FnOnce<Args>>::Output;
 
     extern "rust-call" fn call_once(self, args: Args) -> Self::Output {
@@ -1269,19 +1207,19 @@ impl<Args, F: FnOnce<Args> + Copy + ?Sized, A: DeallocRef> FnOnce<Args> for Box<
     }
 }
 
-impl<Args, F: FnMut<Args> + Copy + ?Sized, A: DeallocRef> FnMut<Args> for Box<F, A> {
+impl<Args, F: FnMut<Args> + Copy + ?Sized, A: AllocRef> FnMut<Args> for Box<F, A> {
     extern "rust-call" fn call_mut(&mut self, args: Args) -> Self::Output {
         <F as FnMut<Args>>::call_mut(self, args)
     }
 }
 
-impl<Args, F: Fn<Args> + Copy + ?Sized, A: DeallocRef> Fn<Args> for Box<F, A> {
+impl<Args, F: Fn<Args> + Copy + ?Sized, A: AllocRef> Fn<Args> for Box<F, A> {
     extern "rust-call" fn call(&self, args: Args) -> Self::Output {
         <F as Fn<Args>>::call(self, args)
     }
 }
 
-impl<T: ?Sized + core::marker::Unsize<U>, U: ?Sized, A: DeallocRef>
+impl<T: ?Sized + core::marker::Unsize<U>, U: ?Sized, A: AllocRef>
     core::ops::CoerceUnsized<Box<U, A>> for Box<T, A>
 {
 }
@@ -1304,17 +1242,11 @@ impl_dispatch_from_dyn!(std::alloc::System);
 #[allow(clippy::items_after_statements)]
 impl<T: Clone, A: Clone> Clone for Box<[T], A>
 where
-    A: AllocRef + Abort,
-    A::BuildAlloc: Clone,
+    A: AllocRef,
 {
     fn clone(&self) -> Self {
-        let mut b = self.build_alloc().clone();
-        let old_ptr = self.ptr.cast();
-        let old_layout = NonZeroLayout::for_value(self.as_ref());
-        let a = unsafe { b.build_alloc_ref(old_ptr.into(), old_layout) };
-
         let mut new = BoxBuilder {
-            data: RawVec::with_capacity_in(self.len(), a),
+            data: RawVec::with_capacity_in(self.len(), self.alloc),
             len: 0,
         };
 
@@ -1332,20 +1264,21 @@ where
         return unsafe { new.into_box() };
 
         // Helper type for responding to panics correctly.
-        struct BoxBuilder<T, A: DeallocRef> {
+        struct BoxBuilder<T, A: AllocRef> {
             data: RawVec<T, A>,
             len: usize,
         }
 
-        impl<T, A: DeallocRef> BoxBuilder<T, A> {
+        impl<T, A: AllocRef> BoxBuilder<T, A> {
             unsafe fn into_box(self) -> Box<[T], A> {
                 let raw = ptr::read(&self.data);
+                let len = self.len;
                 mem::forget(self);
-                raw.into_box().assume_init()
+                raw.into_box(len).assume_init()
             }
         }
 
-        impl<T, A: DeallocRef> Drop for BoxBuilder<T, A> {
+        impl<T, A: AllocRef> Drop for BoxBuilder<T, A> {
             fn drop(&mut self) {
                 let mut data = self.data.ptr();
                 let max = unsafe { data.add(self.len) };
@@ -1361,24 +1294,24 @@ where
     }
 }
 
-impl<T: ?Sized, A: DeallocRef> borrow::Borrow<T> for Box<T, A> {
+impl<T: ?Sized, A: AllocRef> borrow::Borrow<T> for Box<T, A> {
     fn borrow(&self) -> &T {
         &**self
     }
 }
 
-impl<T: ?Sized, A: DeallocRef> borrow::BorrowMut<T> for Box<T, A> {
+impl<T: ?Sized, A: AllocRef> borrow::BorrowMut<T> for Box<T, A> {
     fn borrow_mut(&mut self) -> &mut T {
         &mut **self
     }
 }
 
-impl<T: ?Sized, A: DeallocRef> AsRef<T> for Box<T, A> {
+impl<T: ?Sized, A: AllocRef> AsRef<T> for Box<T, A> {
     fn as_ref(&self) -> &T {
         &**self
     }
 }
-impl<T: ?Sized, A: DeallocRef> AsMut<T> for Box<T, A> {
+impl<T: ?Sized, A: AllocRef> AsMut<T> for Box<T, A> {
     fn as_mut(&mut self) -> &mut T {
         &mut **self
     }
@@ -1406,9 +1339,9 @@ impl<T: ?Sized, A: DeallocRef> AsMut<T> for Box<T, A> {
  *  implementation of `Unpin` (where `T: Unpin`) would be valid/safe, and
  *  could have a method to project a Pin<T> from it.
  */
-impl<T: ?Sized, A: DeallocRef> Unpin for Box<T, A> {}
+impl<T: ?Sized, A: AllocRef> Unpin for Box<T, A> {}
 
-impl<F: ?Sized + Future + Unpin, A: DeallocRef> Future for Box<F, A> {
+impl<F: ?Sized + Future + Unpin, A: AllocRef> Future for Box<F, A> {
     type Output = F::Output;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {

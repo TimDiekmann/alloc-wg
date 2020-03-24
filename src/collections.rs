@@ -1,6 +1,7 @@
 //! Collection types.
 
-use crate::alloc::{AllocRef, CapacityOverflow, LayoutErr, NonZeroLayout};
+use crate::alloc::{Layout, LayoutErr};
+use core::fmt::Display;
 pub use liballoc::collections::{binary_heap, btree_map, btree_set, linked_list, vec_deque};
 
 #[doc(no_inline)]
@@ -12,35 +13,37 @@ pub use self::{
     vec_deque::VecDeque,
 };
 
-/// Augments `AllocErr` with a `CapacityOverflow` variant.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum CollectionAllocErr<A: AllocRef> {
+/// The error type for `try_reserve` methods.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum TryReserveError {
     /// Error due to the computed capacity exceeding the collection's maximum
     /// (usually `isize::MAX` bytes).
     CapacityOverflow,
 
     /// The memory allocator returned an error
+    #[non_exhaustive]
     AllocError {
         /// The layout of allocation request that failed
-        layout: NonZeroLayout,
-
-        /// Error returned by the allocator
-        inner: A::Error,
+        layout: Layout,
     },
 }
 
-impl<A: AllocRef> From<CapacityOverflow> for CollectionAllocErr<A> {
+impl From<LayoutErr> for TryReserveError {
     #[inline]
-    #[must_use]
-    fn from(_: CapacityOverflow) -> Self {
+    fn from(_: LayoutErr) -> Self {
         Self::CapacityOverflow
     }
 }
 
-impl<A: AllocRef> From<LayoutErr> for CollectionAllocErr<A> {
-    #[inline]
-    #[must_use]
-    fn from(_: LayoutErr) -> Self {
-        Self::CapacityOverflow
+impl Display for TryReserveError {
+    fn fmt(&self, fmt: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+        fmt.write_str("memory allocation failed")?;
+        let reason = match &self {
+            Self::CapacityOverflow => {
+                " because the computed capacity exceeded the collection's maximum"
+            }
+            Self::AllocError { .. } => " because the memory allocator returned a error",
+        };
+        fmt.write_str(reason)
     }
 }

@@ -1,11 +1,9 @@
-use crate::alloc::{Abort, AllocRef};
+use crate::{alloc::AllocRef, collections::TryReserveError};
 
 pub trait CloneIn<A: AllocRef>: Sized {
     type Cloned;
 
-    fn clone_in(&self, a: A) -> Self::Cloned
-    where
-        A: Abort;
+    fn clone_in(&self, a: A) -> Self::Cloned;
 
-    fn try_clone_in(&self, a: A) -> Result<Self::Cloned, A::Error>;
+    fn try_clone_in(&self, a: A) -> Result<Self::Cloned, TryReserveError>;
 }
