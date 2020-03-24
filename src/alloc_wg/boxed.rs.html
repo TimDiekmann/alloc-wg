@@ -1454,12 +1454,12 @@
     <span class="ident">hash</span>::{<span class="ident">Hash</span>, <span class="ident">Hasher</span>},
     <span class="ident">iter</span>::<span class="ident">FusedIterator</span>,
     <span class="ident">mem</span>,
+    <span class="ident">mem</span>::<span class="ident">MaybeUninit</span>,
     <span class="ident">ops</span>::{<span class="ident">Deref</span>, <span class="ident">DerefMut</span>},
     <span class="ident">pin</span>::<span class="ident">Pin</span>,
     <span class="ident">ptr</span>::{<span class="self">self</span>, <span class="ident">NonNull</span>},
     <span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>},
 };
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">MaybeUninit</span>;
 
 <span class="doccomment">/// A pointer type for heap allocation.</span>
 <span class="doccomment">///</span>
@@ -1533,10 +1533,10 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// use alloc_wg::{alloc::System, boxed::Box};</span>
+    <span class="doccomment">/// use alloc_wg::{alloc::Global, boxed::Box};</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # #[allow(unused_variables)]</span>
-    <span class="doccomment">/// let five = Box::new_in(5, System);</span>
+    <span class="doccomment">/// let five = Box::new_in(5, Global);</span>
     <span class="doccomment">/// ```</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">inline_always</span>)]</span>
     <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
@@ -1554,10 +1554,10 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// use alloc_wg::{alloc::System, boxed::Box};</span>
+    <span class="doccomment">/// use alloc_wg::{alloc::Global, boxed::Box};</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # #[allow(unused_variables)]</span>
-    <span class="doccomment">/// let five = Box::try_new_in(5, System)?;</span>
+    <span class="doccomment">/// let five = Box::try_new_in(5, Global)?;</span>
     <span class="doccomment">/// # Ok::&lt;_, alloc_wg::alloc::AllocErr&gt;(())</span>
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_new_in</span>(<span class="ident">x</span>: <span class="ident">T</span>, <span class="ident">alloc</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">AllocErr</span><span class="op">&gt;</span> {
@@ -1573,9 +1573,9 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// use alloc_wg::{alloc::System, boxed::Box};</span>
+    <span class="doccomment">/// use alloc_wg::{alloc::Global, boxed::Box};</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut five = Box::&lt;u32, _&gt;::new_uninit_in(System);</span>
+    <span class="doccomment">/// let mut five = Box::&lt;u32, _&gt;::new_uninit_in(Global);</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// let five = unsafe {</span>
     <span class="doccomment">///     // Deferred initialization:</span>
@@ -1600,9 +1600,9 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// use alloc_wg::{alloc::System, boxed::Box};</span>
+    <span class="doccomment">/// use alloc_wg::{alloc::Global, boxed::Box};</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut five = Box::&lt;u32, System&gt;::try_new_uninit_in(System)?;</span>
+    <span class="doccomment">/// let mut five = Box::&lt;u32, Global&gt;::try_new_uninit_in(Global)?;</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// let five = unsafe {</span>
     <span class="doccomment">///     // Deferred initialization:</span>
@@ -1673,9 +1673,9 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// use alloc_wg::{alloc::System, boxed::Box};</span>
+    <span class="doccomment">/// use alloc_wg::{alloc::Global, boxed::Box};</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut values = Box::&lt;[u32], _&gt;::new_uninit_slice_in(3, System);</span>
+    <span class="doccomment">/// let mut values = Box::&lt;[u32], _&gt;::new_uninit_slice_in(3, Global);</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// let values = unsafe {</span>
     <span class="doccomment">///     // Deferred initialization:</span>
@@ -1700,9 +1700,9 @@
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// use alloc_wg::{alloc::System, boxed::Box};</span>
+    <span class="doccomment">/// use alloc_wg::{alloc::Global, boxed::Box};</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut values = Box::&lt;[u32], System&gt;::try_new_uninit_slice_in(3, System)?;</span>
+    <span class="doccomment">/// let mut values = Box::&lt;[u32], Global&gt;::try_new_uninit_slice_in(3, Global)?;</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// let values = unsafe {</span>
     <span class="doccomment">///     // Deferred initialization:</span>

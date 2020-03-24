@@ -28,22 +28,22 @@
 <p>This doesn't actually allocate if <code>T</code> is zero-sized.</p>
 <h1 id="example-2" class="section-header"><a href="#example-2">Example</a></h1>
 <div class="example-wrap"><pre class="rust rust-example-rendered">
-<span class="kw">use</span> <span class="ident">alloc_wg</span>::{<span class="ident">alloc</span>::<span class="ident">System</span>, <span class="ident">boxed</span>::<span class="ident">Box</span>};
+<span class="kw">use</span> <span class="ident">alloc_wg</span>::{<span class="ident">alloc</span>::<span class="ident">Global</span>, <span class="ident">boxed</span>::<span class="ident">Box</span>};
 
-<span class="kw">let</span> <span class="ident">five</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new_in</span>(<span class="number">5</span>, <span class="ident">System</span>);</pre></div>
+<span class="kw">let</span> <span class="ident">five</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new_in</span>(<span class="number">5</span>, <span class="ident">Global</span>);</pre></div>
 </div><h4 id='method.try_new_in' class="method"><code id='try_new_in.v'>pub fn <a href='#method.try_new_in' class='fnname'>try_new_in</a>(x: T, alloc: A) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="struct" href="../../alloc_wg/alloc/struct.AllocErr.html" title="struct alloc_wg::alloc::AllocErr">AllocErr</a>&gt;</code><a class='srclink' href='../../src/alloc_wg/boxed.rs.html#212-218' title='goto source code'>[src]</a></h4><div class='docblock'><p>Tries to allocate memory with the given allocator and then places <code>x</code> into it.</p>
 <p>This doesn't actually allocate if <code>T</code> is zero-sized.</p>
 <h1 id="example-3" class="section-header"><a href="#example-3">Example</a></h1>
 <div class="example-wrap"><pre class="rust rust-example-rendered">
-<span class="kw">use</span> <span class="ident">alloc_wg</span>::{<span class="ident">alloc</span>::<span class="ident">System</span>, <span class="ident">boxed</span>::<span class="ident">Box</span>};
+<span class="kw">use</span> <span class="ident">alloc_wg</span>::{<span class="ident">alloc</span>::<span class="ident">Global</span>, <span class="ident">boxed</span>::<span class="ident">Box</span>};
 
-<span class="kw">let</span> <span class="ident">five</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">try_new_in</span>(<span class="number">5</span>, <span class="ident">System</span>)<span class="question-mark">?</span>;</pre></div>
+<span class="kw">let</span> <span class="ident">five</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">try_new_in</span>(<span class="number">5</span>, <span class="ident">Global</span>)<span class="question-mark">?</span>;</pre></div>
 </div><h4 id='method.new_uninit_in' class="method"><code id='new_uninit_in.v'>pub fn <a href='#method.new_uninit_in' class='fnname'>new_uninit_in</a>(a: A) -&gt; <a class="struct" href="../../alloc_wg/boxed/struct.Box.html" title="struct alloc_wg::boxed::Box">Box</a>&lt;<a class="union" href="https://doc.rust-lang.org/nightly/core/mem/maybe_uninit/union.MaybeUninit.html" title="union core::mem::maybe_uninit::MaybeUninit">MaybeUninit</a>&lt;T&gt;, A&gt;</code><a class='srclink' href='../../src/alloc_wg/boxed.rs.html#240-245' title='goto source code'>[src]</a></h4><div class='docblock'><p>Constructs a new box with uninitialized contents in a specified allocator.</p>
 <h1 id="example-4" class="section-header"><a href="#example-4">Example</a></h1>
 <div class="example-wrap"><pre class="rust rust-example-rendered">
-<span class="kw">use</span> <span class="ident">alloc_wg</span>::{<span class="ident">alloc</span>::<span class="ident">System</span>, <span class="ident">boxed</span>::<span class="ident">Box</span>};
+<span class="kw">use</span> <span class="ident">alloc_wg</span>::{<span class="ident">alloc</span>::<span class="ident">Global</span>, <span class="ident">boxed</span>::<span class="ident">Box</span>};
 
-<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">five</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="op">&lt;</span><span class="ident">u32</span>, <span class="kw">_</span><span class="op">&gt;</span>::<span class="ident">new_uninit_in</span>(<span class="ident">System</span>);
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">five</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="op">&lt;</span><span class="ident">u32</span>, <span class="kw">_</span><span class="op">&gt;</span>::<span class="ident">new_uninit_in</span>(<span class="ident">Global</span>);
 
 <span class="kw">let</span> <span class="ident">five</span> <span class="op">=</span> <span class="kw">unsafe</span> {
     <span class="comment">// Deferred initialization:</span>
@@ -56,9 +56,9 @@
 </div><h4 id='method.try_new_uninit_in' class="method"><code id='try_new_uninit_in.v'>pub fn <a href='#method.try_new_uninit_in' class='fnname'>try_new_uninit_in</a>(alloc: A) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="struct" href="../../alloc_wg/boxed/struct.Box.html" title="struct alloc_wg::boxed::Box">Box</a>&lt;<a class="union" href="https://doc.rust-lang.org/nightly/core/mem/maybe_uninit/union.MaybeUninit.html" title="union core::mem::maybe_uninit::MaybeUninit">MaybeUninit</a>&lt;T&gt;, A&gt;, <a class="struct" href="../../alloc_wg/alloc/struct.AllocErr.html" title="struct alloc_wg::alloc::AllocErr">AllocErr</a>&gt;</code><a class='srclink' href='../../src/alloc_wg/boxed.rs.html#266-270' title='goto source code'>[src]</a></h4><div class='docblock'><p>Tries to construct a new box with uninitialized contents in a specified allocator.</p>
 <h1 id="example-5" class="section-header"><a href="#example-5">Example</a></h1>
 <div class="example-wrap"><pre class="rust rust-example-rendered">
-<span class="kw">use</span> <span class="ident">alloc_wg</span>::{<span class="ident">alloc</span>::<span class="ident">System</span>, <span class="ident">boxed</span>::<span class="ident">Box</span>};
+<span class="kw">use</span> <span class="ident">alloc_wg</span>::{<span class="ident">alloc</span>::<span class="ident">Global</span>, <span class="ident">boxed</span>::<span class="ident">Box</span>};
 
-<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">five</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">System</span><span class="op">&gt;</span>::<span class="ident">try_new_uninit_in</span>(<span class="ident">System</span>)<span class="question-mark">?</span>;
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">five</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="op">&lt;</span><span class="ident">u32</span>, <span class="ident">Global</span><span class="op">&gt;</span>::<span class="ident">try_new_uninit_in</span>(<span class="ident">Global</span>)<span class="question-mark">?</span>;
 
 <span class="kw">let</span> <span class="ident">five</span> <span class="op">=</span> <span class="kw">unsafe</span> {
     <span class="comment">// Deferred initialization:</span>
@@ -92,9 +92,9 @@
 </div></div><h3 id='impl-3' class='impl'><code class='in-band'>impl&lt;T, A:&nbsp;<a class="trait" href="../../alloc_wg/alloc/trait.AllocRef.html" title="trait alloc_wg::alloc::AllocRef">AllocRef</a>&gt; <a class="struct" href="../../alloc_wg/boxed/struct.Box.html" title="struct alloc_wg::boxed::Box">Box</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">[</a>T<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>, A&gt;</code><a href='#impl-3' class='anchor'></a><a class='srclink' href='../../src/alloc_wg/boxed.rs.html#319-374' title='goto source code'>[src]</a></h3><div class='impl-items'><h4 id='method.new_uninit_slice_in' class="method"><code id='new_uninit_slice_in.v'>pub fn <a href='#method.new_uninit_slice_in' class='fnname'>new_uninit_slice_in</a>(len: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>, a: A) -&gt; <a class="struct" href="../../alloc_wg/boxed/struct.Box.html" title="struct alloc_wg::boxed::Box">Box</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">[</a><a class="union" href="https://doc.rust-lang.org/nightly/core/mem/maybe_uninit/union.MaybeUninit.html" title="union core::mem::maybe_uninit::MaybeUninit">MaybeUninit</a>&lt;T&gt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>, A&gt;</code><a class='srclink' href='../../src/alloc_wg/boxed.rs.html#342-344' title='goto source code'>[src]</a></h4><div class='docblock'><p>Construct a new boxed slice with uninitialized contents with the spoecified allocator.</p>
 <h1 id="example-7" class="section-header"><a href="#example-7">Example</a></h1>
 <div class="example-wrap"><pre class="rust rust-example-rendered">
-<span class="kw">use</span> <span class="ident">alloc_wg</span>::{<span class="ident">alloc</span>::<span class="ident">System</span>, <span class="ident">boxed</span>::<span class="ident">Box</span>};
+<span class="kw">use</span> <span class="ident">alloc_wg</span>::{<span class="ident">alloc</span>::<span class="ident">Global</span>, <span class="ident">boxed</span>::<span class="ident">Box</span>};
 
-<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">values</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="op">&lt;</span>[<span class="ident">u32</span>], <span class="kw">_</span><span class="op">&gt;</span>::<span class="ident">new_uninit_slice_in</span>(<span class="number">3</span>, <span class="ident">System</span>);
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">values</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="op">&lt;</span>[<span class="ident">u32</span>], <span class="kw">_</span><span class="op">&gt;</span>::<span class="ident">new_uninit_slice_in</span>(<span class="number">3</span>, <span class="ident">Global</span>);
 
 <span class="kw">let</span> <span class="ident">values</span> <span class="op">=</span> <span class="kw">unsafe</span> {
     <span class="comment">// Deferred initialization:</span>
@@ -110,9 +110,9 @@
 allocator.</p>
 <h1 id="example-8" class="section-header"><a href="#example-8">Example</a></h1>
 <div class="example-wrap"><pre class="rust rust-example-rendered">
-<span class="kw">use</span> <span class="ident">alloc_wg</span>::{<span class="ident">alloc</span>::<span class="ident">System</span>, <span class="ident">boxed</span>::<span class="ident">Box</span>};
+<span class="kw">use</span> <span class="ident">alloc_wg</span>::{<span class="ident">alloc</span>::<span class="ident">Global</span>, <span class="ident">boxed</span>::<span class="ident">Box</span>};
 
-<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">values</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="op">&lt;</span>[<span class="ident">u32</span>], <span class="ident">System</span><span class="op">&gt;</span>::<span class="ident">try_new_uninit_slice_in</span>(<span class="number">3</span>, <span class="ident">System</span>)<span class="question-mark">?</span>;
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">values</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="op">&lt;</span>[<span class="ident">u32</span>], <span class="ident">Global</span><span class="op">&gt;</span>::<span class="ident">try_new_uninit_slice_in</span>(<span class="number">3</span>, <span class="ident">Global</span>)<span class="question-mark">?</span>;
 
 <span class="kw">let</span> <span class="ident">values</span> <span class="op">=</span> <span class="kw">unsafe</span> {
     <span class="comment">// Deferred initialization:</span>
