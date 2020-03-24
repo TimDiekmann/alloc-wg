@@ -166,63 +166,9 @@
 <span id="166">166</span>
 <span id="167">167</span>
 <span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
-<span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! An attempt to collect several proposals of [rust-lang/wg-allocators](https://github.com/rust-lang/wg-allocators) into a</span>
 <span class="doccomment">//! MVP.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! Changes regarding the current `Alloc` trait</span>
-<span class="doccomment">//! -------------------------------------------</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! - The first thing to notice is, that [`Alloc`] was renamed to [`AllocRef`] in order to show that they are typically</span>
-<span class="doccomment">//!   implemented for a reference or smart pointer or ZST, not directly for the type that actually holds the allocator’s</span>
-<span class="doccomment">//!   state.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//!   Issue on WG repository: [rust-lang/wg-allocators#8](https://github.com/rust-lang/wg-allocators/issues/8)</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! - [`AllocRef`] was split up into [`AllocRef`], [`DeallocRef`], and [`ReallocRef`] to make more flexible allocators</span>
-<span class="doccomment">//!   possible.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//!   Issue: [rust-lang/wg-allocators#9](https://github.com/rust-lang/wg-allocators/issues/9)</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! - The allocators has to be associated with [`BuildAllocRef`]. It is related to the allocator traits similar how</span>
-<span class="doccomment">//!   [`BuildHasher`] is related to [`Hasher`]. Although the signatures are different, it makes an even more flexible</span>
-<span class="doccomment">//!   allocator design possible.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//!   Issue: [rust-lang/wg-allocators#12](https://github.com/rust-lang/wg-allocators/issues/12)</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! - Added an associative error type to [`AllocRef`]. Besides adding the possibility of returning additional information on</span>
-<span class="doccomment">//!   allocation failure, it&#39;s also possible to split the usage of the [`AllocRef`] into a fallible and an infallible case.</span>
-<span class="doccomment">//!   Personally I think this is a pretty big deal, as kernel programmer can rely on allocation, which will never fail.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//!   Issue: [rust-lang/wg-allocators#23](https://github.com/rust-lang/wg-allocators/issues/23)</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! - The new layout type [`NonZeroLayout`] was introduced. Currently, implementors of [`Alloc`] can chose to allow</span>
-<span class="doccomment">//!   zero-sized allocation so in a generic context it&#39;s impossible to rely on this, so banning zero-sized allocation is a</span>
-<span class="doccomment">//!   possible step to prevent this. This also removes `unsafe` from [`AllocRef::alloc`] and [`AllocRef::alloc_zeroed`], and</span>
-<span class="doccomment">//!   unlocks the possibility to move the extension API like `alloc_array` into a separate trait.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//!   Issue: [rust-lang/wg-allocators#16](https://github.com/rust-lang/wg-allocators/issues/16)</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! - Support reallocating to a different alignment.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//!   Issue: [rust-lang/wg-allocators#5](https://github.com/rust-lang/wg-allocators/issues/5)</span>
-<span class="doccomment">//!</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! [`Alloc`]: https://doc.rust-lang.org/1.38.0/alloc/alloc/trait.Alloc.html</span>
 <span class="doccomment">//! [`AllocRef`]: crate::alloc::AllocRef</span>
@@ -237,15 +183,25 @@
 <span class="doccomment">//! [`NonZeroLayout`]: crate::alloc::NonZeroLayout</span>
 
 <span class="attribute">#![<span class="ident">feature</span>(
+    <span class="ident">alloc_layout_extra</span>,
+    <span class="ident">alloc_error_hook</span>,
     <span class="ident">dropck_eyepatch</span>,
     <span class="ident">coerce_unsized</span>,
+    <span class="ident">const_fn</span>,
     <span class="ident">const_if_match</span>,
+    <span class="ident">const_panic</span>,
+    <span class="ident">const_nonzero_int_methods</span>,
+    <span class="ident">const_saturating_int_methods</span>,
+    <span class="ident">const_alloc_layout</span>,
+    <span class="ident">const_raw_ptr_to_usize_cast</span>,
     <span class="ident">core_intrinsics</span>,
     <span class="ident">str_internals</span>,
     <span class="ident">dispatch_from_dyn</span>,
     <span class="ident">unsize</span>,
     <span class="ident">exact_size_is_empty</span>,
     <span class="ident">receiver_trait</span>,
+    <span class="ident">maybe_uninit_extra</span>,
+    <span class="ident">ptr_internals</span>,
     <span class="ident">const_generics</span>,
     <span class="ident">const_generic_impls_guard</span>,
     <span class="ident">unboxed_closures</span>,
@@ -254,7 +210,8 @@
     <span class="ident">unsized_locals</span>,
     <span class="ident">fn_traits</span>,
     <span class="ident">exhaustive_patterns</span>,
-    <span class="ident">never_type</span>
+    <span class="ident">never_type</span>,
+    <span class="ident">structural_match</span>
 )]</span>
 <span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>), <span class="ident">no_std</span>)]</span>
 <span class="attribute">#![<span class="ident">doc</span>(<span class="ident">test</span>(<span class="ident">attr</span>(
@@ -288,7 +245,11 @@
     <span class="ident">unused_lifetimes</span>,
     <span class="ident">unused_qualifications</span>
 )]</span>
-<span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">module_name_repetitions</span>, <span class="ident">incomplete_features</span>)]</span>
+<span class="attribute">#![<span class="ident">allow</span>(
+    <span class="ident">clippy</span>::<span class="ident">module_name_repetitions</span>,
+    <span class="ident">clippy</span>::<span class="ident">must_use_candidate</span>,
+    <span class="ident">incomplete_features</span>
+)]</span>
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">alloc</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">boxed</span>;
@@ -304,6 +265,13 @@
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">alloc</span> <span class="kw">as</span> <span class="ident">liballoc</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">liballoc</span>::{<span class="ident">borrow</span>, <span class="ident">fmt</span>, <span class="ident">rc</span>, <span class="ident">slice</span>, <span class="ident">sync</span>};
+
+<span class="comment">// One central function responsible for reporting capacity overflows. This&#39;ll</span>
+<span class="comment">// ensure that the code generation related to these panics is minimal as there&#39;s</span>
+<span class="comment">// only one location which panics rather than a bunch throughout the module.</span>
+<span class="kw">pub</span>(<span class="kw">in</span> <span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">capacity_overflow</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="op">!</span> {
+    <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;capacity overflow&quot;</span>);
+}
 
 <span class="attribute">#[<span class="ident">macro_export</span>]</span>
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">vec</span> {
