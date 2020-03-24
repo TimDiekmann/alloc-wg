@@ -15,7 +15,6 @@
 
 #![feature(
     alloc_layout_extra,
-    alloc_error_hook,
     dropck_eyepatch,
     coerce_unsized,
     const_fn,

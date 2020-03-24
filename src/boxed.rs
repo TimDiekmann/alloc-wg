@@ -103,12 +103,12 @@ use core::{
     hash::{Hash, Hasher},
     iter::FusedIterator,
     mem,
+    mem::MaybeUninit,
     ops::{Deref, DerefMut},
     pin::Pin,
     ptr::{self, NonNull},
     task::{Context, Poll},
 };
-use std::mem::MaybeUninit;
 
 /// A pointer type for heap allocation.
 ///
@@ -182,10 +182,10 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::System, boxed::Box};
+    /// use alloc_wg::{alloc::Global, boxed::Box};
     ///
     /// # #[allow(unused_variables)]
-    /// let five = Box::new_in(5, System);
+    /// let five = Box::new_in(5, Global);
     /// ```
     #[allow(clippy::inline_always)]
     #[inline(always)]
@@ -203,10 +203,10 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::System, boxed::Box};
+    /// use alloc_wg::{alloc::Global, boxed::Box};
     ///
     /// # #[allow(unused_variables)]
-    /// let five = Box::try_new_in(5, System)?;
+    /// let five = Box::try_new_in(5, Global)?;
     /// # Ok::<_, alloc_wg::alloc::AllocErr>(())
     /// ```
     pub fn try_new_in(x: T, alloc: A) -> Result<Self, AllocErr> {
@@ -222,9 +222,9 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::System, boxed::Box};
+    /// use alloc_wg::{alloc::Global, boxed::Box};
     ///
-    /// let mut five = Box::<u32, _>::new_uninit_in(System);
+    /// let mut five = Box::<u32, _>::new_uninit_in(Global);
     ///
     /// let five = unsafe {
     ///     // Deferred initialization:
@@ -249,9 +249,9 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::System, boxed::Box};
+    /// use alloc_wg::{alloc::Global, boxed::Box};
     ///
-    /// let mut five = Box::<u32, System>::try_new_uninit_in(System)?;
+    /// let mut five = Box::<u32, Global>::try_new_uninit_in(Global)?;
     ///
     /// let five = unsafe {
     ///     // Deferred initialization:
@@ -322,9 +322,9 @@ impl<T, A: AllocRef> Box<[T], A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::System, boxed::Box};
+    /// use alloc_wg::{alloc::Global, boxed::Box};
     ///
-    /// let mut values = Box::<[u32], _>::new_uninit_slice_in(3, System);
+    /// let mut values = Box::<[u32], _>::new_uninit_slice_in(3, Global);
     ///
     /// let values = unsafe {
     ///     // Deferred initialization:
@@ -349,9 +349,9 @@ impl<T, A: AllocRef> Box<[T], A> {
     /// # Example
     ///
     /// ```
-    /// use alloc_wg::{alloc::System, boxed::Box};
+    /// use alloc_wg::{alloc::Global, boxed::Box};
     ///
-    /// let mut values = Box::<[u32], System>::try_new_uninit_slice_in(3, System)?;
+    /// let mut values = Box::<[u32], Global>::try_new_uninit_slice_in(3, Global)?;
     ///
     /// let values = unsafe {
     ///     // Deferred initialization:
