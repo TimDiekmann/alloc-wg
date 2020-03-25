@@ -4186,7 +4186,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">split_off</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">at</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span> <span class="op">+</span> <span class="ident">Clone</span>,
     {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">try_split_off</span>(<span class="ident">at</span>) {
             <span class="prelude-val">Err</span>(<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
@@ -4199,7 +4199,7 @@
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_split_off</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">at</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">TryReserveError</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">AllocRef</span>,
+        <span class="ident">A</span>: <span class="ident">AllocRef</span> <span class="op">+</span> <span class="ident">Clone</span>,
     {
         <span class="macro">assert</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">is_char_boundary</span>(<span class="ident">at</span>));
         <span class="kw">let</span> <span class="ident">other</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">vec</span>.<span class="ident">try_split_off</span>(<span class="ident">at</span>)<span class="question-mark">?</span>;
@@ -4471,7 +4471,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">String</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">A</span>: <span class="ident">AllocRef</span>,
+    <span class="ident">A</span>: <span class="ident">AllocRef</span> <span class="op">+</span> <span class="ident">Clone</span>,
 {
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;Cloning is expected to be expensive&quot;</span>]</span>
