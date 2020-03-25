@@ -165,7 +165,7 @@ pub enum ReallocPlacement {
 ///   allocator. A cloned allocator must behave like the same allocator.
 ///
 /// [*currently allocated*]: #currently-allocated-memory
-pub unsafe trait AllocRef: Copy {
+pub unsafe trait AllocRef {
     /// On success, returns a memory block meeting the size and alignment guarantees of `layout`.
     ///
     /// The returned block may have a larger size than specified by `layout.size()` and is
@@ -186,14 +186,14 @@ pub unsafe trait AllocRef: Copy {
     /// call the [`handle_alloc_error`] function, rather than directly invoking `panic!` or similar.
     ///
     /// [`handle_alloc_error`]: ../../alloc/alloc/fn.handle_alloc_error.html
-    fn alloc(self, layout: Layout, init: AllocInit) -> Result<MemoryBlock, AllocErr>;
+    fn alloc(&mut self, layout: Layout, init: AllocInit) -> Result<MemoryBlock, AllocErr>;
 
     /// Deallocates the memory denoted by `memory`.
     ///
     /// # Safety
     ///
     /// `memory` must be a memory block returned by this allocator.
-    unsafe fn dealloc(self, memory: MemoryBlock);
+    unsafe fn dealloc(&mut self, memory: MemoryBlock);
 
     /// Attempts to extend the memory block.
     ///
@@ -231,7 +231,7 @@ pub unsafe trait AllocRef: Copy {
     ///
     /// [`handle_alloc_error`]: ../../alloc/alloc/fn.handle_alloc_error.html
     unsafe fn grow(
-        self,
+        &mut self,
         memory: &mut MemoryBlock,
         new_size: usize,
         placement: ReallocPlacement,
@@ -294,7 +294,7 @@ pub unsafe trait AllocRef: Copy {
     ///
     /// [`handle_alloc_error`]: ../../alloc/alloc/fn.handle_alloc_error.html
     unsafe fn shrink(
-        self,
+        &mut self,
         memory: &mut MemoryBlock,
         new_size: usize,
         placement: ReallocPlacement,
@@ -339,7 +339,7 @@ pub struct Global;
 
 unsafe impl AllocRef for Global {
     #[inline]
-    fn alloc(self, layout: Layout, init: AllocInit) -> Result<MemoryBlock, AllocErr> {
+    fn alloc(&mut self, layout: Layout, init: AllocInit) -> Result<MemoryBlock, AllocErr> {
         unsafe {
             if layout.size() == 0 {
                 Ok(MemoryBlock::new(layout.dangling(), layout))
@@ -355,7 +355,7 @@ unsafe impl AllocRef for Global {
     }
 
     #[inline]
-    unsafe fn dealloc(self, memory: MemoryBlock) {
+    unsafe fn dealloc(&mut self, memory: MemoryBlock) {
         if memory.size() != 0 {
             dealloc(memory.ptr().as_ptr(), memory.layout())
         }
@@ -363,7 +363,7 @@ unsafe impl AllocRef for Global {
 
     #[inline]
     unsafe fn grow(
-        self,
+        &mut self,
         memory: &mut MemoryBlock,
         new_size: usize,
         placement: ReallocPlacement,
@@ -398,7 +398,7 @@ unsafe impl AllocRef for Global {
 
     #[inline]
     unsafe fn shrink(
-        self,
+        &mut self,
         memory: &mut MemoryBlock,
         new_size: usize,
         placement: ReallocPlacement,
@@ -435,14 +435,14 @@ unsafe impl AllocRef for Global {
 #[cfg(feature = "std")]
 unsafe impl AllocRef for System {
     #[inline]
-    fn alloc(self, layout: Layout, init: AllocInit) -> Result<MemoryBlock, AllocErr> {
+    fn alloc(&mut self, layout: Layout, init: AllocInit) -> Result<MemoryBlock, AllocErr> {
         unsafe {
             if layout.size() == 0 {
                 Ok(MemoryBlock::new(layout.dangling(), layout))
             } else {
                 let raw_ptr = match init {
-                    AllocInit::Uninitialized => GlobalAlloc::alloc(&self, layout),
-                    AllocInit::Zeroed => GlobalAlloc::alloc_zeroed(&self, layout),
+                    AllocInit::Uninitialized => GlobalAlloc::alloc(self, layout),
+                    AllocInit::Zeroed => GlobalAlloc::alloc_zeroed(self, layout),
                 };
                 let ptr = NonNull::new(raw_ptr).ok_or(AllocErr)?;
                 Ok(MemoryBlock::new(ptr, layout))
@@ -451,15 +451,15 @@ unsafe impl AllocRef for System {
     }
 
     #[inline]
-    unsafe fn dealloc(self, memory: MemoryBlock) {
+    unsafe fn dealloc(&mut self, memory: MemoryBlock) {
         if memory.size() != 0 {
-            GlobalAlloc::dealloc(&self, memory.ptr().as_ptr(), memory.layout())
+            GlobalAlloc::dealloc(self, memory.ptr().as_ptr(), memory.layout())
         }
     }
 
     #[inline]
     unsafe fn grow(
-        self,
+        &mut self,
         memory: &mut MemoryBlock,
         new_size: usize,
         placement: ReallocPlacement,
@@ -485,7 +485,7 @@ unsafe impl AllocRef for System {
                 // `realloc` probably checks for `new_size > old_size` or something similar.
                 intrinsics::assume(new_size > old_size);
                 let ptr =
-                    GlobalAlloc::realloc(&self, memory.ptr().as_ptr(), memory.layout(), new_size);
+                    GlobalAlloc::realloc(self, memory.ptr().as_ptr(), memory.layout(), new_size);
                 *memory = MemoryBlock::new(NonNull::new(ptr).ok_or(AllocErr)?, new_layout);
                 memory.init_offset(init, old_size);
             }
@@ -495,7 +495,7 @@ unsafe impl AllocRef for System {
 
     #[inline]
     unsafe fn shrink(
-        self,
+        &mut self,
         memory: &mut MemoryBlock,
         new_size: usize,
         placement: ReallocPlacement,
@@ -522,7 +522,7 @@ unsafe impl AllocRef for System {
                 // `realloc` probably checks for `new_size < old_size` or something similar.
                 intrinsics::assume(new_size < old_size);
                 let ptr =
-                    GlobalAlloc::realloc(&self, memory.ptr().as_ptr(), memory.layout(), new_size);
+                    GlobalAlloc::realloc(self, memory.ptr().as_ptr(), memory.layout(), new_size);
                 *memory = MemoryBlock::new(NonNull::new(ptr).ok_or(AllocErr)?, new_layout);
             }
         }

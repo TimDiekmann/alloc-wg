@@ -1632,7 +1632,7 @@ impl<A: AllocRef> String<A> {
     #[inline]
     pub fn split_off(&mut self, at: usize) -> Self
     where
-        A: AllocRef,
+        A: AllocRef + Clone,
     {
         match self.try_split_off(at) {
             Err(CapacityOverflow) => capacity_overflow(),
@@ -1645,7 +1645,7 @@ impl<A: AllocRef> String<A> {
     #[inline]
     pub fn try_split_off(&mut self, at: usize) -> Result<Self, TryReserveError>
     where
-        A: AllocRef,
+        A: AllocRef + Clone,
     {
         assert!(self.is_char_boundary(at));
         let other = self.vec.try_split_off(at)?;
@@ -1917,7 +1917,7 @@ impl fmt::Display for FromUtf16Error {
 
 impl<A> Clone for String<A>
 where
-    A: AllocRef,
+    A: AllocRef + Clone,
 {
     #[inline]
     #[must_use = "Cloning is expected to be expensive"]

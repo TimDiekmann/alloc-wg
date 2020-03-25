@@ -828,7 +828,8 @@ impl<T, A: AllocRef> Vec<T, A> {
             self.try_shrink_to_fit()?;
             let ptr = self.buf.ptr();
             let slice = slice::from_raw_parts_mut(ptr, self.buf.capacity());
-            let output = Box::from_raw_in(slice, self.alloc_ref());
+            let alloc = ptr::read(self.alloc_ref());
+            let output = Box::from_raw_in(slice, alloc);
             mem::forget(self);
             Ok(output)
         }
@@ -1586,7 +1587,10 @@ impl<T, A: AllocRef> Vec<T, A> {
     ///
     /// Panics if the allocation of split part fails.
     #[inline]
-    pub fn split_off(&mut self, at: usize) -> Self {
+    pub fn split_off(&mut self, at: usize) -> Self
+    where
+        A: Clone,
+    {
         match self.try_split_off(at) {
             Err(CapacityOverflow) => capacity_overflow(),
             Err(AllocError { layout, .. }) => handle_alloc_error(layout),
@@ -1596,11 +1600,14 @@ impl<T, A: AllocRef> Vec<T, A> {
 
     /// Same as `split_off` but returns errors instead of panicking.
     #[inline]
-    pub fn try_split_off(&mut self, at: usize) -> Result<Self, TryReserveError> {
+    pub fn try_split_off(&mut self, at: usize) -> Result<Self, TryReserveError>
+    where
+        A: Clone,
+    {
         assert!(at <= self.len(), "`at` out of bounds");
 
         let other_len = self.len - at;
-        let mut other = Self::try_with_capacity_in(other_len, self.alloc_ref())?;
+        let mut other = Self::try_with_capacity_in(other_len, self.alloc_ref().clone())?;
 
         // Unsafely `set_len` and copy items to `other`.
         unsafe {
@@ -1718,8 +1725,13 @@ impl<T, A: AllocRef> Vec<T, A> {
     }
 
     /// Returns a shared reference to the allocator builder backing this `Vec`.
-    pub fn alloc_ref(&self) -> A {
+    pub fn alloc_ref(&self) -> &A {
         self.buf.alloc_ref()
+    }
+
+    /// Returns a mutable reference to the allocator builder backing this `Vec`.
+    pub fn alloc_ref_mut(&mut self) -> &mut A {
+        self.buf.alloc_ref_mut()
     }
 }
 
@@ -2104,12 +2116,12 @@ unsafe impl<T: ?Sized> IsZero for Option<Box<T>> {
 
 impl<T: Clone, A> Clone for Vec<T, A>
 where
-    A: AllocRef,
+    A: AllocRef + Clone,
 {
     #[must_use]
     #[inline]
     fn clone(&self) -> Self {
-        self.clone_in(self.alloc_ref())
+        self.clone_in(self.alloc_ref().clone())
     }
 }
 
@@ -2228,7 +2240,7 @@ impl<T, A: AllocRef> IntoIterator for Vec<T, A> {
                 begin.add(self.len())
             };
             let capacity = self.buf.capacity();
-            let alloc = self.buf.alloc_ref();
+            let alloc = ptr::read(self.alloc_ref());
             mem::forget(self);
             IntoIter {
                 buf: RawVec::from_raw_parts_in(begin, capacity, alloc),
@@ -2373,12 +2385,8 @@ impl<T, A: AllocRef> SpecExtend<T, IntoIter<T, A>, A> for Vec<T, A> {
         let ptr: *const T = iter.buf.ptr();
         if ptr == iter.ptr {
             unsafe {
-                let vec = Self::from_raw_parts_in(
-                    iter.buf.ptr(),
-                    iter.len(),
-                    iter.buf.capacity(),
-                    iter.buf.alloc_ref(),
-                );
+                let vec =
+                    Self::from_raw_parts_in(iter.buf.ptr(), iter.len(), iter.buf.capacity(), alloc);
                 mem::forget(iter);
                 Ok(vec)
             }

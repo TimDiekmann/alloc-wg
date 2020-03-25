@@ -5,6 +5,7 @@ use core::{
     cmp,
     mem::{self, MaybeUninit},
     ops::Drop,
+    ptr,
     ptr::Unique,
     slice,
 };
@@ -168,7 +169,11 @@ impl<T, A: AllocRef> RawVec<T, A> {
         }
     }
 
-    fn allocate_in(capacity: usize, init: AllocInit, alloc: A) -> Result<Self, TryReserveError> {
+    fn allocate_in(
+        capacity: usize,
+        init: AllocInit,
+        mut alloc: A,
+    ) -> Result<Self, TryReserveError> {
         if mem::size_of::<T>() == 0 {
             Ok(Self::new_in(alloc))
         } else {
@@ -223,8 +228,13 @@ impl<T, A: AllocRef> RawVec<T, A> {
     }
 
     /// Returns a shared reference to the allocator builder backing this `RawVec`.
-    pub fn alloc_ref(&self) -> A {
-        self.alloc
+    pub fn alloc_ref(&self) -> &A {
+        &self.alloc
+    }
+
+    /// Returns a mutable reference to the allocator builder backing this `RawVec`.
+    pub fn alloc_ref_mut(&mut self) -> &mut A {
+        &mut self.alloc
     }
 
     fn current_memory(&self) -> Option<MemoryBlock> {
@@ -597,14 +607,14 @@ impl<T, A: AllocRef> RawVec<T, A> {
         let memory = if let Some(mut memory) = self.current_memory() {
             debug_assert_eq!(memory.align(), layout.align());
             unsafe {
-                self.alloc_ref()
+                self.alloc_ref_mut()
                     .grow(&mut memory, layout.size(), placement, init)
                     .map_err(|_| AllocError { layout })?
             };
             memory
         } else {
             match placement {
-                MayMove => self.alloc_ref().alloc(layout, init),
+                MayMove => self.alloc_ref_mut().alloc(layout, init),
                 InPlace => Err(AllocErr),
             }
             .map_err(|_| AllocError { layout })?
@@ -629,7 +639,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
         let new_size = amount * mem::size_of::<T>();
 
         unsafe {
-            self.alloc_ref()
+            self.alloc_ref_mut()
                 .shrink(&mut memory, new_size, placement)
                 .map_err(|_| AllocError {
                     layout: Layout::from_size_align_unchecked(new_size, memory.align()),
@@ -656,7 +666,8 @@ impl<T, A: AllocRef> RawVec<T, A> {
 
         // NOTE: not calling `capacity()` here; actually using the real `cap` field!
         let slice = slice::from_raw_parts_mut(self.ptr() as *mut MaybeUninit<T>, len);
-        let output = Box::from_raw_in(slice, self.alloc);
+        let alloc = ptr::read(self.alloc_ref());
+        let output = Box::from_raw_in(slice, alloc);
         mem::forget(self);
         output
     }
@@ -666,7 +677,7 @@ unsafe impl<#[may_dangle] T, A: AllocRef> Drop for RawVec<T, A> {
     /// Frees the memory owned by the `RawVec` *without* trying to drop its contents.
     fn drop(&mut self) {
         if let Some(memory) = self.current_memory() {
-            unsafe { self.alloc_ref().dealloc(memory) }
+            unsafe { self.alloc_ref_mut().dealloc(memory) }
         }
     }
 }

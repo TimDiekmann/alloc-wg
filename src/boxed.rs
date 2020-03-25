@@ -263,7 +263,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// assert_eq!(*five, 5);
     /// # Ok::<_, alloc_wg::alloc::AllocErr>(())
     /// ```
-    pub fn try_new_uninit_in(alloc: A) -> Result<Box<MaybeUninit<T>, A>, AllocErr> {
+    pub fn try_new_uninit_in(mut alloc: A) -> Result<Box<MaybeUninit<T>, A>, AllocErr> {
         let memory = alloc.alloc(Layout::new::<MaybeUninit<T>>(), AllocInit::Uninitialized)?;
         let ptr = memory.ptr();
         unsafe { Ok(Box::from_raw_in(ptr.cast().as_ptr(), alloc)) }
@@ -542,9 +542,14 @@ impl<T: ?Sized, A: AllocRef> Box<T, A> {
         &mut self.alloc
     }
 
-    /// Returns the allocator and it's currently used layout. If `T` is a ZST, no layout is returned.
-    pub fn alloc_ref(&self) -> A {
-        self.alloc
+    /// Returns a shared reference to the allocator.
+    pub fn alloc_ref(&self) -> &A {
+        &self.alloc
+    }
+
+    /// Returns a mutable reference to the allocator.
+    pub fn alloc_ref_mut(&mut self) -> &mut A {
+        &mut self.alloc
     }
 
     /// Consumes the `Box`, returning a wrapped raw pointer.
@@ -643,7 +648,7 @@ impl<T: ?Sized, A: AllocRef> Box<T, A> {
     #[doc(hidden)]
     pub fn into_unique_alloc(b: Self) -> (Unique<T>, A) {
         let ptr = b.ptr;
-        let alloc = b.alloc;
+        let alloc = unsafe { ptr::read(b.alloc_ref()) };
         mem::forget(b);
 
         // Box is kind-of a library type, but recognized as a "unique pointer" by
@@ -761,7 +766,7 @@ where
     }
 }
 
-impl<T: Clone, A: AllocRef> Clone for Box<T, A> {
+impl<T: Clone, A: AllocRef + Clone> Clone for Box<T, A> {
     /// Returns a new box with a `clone()` of this box's contents.
     ///
     /// # Examples
@@ -781,7 +786,7 @@ impl<T: Clone, A: AllocRef> Clone for Box<T, A> {
     /// ```
     #[inline]
     fn clone(&self) -> Self {
-        self.clone_in(self.alloc)
+        self.clone_in(self.alloc_ref().clone())
     }
 
     /// Copies `source`'s contents into `self` without creating a new allocation.
@@ -1246,7 +1251,7 @@ where
 {
     fn clone(&self) -> Self {
         let mut new = BoxBuilder {
-            data: RawVec::with_capacity_in(self.len(), self.alloc),
+            data: RawVec::with_capacity_in(self.len(), self.alloc.clone()),
             len: 0,
         };
 
