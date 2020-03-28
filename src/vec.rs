@@ -826,12 +826,10 @@ impl<T, A: AllocRef> Vec<T, A> {
     pub fn try_into_boxed_slice(mut self) -> Result<Box<[T], A>, TryReserveError> {
         unsafe {
             self.try_shrink_to_fit()?;
-            let ptr = self.buf.ptr();
-            let slice = slice::from_raw_parts_mut(ptr, self.buf.capacity());
-            let alloc = ptr::read(self.alloc_ref());
-            let output = Box::from_raw_in(slice, alloc);
+            let len = self.len;
+            let buf = ptr::read(&self.buf);
             mem::forget(self);
-            Ok(output)
+            Ok(buf.into_box(len).assume_init())
         }
     }
 
@@ -1726,12 +1724,12 @@ impl<T, A: AllocRef> Vec<T, A> {
 
     /// Returns a shared reference to the allocator builder backing this `Vec`.
     pub fn alloc_ref(&self) -> &A {
-        self.buf.alloc_ref()
+        self.buf.alloc()
     }
 
-    /// Returns a mutable reference to the allocator builder backing this `Vec`.
+    /// Returns a shared reference to the allocator builder backing this `Vec`.
     pub fn alloc_ref_mut(&mut self) -> &mut A {
-        self.buf.alloc_ref_mut()
+        self.buf.alloc_mut()
     }
 }
 
@@ -2240,7 +2238,7 @@ impl<T, A: AllocRef> IntoIterator for Vec<T, A> {
                 begin.add(self.len())
             };
             let capacity = self.buf.capacity();
-            let alloc = ptr::read(self.alloc_ref());
+            let alloc = ptr::read(self.buf.alloc_mut());
             mem::forget(self);
             IntoIter {
                 buf: RawVec::from_raw_parts_in(begin, capacity, alloc),
@@ -2378,15 +2376,19 @@ where
 }
 
 impl<T, A: AllocRef> SpecExtend<T, IntoIter<T, A>, A> for Vec<T, A> {
-    fn try_from_iter_in(iter: IntoIter<T, A>, alloc: A) -> Result<Self, TryReserveError> {
+    fn try_from_iter_in(mut iter: IntoIter<T, A>, alloc: A) -> Result<Self, TryReserveError> {
         // A common case is passing a vector into a function which immediately
         // re-collects into a vector. We can short circuit this if the IntoIter
         // has not been advanced at all.
         let ptr: *const T = iter.buf.ptr();
         if ptr == iter.ptr {
             unsafe {
-                let vec =
-                    Self::from_raw_parts_in(iter.buf.ptr(), iter.len(), iter.buf.capacity(), alloc);
+                let vec = Self::from_raw_parts_in(
+                    iter.buf.ptr(),
+                    iter.len(),
+                    iter.buf.capacity(),
+                    ptr::read(iter.buf.alloc_mut()),
+                );
                 mem::forget(iter);
                 Ok(vec)
             }

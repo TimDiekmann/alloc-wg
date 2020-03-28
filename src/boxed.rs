@@ -87,7 +87,6 @@ use crate::{
         AllocRef,
         Global,
         Layout,
-        MemoryBlock,
     },
     clone::CloneIn,
     collections::TryReserveError::{self, AllocError},
@@ -182,6 +181,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
+    /// #![feature(allocator_api)]
     /// use alloc_wg::{alloc::Global, boxed::Box};
     ///
     /// # #[allow(unused_variables)]
@@ -203,6 +203,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
+    /// #![feature(allocator_api)]
     /// use alloc_wg::{alloc::Global, boxed::Box};
     ///
     /// # #[allow(unused_variables)]
@@ -222,6 +223,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
+    /// #![feature(allocator_api)]
     /// use alloc_wg::{alloc::Global, boxed::Box};
     ///
     /// let mut five = Box::<u32, _>::new_uninit_in(Global);
@@ -249,6 +251,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Example
     ///
     /// ```
+    /// #![feature(allocator_api)]
     /// use alloc_wg::{alloc::Global, boxed::Box};
     ///
     /// let mut five = Box::<u32, Global>::try_new_uninit_in(Global)?;
@@ -265,7 +268,7 @@ impl<T, A: AllocRef> Box<T, A> {
     /// ```
     pub fn try_new_uninit_in(mut alloc: A) -> Result<Box<MaybeUninit<T>, A>, AllocErr> {
         let memory = alloc.alloc(Layout::new::<MaybeUninit<T>>(), AllocInit::Uninitialized)?;
-        let ptr = memory.ptr();
+        let ptr = memory.ptr;
         unsafe { Ok(Box::from_raw_in(ptr.cast().as_ptr(), alloc)) }
     }
 
@@ -322,6 +325,7 @@ impl<T, A: AllocRef> Box<[T], A> {
     /// # Example
     ///
     /// ```
+    /// #![feature(allocator_api)]
     /// use alloc_wg::{alloc::Global, boxed::Box};
     ///
     /// let mut values = Box::<[u32], _>::new_uninit_slice_in(3, Global);
@@ -349,6 +353,7 @@ impl<T, A: AllocRef> Box<[T], A> {
     /// # Example
     ///
     /// ```
+    /// #![feature(allocator_api)]
     /// use alloc_wg::{alloc::Global, boxed::Box};
     ///
     /// let mut values = Box::<[u32], Global>::try_new_uninit_slice_in(3, Global)?;
@@ -511,6 +516,7 @@ impl<T: ?Sized, A: AllocRef> Box<T, A> {
     ///
     /// Manually create a `Box` from scratch by using the global allocator:
     /// ```
+    /// #![feature(allocator_api)]
     /// use alloc_wg::{
     ///     alloc::{alloc, Global},
     ///     boxed::Box,
@@ -646,9 +652,9 @@ impl<T: ?Sized, A: AllocRef> Box<T, A> {
 
     #[inline]
     #[doc(hidden)]
-    pub fn into_unique_alloc(b: Self) -> (Unique<T>, A) {
+    pub fn into_unique_alloc(mut b: Self) -> (Unique<T>, A) {
         let ptr = b.ptr;
-        let alloc = unsafe { ptr::read(b.alloc_ref()) };
+        let alloc = unsafe { ptr::read(b.alloc_ref_mut()) };
         mem::forget(b);
 
         // Box is kind-of a library type, but recognized as a "unique pointer" by
@@ -715,9 +721,7 @@ fn drop_box<T: ?Sized, A: AllocRef>(boxed: &mut Box<T, A>) {
         let layout = Layout::for_value(boxed.as_ref());
         let ptr = boxed.ptr;
         ptr::drop_in_place(ptr.as_ptr());
-        boxed
-            .alloc
-            .dealloc(MemoryBlock::new(ptr.cast().into(), layout));
+        boxed.alloc.dealloc(ptr.cast().into(), layout);
     }
 }
 
@@ -786,7 +790,7 @@ impl<T: Clone, A: AllocRef + Clone> Clone for Box<T, A> {
     /// ```
     #[inline]
     fn clone(&self) -> Self {
-        self.clone_in(self.alloc_ref().clone())
+        self.clone_in(self.alloc.clone())
     }
 
     /// Copies `source`'s contents into `self` without creating a new allocation.
@@ -1251,7 +1255,7 @@ where
 {
     fn clone(&self) -> Self {
         let mut new = BoxBuilder {
-            data: RawVec::with_capacity_in(self.len(), self.alloc.clone()),
+            data: RawVec::with_capacity_in(self.len(), self.alloc_ref().clone()),
             len: 0,
         };
 

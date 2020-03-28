@@ -14,6 +14,7 @@
 //! [`NonZeroLayout`]: crate::alloc::NonZeroLayout
 
 #![feature(
+    allocator_api,
     alloc_layout_extra,
     dropck_eyepatch,
     coerce_unsized,
