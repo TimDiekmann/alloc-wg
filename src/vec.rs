@@ -68,8 +68,8 @@
 //! [`IndexMut`]: core::ops::IndexMut
 //! [`vec!`]: ../macro.vec.html
 
-use crate::{
-    alloc::{handle_alloc_error, handle_reserve_error, AllocRef, Global},
+use crate::{handle_reserve_error, 
+    alloc::{handle_alloc_error, AllocRef, Global},
     boxed::Box,
     capacity_overflow,
     clone::CloneIn,

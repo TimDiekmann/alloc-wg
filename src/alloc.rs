@@ -549,11 +549,3 @@ unsafe impl AllocRef for System {
         }
     }
 }
-
-pub(crate) fn handle_reserve_error<T>(result: Result<T, TryReserveError>) -> T {
-    match result {
-        Ok(t) => t,
-        Err(TryReserveError::AllocError { layout }) => handle_alloc_error(layout),
-        Err(TryReserveError::CapacityOverflow) => capacity_overflow(),
-    }
-}

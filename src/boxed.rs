@@ -79,9 +79,9 @@
 //! [`NonZeroLayout::for_value(&*value)`]: crate::alloc::NonZeroLayout::for_value
 
 use crate::{
+        handle_reserve_error,
     alloc::{
         handle_alloc_error,
-        handle_reserve_error,
         AllocErr,
         AllocInit,
         AllocRef,
