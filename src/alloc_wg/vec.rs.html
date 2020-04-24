@@ -3382,6 +3382,7 @@
 <span id="3382">3382</span>
 <span id="3383">3383</span>
 <span id="3384">3384</span>
+<span id="3385">3385</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! A contiguous growable array type with heap-allocated contents, written</span>
 <span class="doccomment">//! `Vec&lt;T&gt;`.</span>
@@ -3453,12 +3454,13 @@
 <span class="doccomment">//! [`IndexMut`]: core::ops::IndexMut</span>
 <span class="doccomment">//! [`vec!`]: ../macro.vec.html</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">handle_reserve_error</span>, 
+<span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">alloc</span>::{<span class="ident">handle_alloc_error</span>, <span class="ident">AllocRef</span>, <span class="ident">Global</span>},
     <span class="ident">boxed</span>::<span class="ident">Box</span>,
     <span class="ident">capacity_overflow</span>,
     <span class="ident">clone</span>::<span class="ident">CloneIn</span>,
     <span class="ident">collections</span>::<span class="ident">TryReserveError</span>::{<span class="self">self</span>, <span class="ident">AllocError</span>, <span class="ident">CapacityOverflow</span>},
+    <span class="ident">handle_reserve_error</span>,
     <span class="ident">iter</span>::{<span class="ident">FromIteratorIn</span>, <span class="ident">TryExtend</span>},
     <span class="ident">raw_vec</span>::<span class="ident">RawVec</span>,
 };

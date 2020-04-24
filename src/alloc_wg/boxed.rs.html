@@ -1350,13 +1350,6 @@
 <span id="1350">1350</span>
 <span id="1351">1351</span>
 <span id="1352">1352</span>
-<span id="1353">1353</span>
-<span id="1354">1354</span>
-<span id="1355">1355</span>
-<span id="1356">1356</span>
-<span id="1357">1357</span>
-<span id="1358">1358</span>
-<span id="1359">1359</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! A pointer type for heap allocation.</span>
 <span class="doccomment">//!</span>
@@ -1439,17 +1432,10 @@
 <span class="doccomment">//! [`NonZeroLayout::for_value(&amp;*value)`]: crate::alloc::NonZeroLayout::for_value</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">handle_reserve_error</span>,
-    <span class="ident">alloc</span>::{
-        <span class="ident">handle_alloc_error</span>,
-        <span class="ident">AllocErr</span>,
-        <span class="ident">AllocInit</span>,
-        <span class="ident">AllocRef</span>,
-        <span class="ident">Global</span>,
-        <span class="ident">Layout</span>,
-    },
+    <span class="ident">alloc</span>::{<span class="ident">handle_alloc_error</span>, <span class="ident">AllocErr</span>, <span class="ident">AllocInit</span>, <span class="ident">AllocRef</span>, <span class="ident">Global</span>, <span class="ident">Layout</span>},
     <span class="ident">clone</span>::<span class="ident">CloneIn</span>,
     <span class="ident">collections</span>::<span class="ident">TryReserveError</span>::{<span class="self">self</span>, <span class="ident">AllocError</span>},
+    <span class="ident">handle_reserve_error</span>,
     <span class="ident">ptr</span>::<span class="ident">Unique</span>,
     <span class="ident">raw_vec</span>::<span class="ident">RawVec</span>,
 };
