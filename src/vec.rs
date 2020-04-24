@@ -68,12 +68,13 @@
 //! [`IndexMut`]: core::ops::IndexMut
 //! [`vec!`]: ../macro.vec.html
 
-use crate::{handle_reserve_error, 
+use crate::{
     alloc::{handle_alloc_error, AllocRef, Global},
     boxed::Box,
     capacity_overflow,
     clone::CloneIn,
     collections::TryReserveError::{self, AllocError, CapacityOverflow},
+    handle_reserve_error,
     iter::{FromIteratorIn, TryExtend},
     raw_vec::RawVec,
 };

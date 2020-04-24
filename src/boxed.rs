@@ -79,17 +79,10 @@
 //! [`NonZeroLayout::for_value(&*value)`]: crate::alloc::NonZeroLayout::for_value
 
 use crate::{
-        handle_reserve_error,
-    alloc::{
-        handle_alloc_error,
-        AllocErr,
-        AllocInit,
-        AllocRef,
-        Global,
-        Layout,
-    },
+    alloc::{handle_alloc_error, AllocErr, AllocInit, AllocRef, Global, Layout},
     clone::CloneIn,
     collections::TryReserveError::{self, AllocError},
+    handle_reserve_error,
     ptr::Unique,
     raw_vec::RawVec,
 };
