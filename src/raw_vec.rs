@@ -129,7 +129,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
     pub const fn new_in(alloc: A) -> Self {
         // `cap: 0` means "unallocated". zero-sized types are ignored.
         Self {
-            ptr: Unique::empty(),
+            ptr: Unique::dangling(),
             cap: 0,
             alloc,
         }
@@ -182,7 +182,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
                 .alloc(layout, init)
                 .map_err(|_| AllocError { layout })?;
             Ok(Self {
-                ptr: memory.ptr.cast().into(),
+                ptr: Unique::new(memory.ptr.cast().as_ptr()).unwrap(),
                 cap: Self::capacity_from_bytes(memory.size),
                 alloc,
             })
@@ -541,7 +541,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
     }
 
     fn set_memory(&mut self, memory: MemoryBlock) {
-        self.ptr = memory.ptr.cast().into();
+        self.ptr = Unique::new(memory.ptr.cast().as_ptr()).unwrap();
         self.cap = Self::capacity_from_bytes(memory.size);
     }
 
