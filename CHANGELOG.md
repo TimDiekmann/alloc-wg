@@ -1,3 +1,7 @@
+# v0.9
+
+- use `core::alloc` instead of own implementation
+
 # v0.7
 
 - Add `Vec`
