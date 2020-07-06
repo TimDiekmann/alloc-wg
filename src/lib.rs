@@ -47,6 +47,8 @@
     slice_ptr_len,
     slice_ptr_get
 )]
+#![feature(btree_drain_filter)]
+#![feature(map_first_last)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![doc(test(attr(
     deny(

@@ -1,7 +1,11 @@
 use core::ptr;
 
-use super::node::{marker, ForceResult::*, Handle, NodeRef};
-use super::unwrap_unchecked;
+use super::{
+    node::{marker, ForceResult::*, Handle, NodeRef},
+    unwrap_unchecked,
+};
+
+use crate::alloc::AllocRef;
 
 impl<BorrowType, K, V> Handle<NodeRef<BorrowType, K, V, marker::Leaf>, marker::Edge> {
     /// Given a leaf edge handle, returns [`Result::Ok`] with a handle to the neighboring KV
@@ -56,15 +60,16 @@ macro_rules! def_next_kv_uncheched_dealloc {
         /// - The node pointed at by the given handle, and its ancestors, may be deallocated,
         ///   while the reference to those nodes in the surviving ancestors is left dangling;
         ///   thus using the returned handle to navigate further is dangerous.
-        unsafe fn $name <K, V>(
+        unsafe fn $name <K, V, A: AllocRef>(
             leaf_edge: Handle<NodeRef<marker::Owned, K, V, marker::Leaf>, marker::Edge>,
+            mut alloc: A
         ) -> Handle<NodeRef<marker::Owned, K, V, marker::LeafOrInternal>, marker::KV> {
             let mut edge = leaf_edge.forget_node_type();
             loop {
                 edge = match edge.$adjacent_kv() {
                     Ok(internal_kv) => return internal_kv,
                     Err(last_edge) => {
-                        let parent_edge = last_edge.into_node().deallocate_and_ascend();
+                        let parent_edge = last_edge.into_node().deallocate_and_ascend(&mut alloc);
                         unwrap_unchecked(parent_edge).forget_node_type()
                     }
                 }
@@ -158,9 +163,9 @@ impl<K, V> Handle<NodeRef<marker::Owned, K, V, marker::Leaf>, marker::Edge> {
     ///   It is, however, safe to call this method again on the updated handle.
     ///   if the two preconditions above hold.
     /// - Using the updated handle may well invalidate the returned references.
-    pub unsafe fn next_unchecked(&mut self) -> (K, V) {
+    pub unsafe fn next_unchecked<A: AllocRef>(&mut self, alloc: A) -> (K, V) {
         replace(self, |leaf_edge| {
-            let kv = next_kv_unchecked_dealloc(leaf_edge);
+            let kv = next_kv_unchecked_dealloc(leaf_edge, alloc);
             let k = ptr::read(kv.reborrow().into_kv().0);
             let v = ptr::read(kv.reborrow().into_kv().1);
             (kv.next_leaf_edge(), (k, v))
@@ -178,9 +183,9 @@ impl<K, V> Handle<NodeRef<marker::Owned, K, V, marker::Leaf>, marker::Edge> {
     ///   It is, however, safe to call this method again on the updated handle.
     ///   if the two preconditions above hold.
     /// - Using the updated handle may well invalidate the returned references.
-    pub unsafe fn next_back_unchecked(&mut self) -> (K, V) {
+    pub unsafe fn next_back_unchecked<A: AllocRef>(&mut self, alloc: A) -> (K, V) {
         replace(self, |leaf_edge| {
-            let kv = next_back_kv_unchecked_dealloc(leaf_edge);
+            let kv = next_back_kv_unchecked_dealloc(leaf_edge, alloc);
             let k = ptr::read(kv.reborrow().into_kv().0);
             let v = ptr::read(kv.reborrow().into_kv().1);
             (kv.next_back_leaf_edge(), (k, v))
