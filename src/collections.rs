@@ -5,7 +5,7 @@ use core::fmt::Display;
 pub use liballoc::collections::{binary_heap, btree_set, linked_list, vec_deque};
 
 pub mod btree_map {
-    pub use super::super::btree::map::*;
+    pub use crate::btree::map::*;
 }
 
 #[doc(no_inline)]
