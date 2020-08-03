@@ -2632,8 +2632,8 @@ __impl_slice_eq1! { [A] Vec<T, A>, &mut [U], A: AllocRef }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, &[B], A: Clone }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, &mut [B], A: Clone }
 // __impl_slice_eq1! { [] Cow<'_, [A]>, Vec<B>, A: Clone }
-__impl_slice_eq1! { [A, const N: usize] Vec<T, A>, [U; N], [U; N]: core::array::LengthAtMost32, A: AllocRef }
-__impl_slice_eq1! { [A, const N: usize] Vec<T, A>, &[U; N], [U; N]: core::array::LengthAtMost32, A: AllocRef }
+__impl_slice_eq1! { [A, const N: usize] Vec<T, A>, [U; N], A: AllocRef }
+__impl_slice_eq1! { [A, const N: usize] Vec<T, A>, &[U; N], A: AllocRef }
 
 // NOTE: some less important impls are omitted to reduce code bloat
 // FIXME(Centril): Reconsider this?
