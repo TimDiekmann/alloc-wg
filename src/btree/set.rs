@@ -6,9 +6,10 @@ use core::{
     cmp::{
         max,
         min,
-        Ordering::{Equal, Greater, Less},
+        Ordering::{self, Equal, Greater, Less},
     },
     fmt::{self, Debug},
+    hash::{Hash, Hasher},
     iter::{FromIterator, FusedIterator, Peekable},
     mem::ManuallyDrop,
     ops::{BitAnd, BitOr, BitXor, RangeBounds, Sub},
@@ -68,10 +69,35 @@ use crate::alloc::{AllocRef, Global};
 ///     println!("{}", book);
 /// }
 /// ```
-#[derive(Hash, PartialEq, Eq, Ord, PartialOrd)]
 //#[stable(feature = "rust1", since = "1.0.0")]
 pub struct BTreeSet<T, A: AllocRef = Global> {
     map: BTreeMap<T, (), A>,
+}
+
+impl<T: Hash, A: AllocRef> Hash for BTreeSet<T, A> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.map.hash(state)
+    }
+}
+
+impl<T: PartialEq, A: AllocRef> PartialEq for BTreeSet<T, A> {
+    fn eq(&self, other: &BTreeSet<T, A>) -> bool {
+        self.map.eq(&other.map)
+    }
+}
+
+impl<T: Eq, A: AllocRef> Eq for BTreeSet<T, A> {}
+
+impl<T: PartialOrd, A: AllocRef> PartialOrd for BTreeSet<T, A> {
+    fn partial_cmp(&self, other: &BTreeSet<T, A>) -> Option<Ordering> {
+        self.map.partial_cmp(&other.map)
+    }
+}
+
+impl<T: Ord, A: AllocRef> Ord for BTreeSet<T, A> {
+    fn cmp(&self, other: &BTreeSet<T, A>) -> Ordering {
+        self.map.cmp(&other.map)
+    }
 }
 
 //#[stable(feature = "rust1", since = "1.0.0")]
@@ -321,8 +347,9 @@ impl<T: Ord> BTreeSet<T> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
     /// # #![allow(unused_mut)]
+    /// # #![allow(unused_variables)]
     /// use std::collections::BTreeSet;
     ///
     /// let mut set: BTreeSet<i32> = BTreeSet::new();
@@ -341,10 +368,12 @@ impl<T: Ord, A: AllocRef> BTreeSet<T, A> {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
     /// # #![allow(unused_mut)]
+    /// # #![allow(unused_variables)]
     /// # #![feature(allocator_api)]
-    /// use std::{alloc::Global, collections::BTreeSet};
+    /// use alloc_wg::collections::BTreeSet;
+    /// use std::alloc::Global;
     ///
     /// let mut set: BTreeSet<i32> = BTreeSet::new_in(Global);
     /// ```

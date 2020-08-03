@@ -2,10 +2,13 @@
 
 use crate::alloc::{Layout, LayoutErr};
 use core::fmt::Display;
-pub use liballoc::collections::{binary_heap, btree_set, linked_list, vec_deque};
+pub use liballoc::collections::{binary_heap, linked_list, vec_deque};
 
 pub mod btree_map {
     pub use crate::btree::map::*;
+}
+pub mod btree_set {
+    pub use crate::btree::set::*;
 }
 
 #[doc(no_inline)]
