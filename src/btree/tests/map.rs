@@ -214,7 +214,7 @@ fn test_iter_rev() {
 fn do_test_iter_mut_mutation<T>(size: usize)
 where
     T: Copy + Debug + Ord + TryFrom<usize>,
-    <T as std::convert::TryFrom<usize>>::Error: std::fmt::Debug,
+    <T as std::convert::TryFrom<usize>>::Error: Debug,
 {
     let zero = T::try_from(0).unwrap();
     let mut map: BTreeMap<T, T> = (0..size).map(|i| (T::try_from(i).unwrap(), zero)).collect();
@@ -948,8 +948,8 @@ fn test_borrow() {
     }
 
     {
-        let mut map = BTreeMap::new();
-        map.insert(Box::new([0, 1]) as Box<[i32]>, 1);
+        let mut map = BTreeMap::<Box<[i32]>, _>::new();
+        map.insert(Box::new([0i32, 1]), 1);
         assert_eq!(map[&[0, 1][..]], 1);
     }
 
