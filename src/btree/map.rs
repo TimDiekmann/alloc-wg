@@ -536,9 +536,9 @@ impl<K: Debug + Ord, V: Debug, A: AllocRef> Debug for OccupiedEntry<'_, K, V, A>
 }
 
 // An iterator for merging two sorted sequences into one
-struct MergeIter<K, V, I: Iterator<Item = (K, V)>> {
-    left: Peekable<I>,
-    right: Peekable<I>,
+struct MergeIter<K, V, ILeft: Iterator<Item = (K, V)>, IRight: Iterator<Item = (K, V)>> {
+    left: Peekable<ILeft>,
+    right: Peekable<IRight>,
 }
 
 impl<K: Ord, V> BTreeMap<K, V> {
@@ -1035,11 +1035,7 @@ impl<K: Ord, V, A: AllocRef> BTreeMap<K, V, A> {
             Self::new_in(ManuallyDrop::into_inner(self.alloc.clone())),
         )
         .into_iter();
-        let other_iter = mem::replace(
-            other,
-            Self::new_in(ManuallyDrop::into_inner(self.alloc.clone())),
-        )
-        .into_iter();
+        let other_iter = other.drain_filter(|_, _| true); // drain every element
         let iter = MergeIter {
             left: self_iter.peekable(),
             right: other_iter.peekable(),
@@ -3027,7 +3023,9 @@ fn handle_underfull_node<K, V, A: AllocRef>(
     }
 }
 
-impl<K: Ord, V, I: Iterator<Item = (K, V)>> Iterator for MergeIter<K, V, I> {
+impl<K: Ord, V, ILeft: Iterator<Item = (K, V)>, IRight: Iterator<Item = (K, V)>> Iterator
+    for MergeIter<K, V, ILeft, IRight>
+{
     type Item = (K, V);
 
     fn next(&mut self) -> Option<(K, V)> {
