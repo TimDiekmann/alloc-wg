@@ -276,7 +276,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
     /// # #![feature(raw_vec_internals)]
     /// # extern crate alloc;
     /// # use std::ptr;
-    /// # use alloc::raw_vec::RawVec;
+    /// # use alloc_wg::raw_vec::RawVec;
     /// struct MyVec<T> {
     ///     buf: RawVec<T>,
     ///     len: usize,

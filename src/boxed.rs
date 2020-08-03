@@ -1030,10 +1030,7 @@ impl<A: AllocRef> From<Box<str, A>> for Box<[u8], A> {
 }
 
 #[allow(clippy::use_self)]
-impl<T, const N: usize> core::convert::TryFrom<Box<[T]>> for Box<[T; N]>
-where
-    [T; N]: core::array::LengthAtMost32,
-{
+impl<T, const N: usize> core::convert::TryFrom<Box<[T]>> for Box<[T; N]> {
     type Error = Box<[T]>;
 
     fn try_from(boxed_slice: Box<[T]>) -> Result<Self, Self::Error> {
