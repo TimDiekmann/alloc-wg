@@ -152,7 +152,7 @@ unsafe impl<#[may_dangle] K, #[may_dangle] V> Drop for BTreeMap<K, V> {
 impl<K: Clone, V: Clone> Clone for BTreeMap<K, V> {
     fn clone(&self) -> BTreeMap<K, V> {
         fn clone_subtree<'a, K: Clone, V: Clone>(
-            node: node::NodeRef<marker::Immut<'a>, K, V, marker::LeafOrInternal>,
+            node: NodeRef<marker::Immut<'a>, K, V, marker::LeafOrInternal>,
         ) -> BTreeMap<K, V>
         where
             K: 'a,
@@ -290,13 +290,13 @@ where
 /// [`iter`]: struct.BTreeMap.html#method.iter
 /// [`BTreeMap`]: struct.BTreeMap.html
 //#[stable(feature = "rust1", since = "1.0.0")]
-pub struct Iter<'a, K: 'a, V: 'a> {
+pub struct Iter<'a, K, V> {
     range: Range<'a, K, V>,
     length: usize,
 }
 
 //#[stable(feature = "collection_debug", since = "1.17.0")]
-impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for Iter<'_, K, V> {
+impl<K: Debug, V: Debug> Debug for Iter<'_, K, V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.clone()).finish()
     }
@@ -331,7 +331,7 @@ pub struct IntoIter<K, V> {
 }
 
 //#[stable(feature = "collection_debug", since = "1.17.0")]
-impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for IntoIter<K, V> {
+impl<K: Debug, V: Debug> Debug for IntoIter<K, V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let range = Range {
             front: self.front.as_ref().map(|f| f.reborrow()),
@@ -349,12 +349,12 @@ impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for IntoIter<K, V> {
 /// [`keys`]: struct.BTreeMap.html#method.keys
 /// [`BTreeMap`]: struct.BTreeMap.html
 //#[stable(feature = "rust1", since = "1.0.0")]
-pub struct Keys<'a, K: 'a, V: 'a> {
+pub struct Keys<'a, K, V> {
     inner: Iter<'a, K, V>,
 }
 
 //#[stable(feature = "collection_debug", since = "1.17.0")]
-impl<K: fmt::Debug, V> fmt::Debug for Keys<'_, K, V> {
+impl<K: Debug, V> Debug for Keys<'_, K, V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.clone()).finish()
     }
@@ -368,12 +368,12 @@ impl<K: fmt::Debug, V> fmt::Debug for Keys<'_, K, V> {
 /// [`values`]: struct.BTreeMap.html#method.values
 /// [`BTreeMap`]: struct.BTreeMap.html
 //#[stable(feature = "rust1", since = "1.0.0")]
-pub struct Values<'a, K: 'a, V: 'a> {
+pub struct Values<'a, K, V> {
     inner: Iter<'a, K, V>,
 }
 
 //#[stable(feature = "collection_debug", since = "1.17.0")]
-impl<K, V: fmt::Debug> fmt::Debug for Values<'_, K, V> {
+impl<K, V: Debug> Debug for Values<'_, K, V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.clone()).finish()
     }
@@ -406,7 +406,7 @@ pub struct Range<'a, K: 'a, V: 'a> {
 }
 
 //#[stable(feature = "collection_debug", since = "1.17.0")]
-impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for Range<'_, K, V> {
+impl<K: Debug, V: Debug> Debug for Range<'_, K, V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.clone()).finish()
     }
@@ -429,7 +429,7 @@ pub struct RangeMut<'a, K: 'a, V: 'a> {
 }
 
 //#[stable(feature = "collection_debug", since = "1.17.0")]
-impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for RangeMut<'_, K, V> {
+impl<K: Debug, V: Debug> Debug for RangeMut<'_, K, V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let range = Range {
             front: self.front.as_ref().map(|f| f.reborrow()),
@@ -1777,10 +1777,10 @@ where
 }
 
 //#[unstable(feature = "btree_drain_filter", issue = "70530")]
-impl<K, V, F> fmt::Debug for DrainFilter<'_, K, V, F>
+impl<K, V, F> Debug for DrainFilter<'_, K, V, F>
 where
-    K: fmt::Debug,
-    V: fmt::Debug,
+    K: Debug,
+    V: Debug,
     F: FnMut(&K, &mut V) -> bool,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
