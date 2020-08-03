@@ -595,9 +595,11 @@ impl<K: Ord, V, A: AllocRef> BTreeMap<K, V, A> {
     /// Basic usage:
     ///
     /// ```
-    /// use std::collections::BTreeMap;
+    /// # #![feature(allocator_api)]
+    /// use alloc_wg::collections::BTreeMap;
+    /// use std::alloc::Global;
     ///
-    /// let mut map = BTreeMap::new();
+    /// let mut map = BTreeMap::new_in(Global);
     ///
     /// // entries can now be inserted into the empty map
     /// map.insert(1, "a");
