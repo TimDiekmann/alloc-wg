@@ -3,7 +3,7 @@ mod navigate;
 mod node;
 mod search;
 pub mod set;
-#[cfg(test)]
+#[cfg(all(test, std))]
 mod tests;
 
 #[doc(hidden)]
