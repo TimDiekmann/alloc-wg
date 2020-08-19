@@ -579,6 +579,7 @@
 <span id="578">578</span>
 <span id="579">579</span>
 <span id="580">580</span>
+<span id="581">581</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="attribute">#![<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
 
@@ -594,9 +595,10 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">alloc</span>::{<span class="ident">handle_alloc_error</span>, <span class="ident">AllocRef</span>, <span class="ident">Global</span>, <span class="ident">Layout</span>},
     <span class="ident">boxed</span>::<span class="ident">Box</span>,
-    <span class="ident">collections</span>::<span class="ident">TryReserveError</span>::{<span class="self">self</span>, <span class="kw-2">*</span>},
+    <span class="ident">collections</span>::<span class="ident">TryReserveError</span>::{<span class="self">self</span>, <span class="ident">AllocError</span>, <span class="ident">CapacityOverflow</span>},
 };
 
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">enum</span> <span class="ident">AllocInit</span> {
     <span class="doccomment">/// The contents of the new memory are uninitialized.</span>
     <span class="ident">Uninitialized</span>,
@@ -606,14 +608,14 @@
 
 <span class="doccomment">/// A low-level utility for more ergonomically allocating, reallocating, and deallocating</span>
 <span class="doccomment">/// a buffer of memory on the heap without having to worry about all the corner cases</span>
-<span class="doccomment">/// involved. This type is excellent for building your own data structures like Vec and VecDeque.</span>
+<span class="doccomment">/// involved. This type is excellent for building your own data structures like `Vec` and `VecDeque`.</span>
 <span class="doccomment">/// In particular:</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// * Produces `Unique::dangling()` on zero-sized types.</span>
 <span class="doccomment">/// * Produces `Unique::dangling()` on zero-length allocations.</span>
 <span class="doccomment">/// * Avoids freeing `Unique::dangling()`.</span>
 <span class="doccomment">/// * Catches all overflows in capacity computations (promotes them to &quot;capacity overflow&quot; panics).</span>
-<span class="doccomment">/// * Guards against 32-bit systems allocating more than isize::MAX bytes.</span>
+<span class="doccomment">/// * Guards against 32-bit systems allocating more than `isize::MAX` bytes.</span>
 <span class="doccomment">/// * Guards against overflowing your length.</span>
 <span class="doccomment">/// * Calls `handle_alloc_error` for fallible allocations.</span>
 <span class="doccomment">/// * Contains a `ptr::Unique` and thus endows the user with all related benefits.</span>
@@ -790,7 +792,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_box</span>(<span class="ident">slice</span>: <span class="ident">Box</span><span class="op">&lt;</span>[<span class="ident">T</span>], <span class="ident">A</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="self">Self</span> {
         <span class="kw">unsafe</span> {
             <span class="kw">let</span> (<span class="ident">ptr</span>, <span class="ident">alloc</span>) <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">into_raw_alloc</span>(<span class="ident">slice</span>);
-            <span class="ident">RawVec</span>::<span class="ident">from_raw_parts_in</span>(<span class="ident">ptr</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">ptr</span>.<span class="ident">len</span>(), <span class="ident">alloc</span>)
+            <span class="self">Self</span>::<span class="ident">from_raw_parts_in</span>(<span class="ident">ptr</span>.<span class="ident">as_mut_ptr</span>(), <span class="ident">ptr</span>.<span class="ident">len</span>(), <span class="ident">alloc</span>)
         }
     }
 
@@ -828,7 +830,7 @@
     <span class="doccomment">/// Gets the capacity of the allocation.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// This will always be `usize::MAX` if `T` is zero-sized.</span>
-    <span class="attribute">#[<span class="ident">inline</span>(<span class="ident">always</span>)]</span>
+    <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">capacity</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">usize</span> {
         <span class="kw">if</span> <span class="ident">mem</span>::<span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="op">==</span> <span class="number">0</span> {
             <span class="ident">usize</span>::<span class="ident">MAX</span>
