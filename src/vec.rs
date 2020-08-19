@@ -3129,7 +3129,7 @@ where
 }
 
 /// Private helper methods for `Splice::drop`
-impl<T, A: AllocRef> Drain<'_, T, A>
+impl<T, A> Drain<'_, T, A>
 where
     A: AllocRef,
 {

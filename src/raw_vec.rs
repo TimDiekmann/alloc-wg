@@ -12,9 +12,10 @@ use core::{
 use crate::{
     alloc::{handle_alloc_error, AllocRef, Global, Layout},
     boxed::Box,
-    collections::TryReserveError::{self, *},
+    collections::TryReserveError::{self, AllocError, CapacityOverflow},
 };
 
+#[derive(Copy, Clone)]
 enum AllocInit {
     /// The contents of the new memory are uninitialized.
     Uninitialized,
@@ -24,14 +25,14 @@ enum AllocInit {
 
 /// A low-level utility for more ergonomically allocating, reallocating, and deallocating
 /// a buffer of memory on the heap without having to worry about all the corner cases
-/// involved. This type is excellent for building your own data structures like Vec and VecDeque.
+/// involved. This type is excellent for building your own data structures like `Vec` and `VecDeque`.
 /// In particular:
 ///
 /// * Produces `Unique::dangling()` on zero-sized types.
 /// * Produces `Unique::dangling()` on zero-length allocations.
 /// * Avoids freeing `Unique::dangling()`.
 /// * Catches all overflows in capacity computations (promotes them to "capacity overflow" panics).
-/// * Guards against 32-bit systems allocating more than isize::MAX bytes.
+/// * Guards against 32-bit systems allocating more than `isize::MAX` bytes.
 /// * Guards against overflowing your length.
 /// * Calls `handle_alloc_error` for fallible allocations.
 /// * Contains a `ptr::Unique` and thus endows the user with all related benefits.
@@ -208,7 +209,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
     pub fn from_box(slice: Box<[T], A>) -> Self {
         unsafe {
             let (ptr, alloc) = Box::into_raw_alloc(slice);
-            RawVec::from_raw_parts_in(ptr.as_mut_ptr(), ptr.len(), alloc)
+            Self::from_raw_parts_in(ptr.as_mut_ptr(), ptr.len(), alloc)
         }
     }
 
@@ -246,7 +247,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
     /// Gets the capacity of the allocation.
     ///
     /// This will always be `usize::MAX` if `T` is zero-sized.
-    #[inline(always)]
+    #[inline]
     pub fn capacity(&self) -> usize {
         if mem::size_of::<T>() == 0 {
             usize::MAX
