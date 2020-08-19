@@ -83,8 +83,7 @@
     incomplete_features
 )]
 
-// pub mod alloc;
-pub use liballoc::alloc;
+pub mod alloc;
 pub mod boxed;
 pub mod clone;
 pub mod collections;
@@ -94,16 +93,6 @@ pub mod raw_vec;
 extern crate alloc as liballoc;
 
 pub use liballoc::{borrow, fmt, rc, slice, sync};
-
-use crate::collections::TryReserveError;
-use liballoc::alloc::handle_alloc_error;
-
-// One central function responsible for reporting capacity overflows. This'll
-// ensure that the code generation related to these panics is minimal as there's
-// only one location which panics rather than a bunch throughout the module.
-pub(in crate) fn capacity_overflow() -> ! {
-    panic!("capacity overflow");
-}
 
 #[macro_export]
 macro_rules! vec {
@@ -166,12 +155,4 @@ macro_rules! format {
         let _ = write!(&mut s, $fmt, $($args),*);
         s
     }}
-}
-
-pub(crate) fn handle_reserve_error<T>(result: Result<T, TryReserveError>) -> T {
-    match result {
-        Ok(t) => t,
-        Err(TryReserveError::AllocError { layout }) => handle_alloc_error(layout),
-        Err(TryReserveError::CapacityOverflow) => capacity_overflow(),
-    }
 }

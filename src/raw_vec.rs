@@ -10,7 +10,7 @@ use core::{
 };
 
 use crate::{
-    alloc::{handle_alloc_error, AllocRef, Global, Layout},
+    alloc::{handle_alloc_error, AllocRef, BuildAllocRef, Global, Layout},
     boxed::Box,
     collections::TryReserveError::{self, *},
 };
@@ -45,10 +45,10 @@ enum AllocInit {
 /// `usize::MAX`. This means that you need to be careful when round-tripping this type with a
 /// `Box<[T]>`, since `capacity()` won't yield the length.
 #[allow(missing_debug_implementations)]
-pub struct RawVec<T, A: AllocRef = Global> {
+pub struct RawVec<T, A: BuildAllocRef = Global> {
     ptr: Unique<T>,
     cap: usize,
-    alloc: A,
+    alloc_builder: A,
 }
 
 impl<T> RawVec<T, Global> {
@@ -92,11 +92,6 @@ impl<T> RawVec<T, Global> {
         Self::with_capacity_in(capacity, Global)
     }
 
-    #[inline]
-    pub fn twith_capacity(capacity: usize) -> Self {
-        Self::with_capacity_in(capacity, Global)
-    }
-
     /// Like `with_capacity`, but guarantees the buffer is zeroed.
     #[inline]
     pub fn with_capacity_zeroed(capacity: usize) -> Self {
@@ -117,71 +112,62 @@ impl<T> RawVec<T, Global> {
     }
 }
 
-impl<T, A: AllocRef> RawVec<T, A> {
+impl<T, A: BuildAllocRef> RawVec<T, A> {
     /// Like `new`, but parameterized over the choice of allocator for
     /// the returned `RawVec`.
-    pub const fn new_in(alloc: A) -> Self {
+    pub const fn new_in(alloc_builder: A) -> Self {
         // `cap: 0` means "unallocated". zero-sized types are ignored.
         Self {
             ptr: Unique::dangling(),
             cap: 0,
-            alloc,
+            alloc_builder,
         }
-    }
-
-    #[inline]
-    pub fn try_with_capacity_in(capacity: usize, alloc: A) -> Result<Self, TryReserveError> {
-        Self::allocate_in(capacity, AllocInit::Uninitialized, alloc)
-    }
-
-    #[inline]
-    pub fn try_with_capacity_zeroed_in(capacity: usize, alloc: A) -> Result<Self, TryReserveError> {
-        Self::allocate_in(capacity, AllocInit::Zeroed, alloc)
     }
 
     /// Like `with_capacity`, but parameterized over the choice of
     /// allocator for the returned `RawVec`.
     #[inline]
-    pub fn with_capacity_in(capacity: usize, alloc: A) -> Self {
-        match Self::try_with_capacity_in(capacity, alloc) {
-            Err(CapacityOverflow) => capacity_overflow(),
-            Err(AllocError { layout, .. }) => handle_alloc_error(layout),
-            Ok(v) => v,
-        }
+    pub fn with_capacity_in(capacity: usize, alloc_builder: A) -> Self {
+        Self::allocate_in(capacity, AllocInit::Uninitialized, alloc_builder)
     }
 
     /// Like `with_capacity_zeroed`, but parameterized over the choice
     /// of allocator for the returned `RawVec`.
     #[inline]
-    pub fn with_capacity_zeroed_in(capacity: usize, alloc: A) -> Self {
-        match Self::try_with_capacity_zeroed_in(capacity, alloc) {
-            Err(CapacityOverflow) => capacity_overflow(),
-            Err(AllocError { layout, .. }) => handle_alloc_error(layout),
-            Ok(v) => v,
-        }
+    pub fn with_capacity_zeroed_in(capacity: usize, alloc_builder: A) -> Self {
+        Self::allocate_in(capacity, AllocInit::Zeroed, alloc_builder)
     }
 
-    fn allocate_in(
-        capacity: usize,
-        init: AllocInit,
-        mut alloc: A,
-    ) -> Result<Self, TryReserveError> {
+    fn allocate_in(capacity: usize, init: AllocInit, mut alloc_builder: A) -> Self {
         if mem::size_of::<T>() == 0 {
-            Ok(Self::new_in(alloc))
+            Self::new_in(alloc_builder)
         } else {
-            let layout = Layout::array::<T>(capacity)?;
-            alloc_guard(layout.size())?;
+            // We avoid `unwrap_or_else` here because it bloats the amount of
+            // LLVM IR generated.
+            let layout = match Layout::array::<T>(capacity) {
+                Ok(layout) => layout,
+                Err(_) => capacity_overflow(),
+            };
+            match alloc_guard(layout.size()) {
+                Ok(_) => {}
+                Err(_) => capacity_overflow(),
+            }
 
-            let memory = match init {
+            let mut alloc = unsafe { alloc_builder.build_alloc_ref(NonNull::dangling(), layout) };
+            let result = match init {
                 AllocInit::Uninitialized => alloc.alloc(layout),
                 AllocInit::Zeroed => alloc.alloc_zeroed(layout),
+            };
+            let ptr = match result {
+                Ok(ptr) => ptr,
+                Err(_) => handle_alloc_error(layout),
+            };
+
+            Self {
+                ptr: unsafe { Unique::new_unchecked(ptr.cast().as_ptr()) },
+                cap: Self::capacity_from_bytes(ptr.len()),
+                alloc_builder,
             }
-            .map_err(|_| AllocError { layout })?;
-            Ok(Self {
-                ptr: Unique::new(memory.as_non_null_ptr().cast().as_ptr()).unwrap(),
-                cap: Self::capacity_from_bytes(memory.len()),
-                alloc,
-            })
         }
     }
 
@@ -196,23 +182,27 @@ impl<T, A: AllocRef> RawVec<T, A> {
     /// If the `ptr` and `capacity` come from a `RawVec` created via `alloc`, then this is
     /// guaranteed.
     #[inline]
-    pub unsafe fn from_raw_parts_in(ptr: *mut T, capacity: usize, alloc: A) -> Self {
+    pub unsafe fn from_raw_parts_in(ptr: *mut T, capacity: usize, alloc_builder: A) -> Self {
         Self {
             ptr: Unique::new_unchecked(ptr),
             cap: capacity,
-            alloc,
+            alloc_builder,
         }
     }
 
     /// Converts a `Box<[T]>` into a `RawVec<T>`.
     pub fn from_box(slice: Box<[T], A>) -> Self {
         unsafe {
-            let (ptr, alloc) = Box::into_raw_alloc(slice);
-            RawVec::from_raw_parts_in(ptr.as_mut_ptr(), ptr.len(), alloc)
+            let mut slice = ManuallyDrop::new(slice);
+            RawVec::from_raw_parts_in(
+                slice.as_mut_ptr(),
+                slice.len(),
+                ptr::read(Box::build_alloc(&slice)),
+            )
         }
     }
 
-    /// Converts the entire buffer into `Box<[MaybeUninit<T>]>` with the specified `len`.
+    /// Converts the entire buffer into `Box<[MaybeUninit<T>], A>` with the specified `len`.
     ///
     /// Note that this will correctly reconstitute any `cap` changes
     /// that may have been performed. (See description of type for details.)
@@ -233,7 +223,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
 
         let me = ManuallyDrop::new(self);
         let slice = slice::from_raw_parts_mut(me.ptr() as *mut MaybeUninit<T>, len);
-        Box::from_raw_in(slice, ptr::read(me.alloc()))
+        Box::from_raw_in(slice, ptr::read(&me.alloc_builder))
     }
 
     /// Gets a raw pointer to the start of the allocation. Note that this is
@@ -256,13 +246,13 @@ impl<T, A: AllocRef> RawVec<T, A> {
     }
 
     /// Returns a shared reference to the allocator backing this `RawVec`.
-    pub fn alloc(&self) -> &A {
-        &self.alloc
+    pub fn alloc_builder(&self) -> &A {
+        &self.alloc_builder
     }
 
     /// Returns a mutable reference to the allocator backing this `RawVec`.
-    pub fn alloc_mut(&mut self) -> &mut A {
-        &mut self.alloc
+    pub fn alloc_builder_mut(&mut self) -> &mut A {
+        &mut self.alloc_builder
     }
 
     fn current_memory(&self) -> Option<(NonNull<u8>, Layout)> {
@@ -385,10 +375,6 @@ impl<T, A: AllocRef> RawVec<T, A> {
         }
     }
 
-    pub fn try_shrink_to_fit(&mut self, amount: usize) -> Result<(), TryReserveError> {
-        self.shrink(amount)
-    }
-
     /// Shrinks the allocation down to the specified amount. If the given amount
     /// is 0, actually completely deallocates.
     ///
@@ -400,15 +386,13 @@ impl<T, A: AllocRef> RawVec<T, A> {
     ///
     /// Aborts on OOM.
     pub fn shrink_to_fit(&mut self, amount: usize) {
-        match self.try_shrink_to_fit(amount) {
+        match self.shrink(amount) {
             Err(CapacityOverflow) => capacity_overflow(),
             Err(AllocError { layout, .. }) => handle_alloc_error(layout),
             Ok(()) => { /* yay */ }
         }
     }
-}
 
-impl<T, A: AllocRef> RawVec<T, A> {
     /// Returns if the buffer needs to grow to fulfill the needed extra capacity.
     /// Mainly used to make inlining reserve-calls possible without inlining `grow`.
     fn needs_to_grow(&self, len: usize, additional: usize) -> bool {
@@ -468,7 +452,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
         let new_layout = Layout::array::<T>(cap);
 
         // `finish_grow` is non-generic over `T`.
-        let ptr = finish_grow(new_layout, self.current_memory(), &mut self.alloc)?;
+        let ptr = finish_grow(new_layout, self.current_memory(), &mut self.alloc_builder)?;
         self.set_ptr(ptr);
         Ok(())
     }
@@ -487,7 +471,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
         let new_layout = Layout::array::<T>(cap);
 
         // `finish_grow` is non-generic over `T`.
-        let ptr = finish_grow(new_layout, self.current_memory(), &mut self.alloc)?;
+        let ptr = finish_grow(new_layout, self.current_memory(), &mut self.alloc_builder)?;
         self.set_ptr(ptr);
         Ok(())
     }
@@ -506,7 +490,8 @@ impl<T, A: AllocRef> RawVec<T, A> {
         let new_size = amount * mem::size_of::<T>();
 
         let ptr = unsafe {
-            self.alloc
+            self.alloc_builder
+                .build_alloc_ref(ptr, layout)
                 .shrink(ptr, layout, new_size)
                 .map_err(|_| AllocError {
                     layout: Layout::from_size_align_unchecked(new_size, layout.align()),
@@ -524,32 +509,42 @@ impl<T, A: AllocRef> RawVec<T, A> {
 fn finish_grow<A>(
     new_layout: Result<Layout, LayoutErr>,
     current_memory: Option<(NonNull<u8>, Layout)>,
-    alloc: &mut A,
+    alloc_builder: &mut A,
 ) -> Result<NonNull<[u8]>, TryReserveError>
 where
-    A: AllocRef,
+    A: BuildAllocRef,
 {
     // Check for the error here to minimize the size of `RawVec::grow_*`.
     let new_layout = new_layout.map_err(|_| CapacityOverflow)?;
 
     alloc_guard(new_layout.size())?;
 
-    let memory = if let Some((ptr, old_layout)) = current_memory {
-        debug_assert_eq!(old_layout.align(), new_layout.align());
-        unsafe { alloc.grow(ptr, old_layout, new_layout.size()) }
-    } else {
-        alloc.alloc(new_layout)
+    let memory = unsafe {
+        if let Some((ptr, old_layout)) = current_memory {
+            debug_assert_eq!(old_layout.align(), new_layout.align());
+            alloc_builder
+                .build_alloc_ref(ptr, old_layout)
+                .grow(ptr, old_layout, new_layout.size())
+        } else {
+            alloc_builder
+                .build_alloc_ref(NonNull::dangling(), new_layout)
+                .alloc(new_layout)
+        }
     }
     .map_err(|_| AllocError { layout: new_layout })?;
 
     Ok(memory)
 }
 
-unsafe impl<#[may_dangle] T, A: AllocRef> Drop for RawVec<T, A> {
+unsafe impl<#[may_dangle] T, A: BuildAllocRef> Drop for RawVec<T, A> {
     /// Frees the memory owned by the `RawVec` *without* trying to drop its contents.
     fn drop(&mut self) {
         if let Some((ptr, layout)) = self.current_memory() {
-            unsafe { self.alloc.dealloc(ptr, layout) }
+            unsafe {
+                self.alloc_builder
+                    .build_alloc_ref(ptr, layout)
+                    .dealloc(ptr, layout)
+            }
         }
     }
 }
