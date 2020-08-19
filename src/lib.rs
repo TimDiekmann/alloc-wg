@@ -88,13 +88,8 @@ pub use liballoc::alloc;
 pub mod boxed;
 pub mod clone;
 pub mod collections;
-pub mod iter;
 mod ptr;
 pub mod raw_vec;
-// pub use liballoc::raw_vec;
-pub mod str;
-pub mod string;
-pub mod vec;
 
 extern crate alloc as liballoc;
 

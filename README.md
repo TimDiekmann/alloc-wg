@@ -1,3 +1,9 @@
+⚠️ **This is a test branch!** ⚠️
+
+[![Test Status](https://github.com/TimDiekmann/alloc-wg/workflows/Test/badge.svg?event=push&branch=buildalloc-test)](https://github.com/TimDiekmann/alloc-wg/actions?query=workflow%3ATest+event%3Apush+branch%3Abuildalloc-test)
+
+This test branch will test `BuildAllocRef`.
+
 Alloc-WG
 ========
 

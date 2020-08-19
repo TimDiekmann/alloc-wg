@@ -2,16 +2,6 @@
 
 use crate::alloc::{Layout, LayoutErr};
 use core::fmt::Display;
-pub use liballoc::collections::{binary_heap, btree_map, btree_set, linked_list, vec_deque};
-
-#[doc(no_inline)]
-pub use self::{
-    binary_heap::BinaryHeap,
-    btree_map::BTreeMap,
-    btree_set::BTreeSet,
-    linked_list::LinkedList,
-    vec_deque::VecDeque,
-};
 
 /// The error type for `try_reserve` methods.
 #[derive(Clone, PartialEq, Eq, Debug)]
