@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - buildalloc-test
   pull_request:
 
 jobs:
