@@ -79,7 +79,7 @@
 //! [`NonZeroLayout::for_value(&*value)`]: crate::alloc::NonZeroLayout::for_value
 
 use crate::{
-    alloc::{handle_alloc_error, AllocErr, AllocInit, AllocRef, Global, Layout},
+    alloc::{handle_alloc_error, AllocErr, AllocRef, Global, Layout},
     clone::CloneIn,
     collections::TryReserveError::{self, AllocError},
     handle_reserve_error,
@@ -260,9 +260,9 @@ impl<T, A: AllocRef> Box<T, A> {
     /// # Ok::<_, alloc_wg::alloc::AllocErr>(())
     /// ```
     pub fn try_new_uninit_in(mut alloc: A) -> Result<Box<MaybeUninit<T>, A>, AllocErr> {
-        let memory = alloc.alloc(Layout::new::<MaybeUninit<T>>(), AllocInit::Uninitialized)?;
-        let ptr = memory.ptr;
-        unsafe { Ok(Box::from_raw_in(ptr.cast().as_ptr(), alloc)) }
+        let memory = alloc.alloc(Layout::new::<MaybeUninit<T>>())?;
+        let ptr = memory.as_mut_ptr();
+        unsafe { Ok(Box::from_raw_in(ptr.cast(), alloc)) }
     }
 
     /// Constructs a new `Pin<Box<T, A>>` with the specified allocator. If `T` does not implement

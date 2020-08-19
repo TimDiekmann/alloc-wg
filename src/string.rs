@@ -1665,11 +1665,13 @@ impl<A: AllocRef> String<A> {
     /// # use alloc_wg::string::String;
     /// let mut s = String::from("foo");
     ///
+    /// let capacity = s.capacity();
+    ///
     /// s.clear();
     ///
     /// assert!(s.is_empty());
-    /// assert_eq!(0, s.len());
-    /// assert_eq!(3, s.capacity());
+    /// assert_eq!(s.len(), 0);
+    /// assert_eq!(s.capacity(), capacity);
     /// ```
     #[inline]
     pub fn clear(&mut self) {

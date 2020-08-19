@@ -39,7 +39,9 @@
     exhaustive_patterns,
     never_type,
     structural_match,
-    raw_vec_internals
+    raw_vec_internals,
+    slice_ptr_len,
+    slice_ptr_get
 )]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![doc(test(attr(
