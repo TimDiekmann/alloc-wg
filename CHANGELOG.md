@@ -1,3 +1,8 @@
+# v0.10 (unreleased)
+
+**Breaking Changes**:
+- Update `AllocRef` trait to latest nightly
+
 # v0.9
 
 - use `core::alloc` instead of own implementation
