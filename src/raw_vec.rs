@@ -504,14 +504,12 @@ impl<T, A: AllocRef> RawVec<T, A> {
         } else {
             return Ok(());
         };
-        let new_size = amount * mem::size_of::<T>();
+        let new_layout = Layout::array::<T>(amount)?;
 
         let ptr = unsafe {
             self.alloc
-                .shrink(ptr, layout, new_size)
-                .map_err(|_| AllocError {
-                    layout: Layout::from_size_align_unchecked(new_size, layout.align()),
-                })?
+                .shrink(ptr, layout, new_layout)
+                .map_err(|_| AllocError { layout: new_layout })?
         };
         self.set_ptr(ptr);
         Ok(())
@@ -537,7 +535,7 @@ where
 
     let memory = if let Some((ptr, old_layout)) = current_memory {
         debug_assert_eq!(old_layout.align(), new_layout.align());
-        unsafe { alloc.grow(ptr, old_layout, new_layout.size()) }
+        unsafe { alloc.grow(ptr, old_layout, new_layout) }
     } else {
         alloc.alloc(new_layout)
     }
