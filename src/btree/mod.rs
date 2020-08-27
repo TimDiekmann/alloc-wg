@@ -1,3 +1,13 @@
+#![allow(
+    explicit_outlives_requirements,
+    single_use_lifetimes,
+    trivial_casts,
+)]
+#![allow(
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::type_complexity
+)]
 pub mod map;
 mod navigate;
 mod node;
