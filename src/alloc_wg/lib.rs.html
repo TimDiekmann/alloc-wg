@@ -188,6 +188,10 @@
 <span id="187">187</span>
 <span id="188">188</span>
 <span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="doccomment">//! An attempt to collect several proposals of [rust-lang/wg-allocators](https://github.com/rust-lang/wg-allocators) into a</span>
 <span class="doccomment">//! MVP.</span>
@@ -207,36 +211,40 @@
 <span class="attribute">#![<span class="ident">feature</span>(
     <span class="ident">allocator_api</span>,
     <span class="ident">alloc_layout_extra</span>,
-    <span class="ident">dropck_eyepatch</span>,
-    <span class="ident">extend_one</span>,
     <span class="ident">coerce_unsized</span>,
-    <span class="ident">const_fn</span>,
-    <span class="ident">const_panic</span>,
     <span class="ident">const_alloc_layout</span>,
+    <span class="ident">const_fn</span>,
+    <span class="ident">const_generics</span>,
+    <span class="ident">const_panic</span>,
     <span class="ident">const_raw_ptr_to_usize_cast</span>,
     <span class="ident">core_intrinsics</span>,
-    <span class="ident">str_internals</span>,
     <span class="ident">dispatch_from_dyn</span>,
-    <span class="ident">unsize</span>,
+    <span class="ident">dropck_eyepatch</span>,
     <span class="ident">exact_size_is_empty</span>,
-    <span class="ident">internal_uninit_const</span>,
-    <span class="ident">receiver_trait</span>,
+    <span class="ident">exclusive_range_pattern</span>,
+    <span class="ident">exhaustive_patterns</span>,
+    <span class="ident">extend_one</span>,
+    <span class="ident">fn_traits</span>,
     <span class="ident">maybe_uninit_extra</span>,
+    <span class="ident">maybe_uninit_ref</span>,
     <span class="ident">maybe_uninit_slice</span>,
+    <span class="ident">maybe_uninit_uninit_array</span>,
+    <span class="ident">never_type</span>,
     <span class="ident">or_patterns</span>,
     <span class="ident">ptr_internals</span>,
-    <span class="ident">const_generics</span>,
-    <span class="ident">unboxed_closures</span>,
-    <span class="ident">specialization</span>,
-    <span class="ident">trusted_len</span>,
-    <span class="ident">unsized_locals</span>,
-    <span class="ident">fn_traits</span>,
-    <span class="ident">exhaustive_patterns</span>,
-    <span class="ident">never_type</span>,
-    <span class="ident">structural_match</span>,
+    <span class="ident">raw_ref_op</span>,
     <span class="ident">raw_vec_internals</span>,
+    <span class="ident">receiver_trait</span>,
+    <span class="ident">slice_ptr_get</span>,
     <span class="ident">slice_ptr_len</span>,
-    <span class="ident">slice_ptr_get</span>
+    <span class="ident">specialization</span>,
+    <span class="ident">str_internals</span>,
+    <span class="ident">structural_match</span>,
+    <span class="ident">trusted_len</span>,
+    <span class="ident">unboxed_closures</span>,
+    <span class="ident">unsafe_block_in_unsafe_fn</span>,
+    <span class="ident">unsize</span>,
+    <span class="ident">unsized_locals</span>
 )]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">btree_drain_filter</span>)]</span>
 <span class="attribute">#![<span class="ident">feature</span>(<span class="ident">map_first_last</span>)]</span>
@@ -244,13 +252,13 @@
 <span class="attribute">#![<span class="ident">doc</span>(<span class="ident">test</span>(<span class="ident">attr</span>(
     <span class="ident">deny</span>(
         <span class="ident">future_incompatible</span>,
+        <span class="ident">macro_use_extern_crate</span>,
         <span class="ident">nonstandard_style</span>,
         <span class="ident">rust_2018_compatibility</span>,
         <span class="ident">rust_2018_idioms</span>,
-        <span class="ident">unused</span>,
-        <span class="ident">macro_use_extern_crate</span>,
         <span class="ident">trivial_casts</span>,
         <span class="ident">trivial_numeric_casts</span>,
+        <span class="ident">unused</span>,
         <span class="ident">unused_import_braces</span>,
         <span class="ident">unused_lifetimes</span>,
         <span class="ident">unused_qualifications</span>,
@@ -260,23 +268,23 @@
 )))]</span>
 <span class="attribute">#![<span class="ident">warn</span>(
     <span class="ident">future_incompatible</span>,
+    <span class="ident">macro_use_extern_crate</span>,
     <span class="ident">nonstandard_style</span>,
     <span class="ident">rust_2018_compatibility</span>,
     <span class="ident">rust_2018_idioms</span>,
-    <span class="ident">unused</span>,
-    <span class="ident">macro_use_extern_crate</span>,
     <span class="ident">single_use_lifetimes</span>,
     <span class="ident">trivial_casts</span>,
     <span class="ident">trivial_numeric_casts</span>,
+    <span class="ident">unused</span>,
     <span class="ident">unused_import_braces</span>,
     <span class="ident">unused_lifetimes</span>,
     <span class="ident">unused_qualifications</span>
 )]</span>
 <span class="attribute">#![<span class="ident">allow</span>(
-    <span class="ident">clippy</span>::<span class="ident">module_name_repetitions</span>,
-    <span class="ident">clippy</span>::<span class="ident">must_use_candidate</span>,
     <span class="ident">clippy</span>::<span class="ident">missing_errors_doc</span>,
     <span class="ident">clippy</span>::<span class="ident">missing_safety_doc</span>,
+    <span class="ident">clippy</span>::<span class="ident">module_name_repetitions</span>,
+    <span class="ident">clippy</span>::<span class="ident">must_use_candidate</span>,
     <span class="ident">incomplete_features</span>
 )]</span>
 
@@ -304,66 +312,66 @@
 <span class="comment">// One central function responsible for reporting capacity overflows. This&#39;ll</span>
 <span class="comment">// ensure that the code generation related to these panics is minimal as there&#39;s</span>
 <span class="comment">// only one location which panics rather than a bunch throughout the module.</span>
-<span class="kw">pub</span>(<span class="kw">in</span> <span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">capacity_overflow</span>() <span class="op">-&gt;</span> <span class="op">!</span> {
+<span class="kw">pub</span>(<span class="kw">in</span> <span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">capacity_overflow</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="op">!</span> {
     <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;capacity overflow&quot;</span>);
 }
 
 <span class="attribute">#[<span class="ident">macro_export</span>]</span>
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">vec</span> {
-    ($(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>),<span class="kw-2">*</span>) <span class="op">=&gt;</span> ({
+    ($(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>),<span class="kw-2">*</span>) <span class="op">=</span><span class="op">&gt;</span> ({
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span>::<span class="ident">Vec</span>::<span class="ident">new</span>();
         $( <span class="ident">v</span>.<span class="ident">push</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>); )<span class="op">*</span>
         <span class="ident">v</span>
     });
-    ($(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>,)<span class="kw-2">*</span>) <span class="op">=&gt;</span> (<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span><span class="op">!</span>[$(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>),<span class="kw-2">*</span>]);
-    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">elem</span>:<span class="ident">expr</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">n</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> (
+    ($(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>,)<span class="kw-2">*</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro">vec</span><span class="macro">!</span>[$(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>),<span class="kw-2">*</span>]);
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">elem</span>:<span class="ident">expr</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">n</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> (
         <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span>::<span class="ident">from_elem</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">elem</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">n</span>)
     );
-    (<span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {
+    (<span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {
         <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span>::<span class="ident">Vec</span>::<span class="ident">new_in</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>)
     };
-    (<span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>; $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>),<span class="kw-2">*</span>) <span class="op">=&gt;</span> {{
+    (<span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>; $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>),<span class="kw-2">*</span>) <span class="op">=</span><span class="op">&gt;</span> {{
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span>::<span class="ident">Vec</span>::<span class="ident">new_in</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>);
         $( <span class="ident">v</span>.<span class="ident">push</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>); )<span class="op">*</span>
         <span class="ident">v</span>
     }};
-    (<span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>; $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>,)<span class="kw-2">*</span>) <span class="op">=&gt;</span> (<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span><span class="op">!</span>[<span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>; $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>),<span class="kw-2">*</span>]);
-    (<span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">elem</span>:<span class="ident">expr</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">n</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {{
+    (<span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>; $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>,)<span class="kw-2">*</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro">vec</span><span class="macro">!</span>[<span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>; $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>),<span class="kw-2">*</span>]);
+    (<span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">elem</span>:<span class="ident">expr</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">n</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {{
         <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span>::<span class="ident">from_elem_in</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">elem</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">n</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>)
     }};
-    (<span class="kw">try</span> $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>),<span class="kw-2">*</span>) <span class="op">=&gt;</span> {{
-        (<span class="op">||</span> <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span>,<span class="kw">_</span><span class="op">&gt;</span>, <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">collections</span>::<span class="ident">CollectionAllocErr</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;&gt;</span> {
+    (<span class="ident">try</span> $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>),<span class="kw-2">*</span>) <span class="op">=</span><span class="op">&gt;</span> {{
+        (<span class="op">|</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span>,<span class="kw">_</span><span class="op">&gt;</span>, <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">collections</span>::<span class="ident">CollectionAllocErr</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span>::<span class="ident">Vec</span>::<span class="ident">new</span>();
             $( <span class="ident">v</span>.<span class="ident">try_push</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>)<span class="question-mark">?</span>; )<span class="op">*</span>
             <span class="prelude-val">Ok</span>(<span class="ident">v</span>)
         })()
     }};
-    (<span class="kw">try</span> $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>,)<span class="kw-2">*</span>) <span class="op">=&gt;</span> (<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span><span class="op">!</span>[<span class="kw">try</span> $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>),<span class="kw-2">*</span>]);
-    (<span class="kw">try</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">elem</span>:<span class="ident">expr</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">n</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {{
+    (<span class="ident">try</span> $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>,)<span class="kw-2">*</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro">vec</span><span class="macro">!</span>[<span class="macro-nonterminal">try</span> $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>),<span class="kw-2">*</span>]);
+    (<span class="ident">try</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">elem</span>:<span class="ident">expr</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">n</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {{
         <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span>::<span class="ident">try_from_elem_in</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">elem</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">n</span>, <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">alloc</span>::<span class="ident">AbortAlloc</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">alloc</span>::<span class="ident">Global</span><span class="op">&gt;</span>)
     }};
-    (<span class="kw">try</span> <span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>; $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>),<span class="kw-2">*</span>) <span class="op">=&gt;</span> {{
-        (<span class="op">||</span> <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span>,<span class="kw">_</span><span class="op">&gt;</span>, <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">collections</span>::<span class="ident">CollectionAllocErr</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;&gt;</span> {
+    (<span class="ident">try</span> <span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>; $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>),<span class="kw-2">*</span>) <span class="op">=</span><span class="op">&gt;</span> {{
+        (<span class="op">|</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span>::<span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span>,<span class="kw">_</span><span class="op">&gt;</span>, <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">collections</span>::<span class="ident">CollectionAllocErr</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span>::<span class="ident">Vec</span>::<span class="ident">new_in</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>);
             $( <span class="ident">v</span>.<span class="ident">try_push</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>)<span class="question-mark">?</span>; )<span class="op">*</span>
             <span class="prelude-val">Ok</span>(<span class="ident">v</span>)
         })()
     }};
-    (<span class="kw">try</span> <span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>; $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>,)<span class="kw-2">*</span>) <span class="op">=&gt;</span> (<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span><span class="op">!</span>[<span class="kw">try</span> <span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>; $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>),<span class="kw-2">*</span>]);
-    (<span class="kw">try</span> <span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">elem</span>:<span class="ident">expr</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">n</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {{
+    (<span class="ident">try</span> <span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>; $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>:<span class="ident">expr</span>,)<span class="kw-2">*</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro">vec</span><span class="macro">!</span>[<span class="macro-nonterminal">try</span> <span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>; $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">x</span>),<span class="kw-2">*</span>]);
+    (<span class="ident">try</span> <span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">elem</span>:<span class="ident">expr</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">n</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {{
         <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">vec</span>::<span class="ident">try_from_elem_in</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">elem</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">n</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>)
     }};
 }
 
 <span class="attribute">#[<span class="ident">macro_export</span>]</span>
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">format</span> {
-    ( <span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">fmt</span>:<span class="ident">expr</span>, $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">args</span>:<span class="ident">expr</span>),<span class="op">*</span> ) <span class="op">=&gt;</span> {{
+    ( <span class="kw">in</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">fmt</span>:<span class="ident">expr</span>, $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">args</span>:<span class="ident">expr</span>),<span class="op">*</span> ) <span class="op">=</span><span class="op">&gt;</span> {{
         <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Write</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">string</span>::<span class="ident">String</span>::<span class="ident">new_in</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">alloc</span>);
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">fmt</span>, $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">args</span>),<span class="kw-2">*</span>);
         <span class="ident">s</span>
     }};
-    ( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">fmt</span>:<span class="ident">expr</span>, $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">args</span>:<span class="ident">expr</span>),<span class="op">*</span> ) <span class="op">=&gt;</span> {{
+    ( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">fmt</span>:<span class="ident">expr</span>, $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">args</span>:<span class="ident">expr</span>),<span class="op">*</span> ) <span class="op">=</span><span class="op">&gt;</span> {{
         <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Write</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">string</span>::<span class="ident">String</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="macro">write</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">fmt</span>, $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">args</span>),<span class="kw-2">*</span>);
@@ -371,11 +379,11 @@
     }}
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">handle_reserve_error</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">result</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">TryReserveError</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="ident">T</span> {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">handle_reserve_error</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">result</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">TryReserveError</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span> {
     <span class="kw">match</span> <span class="ident">result</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">t</span>) <span class="op">=&gt;</span> <span class="ident">t</span>,
-        <span class="prelude-val">Err</span>(<span class="ident">TryReserveError</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span> }) <span class="op">=&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>),
-        <span class="prelude-val">Err</span>(<span class="ident">TryReserveError</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=&gt;</span> <span class="ident">capacity_overflow</span>(),
+        <span class="prelude-val">Ok</span>(<span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">t</span>,
+        <span class="prelude-val">Err</span>(<span class="ident">TryReserveError</span>::<span class="ident">AllocError</span> { <span class="ident">layout</span> }) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">handle_alloc_error</span>(<span class="ident">layout</span>),
+        <span class="prelude-val">Err</span>(<span class="ident">TryReserveError</span>::<span class="ident">CapacityOverflow</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">capacity_overflow</span>(),
     }
 }
 </pre></div>

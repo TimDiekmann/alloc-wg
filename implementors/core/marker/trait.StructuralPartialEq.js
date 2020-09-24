@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["alloc_wg"] = [{"text":"impl StructuralPartialEq for TryReserveError","synthetic":false,"types":[]}];
+implementors["alloc_wg"] = [{"text":"impl&lt;T, A:&nbsp;AllocRef&gt; StructuralPartialEq for BTreeSet&lt;T, A&gt;","synthetic":false,"types":[]},{"text":"impl StructuralPartialEq for TryReserveError","synthetic":false,"types":[]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
