@@ -1,6 +1,9 @@
 Alloc-WG
 ========
 
+### IMPORTANT: This crate will be deprecated as soon as most of the collections with allocator support landed upstream which will probably be this October.
+
+---
 
 [![Test Status](https://github.com/TimDiekmann/alloc-wg/workflows/Test/badge.svg?event=push&branch=master)](https://github.com/TimDiekmann/alloc-wg/actions?query=workflow%3ATest+event%3Apush+branch%3Amaster)
 [![Lint Status](https://github.com/TimDiekmann/alloc-wg/workflows/Lint/badge.svg?event=push&branch=master)](https://github.com/TimDiekmann/alloc-wg/actions?query=workflow%3ALint+event%3Apush+branch%3Amaster)
@@ -16,17 +19,6 @@ MVP.
  
 It requires a nightly compiler, and is designed to replace the alloc crate. However, this is not completely possible as crate, as some 
 compiler features are not possible for crates.
-
-Currently associated containers
--------------------------------
-  
-- [`Box`]struct
-  - specialization of sized iterators as it's not possible for downstream crates.
-  - Limited `T: Copy` for `Fn`-traits as it's not possible for downstream crates.
-   
-- [`RawVec`]
-- [`Vec`]
-- [`String`]
 
 [`Alloc`]: https://doc.rust-lang.org/1.38.0/alloc/alloc/trait.Alloc.html
 [`AllocRef`]: https://timdiekmann.github.io/alloc-wg/alloc_wg/alloc/trait.AllocRef.html
