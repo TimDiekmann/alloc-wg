@@ -6,10 +6,10 @@ use core::{
     cmp::{
         max,
         min,
-        Ordering::{self, Equal, Greater, Less},
+        Ordering::{Equal, Greater, Less},
     },
     fmt::{self, Debug},
-    hash::{Hash, Hasher},
+    hash::Hash,
     iter::{FromIterator, FusedIterator, Peekable},
     mem::ManuallyDrop,
     ops::{BitAnd, BitOr, BitXor, RangeBounds, Sub},
@@ -69,38 +69,11 @@ use crate::alloc::{AllocRef, Global};
 ///     println!("{}", book);
 /// }
 /// ```
-//#[stable(feature = "rust1", since = "1.0.0")]
+#[derive(Hash, PartialEq, Eq, Ord, PartialOrd)]
 pub struct BTreeSet<T, A: AllocRef = Global> {
     map: BTreeMap<T, (), A>,
 }
 
-impl<T: Hash, A: AllocRef> Hash for BTreeSet<T, A> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.map.hash(state)
-    }
-}
-
-impl<T: PartialEq, A: AllocRef> PartialEq for BTreeSet<T, A> {
-    fn eq(&self, other: &BTreeSet<T, A>) -> bool {
-        self.map.eq(&other.map)
-    }
-}
-
-impl<T: Eq, A: AllocRef> Eq for BTreeSet<T, A> {}
-
-impl<T: PartialOrd, A: AllocRef> PartialOrd for BTreeSet<T, A> {
-    fn partial_cmp(&self, other: &BTreeSet<T, A>) -> Option<Ordering> {
-        self.map.partial_cmp(&other.map)
-    }
-}
-
-impl<T: Ord, A: AllocRef> Ord for BTreeSet<T, A> {
-    fn cmp(&self, other: &BTreeSet<T, A>) -> Ordering {
-        self.map.cmp(&other.map)
-    }
-}
-
-//#[stable(feature = "rust1", since = "1.0.0")]
 impl<T: Clone, A: AllocRef + Clone> Clone for BTreeSet<T, A> {
     fn clone(&self) -> Self {
         BTreeSet {
@@ -347,9 +320,8 @@ impl<T: Ord> BTreeSet<T> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```ignore
     /// # #![allow(unused_mut)]
-    /// # #![allow(unused_variables)]
     /// use std::collections::BTreeSet;
     ///
     /// let mut set: BTreeSet<i32> = BTreeSet::new();
@@ -1412,10 +1384,20 @@ impl<'a, T> Iterator for Iter<'a, T> {
     fn next(&mut self) -> Option<&'a T> {
         self.iter.next()
     }
+
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
     }
+
     fn last(mut self) -> Option<&'a T> {
+        self.next_back()
+    }
+
+    fn min(mut self) -> Option<&'a T> {
+        self.next()
+    }
+
+    fn max(mut self) -> Option<&'a T> {
         self.next_back()
     }
 }
@@ -1442,6 +1424,7 @@ impl<T, A: AllocRef> Iterator for IntoIter<T, A> {
     fn next(&mut self) -> Option<T> {
         self.iter.next().map(|(k, _)| k)
     }
+
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
     }
@@ -1480,6 +1463,14 @@ impl<'a, T> Iterator for Range<'a, T> {
     }
 
     fn last(mut self) -> Option<&'a T> {
+        self.next_back()
+    }
+
+    fn min(mut self) -> Option<&'a T> {
+        self.next()
+    }
+
+    fn max(mut self) -> Option<&'a T> {
         self.next_back()
     }
 }
@@ -1572,6 +1563,10 @@ impl<'a, T: Ord, A: AllocRef> Iterator for Difference<'a, T, A> {
         };
         (self_len.saturating_sub(other_len), Some(self_len))
     }
+
+    fn min(mut self) -> Option<&'a T> {
+        self.next()
+    }
 }
 
 //#[stable(feature = "fused", since = "1.26.0")]
@@ -1602,6 +1597,10 @@ impl<'a, T: Ord> Iterator for SymmetricDifference<'a, T> {
         // and T is an empty type, the storage overhead of sets limits
         // the number of elements to less than half the range of usize.
         (0, Some(a_len + b_len))
+    }
+
+    fn min(mut self) -> Option<&'a T> {
+        self.next()
     }
 }
 
@@ -1667,6 +1666,10 @@ impl<'a, T: Ord, A: AllocRef> Iterator for Intersection<'a, T, A> {
             IntersectionInner::Answer(Some(_)) => (1, Some(1)),
         }
     }
+
+    fn min(mut self) -> Option<&'a T> {
+        self.next()
+    }
 }
 
 //#[stable(feature = "fused", since = "1.26.0")]
@@ -1691,6 +1694,10 @@ impl<'a, T: Ord> Iterator for Union<'a, T> {
         let (a_len, b_len) = self.0.lens();
         // No checked_add - see SymmetricDifference::size_hint.
         (max(a_len, b_len), Some(a_len + b_len))
+    }
+
+    fn min(mut self) -> Option<&'a T> {
+        self.next()
     }
 }
 
