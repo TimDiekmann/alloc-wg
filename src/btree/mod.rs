@@ -1,13 +1,7 @@
-#![allow(
-    explicit_outlives_requirements,
-    single_use_lifetimes,
-    trivial_casts,
-)]
-#![allow(
-    clippy::pedantic,
-    clippy::nursery,
-    clippy::type_complexity
-)]
+#![allow(explicit_outlives_requirements, single_use_lifetimes, trivial_casts)]
+#![allow(clippy::pedantic, clippy::nursery, clippy::type_complexity)]
+#![deny(unsafe_op_in_unsafe_fn)]
+mod borrow;
 pub mod map;
 mod navigate;
 mod node;
@@ -31,7 +25,9 @@ pub unsafe fn unwrap_unchecked<T>(val: Option<T>) -> T {
         if cfg!(debug_assertions) {
             panic!("'unchecked' unwrap on None in BTreeMap");
         } else {
-            core::intrinsics::unreachable();
+            unsafe {
+                core::intrinsics::unreachable();
+            }
         }
     })
 }
