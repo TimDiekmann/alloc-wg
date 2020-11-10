@@ -1,7 +1,7 @@
 Alloc-WG
 ========
 
-### IMPORTANT: This crate will be deprecated as soon as most of the collections with allocator support landed upstream which will probably be this October.
+### IMPORTANT: This crate will be deprecated as soon as most of the collections with allocator support landed upstream which will probably be ~this October~ by the end of 2020.
 
 ---
 
